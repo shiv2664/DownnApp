@@ -1,0 +1,124 @@
+package com.shivam.downn.ui.screens.feedscreen
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.shivam.downn.ActivityCategory
+import com.shivam.downn.DummyData
+import com.shivam.downn.DummyData.dummyActivities
+import com.shivam.downn.ui.ActivityCard
+import com.shivam.downn.ui.CategoryChip
+
+@Composable
+fun FeedScreen(innerPadding: PaddingValues) {
+
+    val viewModel = hiltViewModel<FeedViewModel>()
+//    val state by viewModel.state.collectAsState()
+
+    Scaffold(
+        topBar = { FeedTopBar() },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = {},
+                containerColor = MaterialTheme.colorScheme.primary
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Create Activity"
+                )
+            }
+        }
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+
+            ActivityList(dummyActivities)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FeedTopBar() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+    ) {
+        TopAppBar(
+            title = { Text("Downn") },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            )
+        )
+
+        LazyRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            item {
+                CategoryChip(
+                    label = "All",
+                    emoji = "🌟",
+                    isSelected = true,
+                    onClick = {  }
+                )
+            }
+
+            items(ActivityCategory.entries.toTypedArray()) { category ->
+                CategoryChip(
+                    label = category.displayName,
+                    emoji = category.emoji,
+                    isSelected =true,
+                    onClick = { }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ActivityList(
+    activities: List<DummyData.ActivityItem>,
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        items(
+            items = activities,
+            key = { it.id }
+        ) { activity ->
+            ActivityCard(
+                activity.userName,
+                activity.userAvatar,
+                activity.activityTitle,
+                activity.description,
+                activity.category,
+                activity.categoryEmoji,
+                activity.timeAgo,
+                activity.distance,
+                activity.participantCount,
+                activity.maxParticipants,
+                activity.participantAvatars,
+                {},
+                {},
+            )
+        }
+    }
+}
