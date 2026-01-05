@@ -54,23 +54,24 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 
 @Composable
 fun ActivityCard(
-    userName: String,
-    userAvatar: String?,
-    activityTitle: String,
-    description: String?,
-    category: String,
-    categoryEmoji: String,
-    timeAgo: String,
-    distance: String,
-    participantCount: Int,
-    maxParticipants: Int?,
-    participantAvatars: List<String>,
+    userName: String="",
+    userAvatar: String="",
+    activityTitle: String="",
+    description: String="",
+    category: String="",
+    categoryEmoji: String="",
+    timeAgo: String="",
+    distance: String="",
+    participantCount: Int=0,
+    maxParticipants: Int?=0,
+    participantAvatars: List<String> =emptyList(),
     onCardClick: () -> Unit,
     onJoinClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -151,12 +152,12 @@ fun ActivityCard(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(text = categoryEmoji)
-                        Text(
-                            text = category,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                            fontWeight = FontWeight.Medium
-                        )
+//                        Text(
+//                            text = category,
+//                            style = MaterialTheme.typography.labelMedium,
+//                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+//                            fontWeight = FontWeight.Medium
+//                        )
                     }
                 }
             }
@@ -247,7 +248,7 @@ fun ActivityCard(
                         }
                     }
 
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(30.dp))
 
                     Text(
                         text = if (maxParticipants != null) {
@@ -719,6 +720,84 @@ fun CategoryChip(
             )
         }
     }
+}
+
+@Preview(showBackground = true, name = "Default Activity Card")
+@Composable
+fun ActivityCardPreview() {
+    // You might need to wrap it in your app's theme for correct styling
+    // MaterialTheme {
+    ActivityCard(
+        userName = "Jane Doe",
+        userAvatar = "https://example.com/avatar.jpg", // Replace with a valid image URL or leave empty
+        activityTitle = "Evening Jog in the Park",
+        description = "A relaxing jog to unwind after a long day. Everyone is welcome, no matter the pace!",
+        category = "Running",
+        categoryEmoji = "🏃‍♀️",
+        timeAgo = "5m ago",
+        distance = "2 km away",
+        participantCount = 5,
+        maxParticipants = 10,
+        participantAvatars = listOf(
+            "https://example.com/p1.jpg",
+            "https://example.com/p2.jpg",
+            "https://example.com/p3.jpg",
+            "https://example.com/p4.jpg"
+        ),
+        onCardClick = {},
+        onJoinClick = {}
+    )
+    // }
+}
+
+@Preview(showBackground = true, name = "Card with No Description")
+@Composable
+fun ActivityCardNoDescriptionPreview() {
+    // MaterialTheme {
+    ActivityCard(
+        userName = "John Smith",
+        userAvatar = "", // Example of no user avatar
+        activityTitle = "Morning Coffee Meetup",
+        description = "", // Empty description
+        category = "Social",
+        categoryEmoji = "☕",
+        timeAgo = "1h ago",
+        distance = "500m away",
+        participantCount = 2,
+        maxParticipants = 4,
+        participantAvatars = listOf("https://example.com/p1.jpg"),
+        onCardClick = {},
+        onJoinClick = {}
+    )
+    // }
+}
+
+@Preview(showBackground = true, name = "Card with Unlimited Participants")
+@Composable
+fun ActivityCardUnlimitedParticipantsPreview() {
+    // MaterialTheme {
+    ActivityCard(
+        userName = "Community Event",
+        userAvatar = "",
+        activityTitle = "Local Park Cleanup",
+        description = "Let's make our park beautiful again. Gloves and bags will be provided.",
+        category = "Volunteering",
+        categoryEmoji = "🌍",
+        timeAgo = "2d ago",
+        distance = "1.5 km away",
+        participantCount = 12,
+        maxParticipants = null, // No limit on participants
+        participantAvatars = listOf(
+            "https://example.com/p1.jpg",
+            "https://example.com/p2.jpg",
+            "https://example.com/p3.jpg",
+            "https://example.com/p4.jpg",
+            "https://example.com/p5.jpg"
+        ),
+        onCardClick = {},
+        onJoinClick = {}
+    )
+    // }
 }
 
 

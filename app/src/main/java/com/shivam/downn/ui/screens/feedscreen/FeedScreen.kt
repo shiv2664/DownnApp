@@ -19,13 +19,13 @@ import com.shivam.downn.ui.ActivityCard
 import com.shivam.downn.ui.CategoryChip
 
 @Composable
-fun FeedScreen(innerPadding: PaddingValues) {
+fun FeedScreen(innerPadding: PaddingValues,onCardClick: () -> Unit) {
 
     val viewModel = hiltViewModel<FeedViewModel>()
 //    val state by viewModel.state.collectAsState()
-
     Scaffold(
         topBar = { FeedTopBar() },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {},
@@ -41,10 +41,11 @@ fun FeedScreen(innerPadding: PaddingValues) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
         ) {
-
-            ActivityList(dummyActivities)
+            ActivityList(
+                dummyActivities, paddingValues,
+                onCardClick = {onCardClick}
+            )
         }
     }
 }
@@ -67,7 +68,7 @@ fun FeedTopBar() {
         LazyRow(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             item {
@@ -94,10 +95,12 @@ fun FeedTopBar() {
 @Composable
 fun ActivityList(
     activities: List<DummyData.ActivityItem>,
+    paddingValues: PaddingValues,
+    onCardClick:()-> Unit
 ) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
+        modifier = Modifier.fillMaxSize().padding(paddingValues),
+        contentPadding = PaddingValues(16.dp, end = 16.dp, bottom = 120.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         items(
@@ -105,10 +108,10 @@ fun ActivityList(
             key = { it.id }
         ) { activity ->
             ActivityCard(
-                activity.userName,
-                activity.userAvatar,
+                activity?.userName?:"",
+                activity?.userAvatar?:"",
                 activity.activityTitle,
-                activity.description,
+                activity?.description?:"",
                 activity.category,
                 activity.categoryEmoji,
                 activity.timeAgo,
@@ -116,7 +119,7 @@ fun ActivityList(
                 activity.participantCount,
                 activity.maxParticipants,
                 activity.participantAvatars,
-                {},
+                {onCardClick},
                 {},
             )
         }

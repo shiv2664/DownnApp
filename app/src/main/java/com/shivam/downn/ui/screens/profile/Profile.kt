@@ -5,13 +5,18 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -30,13 +35,45 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.shivam.downn.DummyData
+import com.shivam.downn.DummyData.dummyActivities
 import com.shivam.downn.R
+import com.shivam.downn.ui.ActivityCard
 
 
 @Composable()
 fun Profile(){
-ActivityCardExact("","","","","","",10,{})
+ActivityListProfile(dummyActivities)
+
 }
+
+@Composable
+fun ActivityListProfile(
+    activities: List<DummyData.ActivityItem>,
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        items(
+            items = activities,
+            key = { it.id }
+        ) { activity ->
+            ActivityCardExact(
+                activity.userAvatar?:"",
+                activity.userName,
+                activity.timeAgo,
+                activity.activityTitle,
+                "",
+                activity.distance,
+                activity.participantCount,
+                {},
+            )
+        }
+    }
+}
+
 @Composable
 fun ActivityCardExact(
     avatar: String,
@@ -140,7 +177,7 @@ fun ActivityCardExact(
             contentDescription = null,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(190.dp)
+                .wrapContentHeight()
                 .clip(RoundedCornerShape(20.dp)),
             contentScale = ContentScale.Crop
         )
