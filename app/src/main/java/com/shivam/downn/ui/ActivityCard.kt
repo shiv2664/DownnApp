@@ -1,5 +1,6 @@
 package com.shivam.downn.ui
 
+import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -77,9 +78,9 @@ fun ActivityCard(
     modifier: Modifier = Modifier
 ) {
     Card(
+        onClick = onCardClick,
         modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onCardClick),
+            .fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
@@ -261,9 +262,8 @@ fun ActivityCard(
                     )
                 }
 
-                // Join Button
                 Button(
-                    onClick = onJoinClick,
+                    onClick = { onJoinClick()},
                     modifier = Modifier.height(40.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary

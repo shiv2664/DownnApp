@@ -20,8 +20,26 @@ val itemsDataList: List<DataScreens> = listOf(
         iconResSelected = R.drawable.home_new_selected
     ),
     DataScreens(
-        "your_saves",
-        "Your Saves",
+        "explore",
+        " Explore",
+        iconRes = R.drawable.bookmarks_new,
+        iconResSelected = R.drawable.bookmarks_new_selected
+    ),
+    DataScreens(
+        "create_post",
+        " Create",
+        iconRes = R.drawable.bookmarks_new,
+        iconResSelected = R.drawable.bookmarks_new_selected
+    ),
+    DataScreens(
+        "alerts",
+        "Alerts",
+        iconRes = R.drawable.bookmarks_new,
+        iconResSelected = R.drawable.bookmarks_new_selected
+    ),
+    DataScreens(
+        "profile",
+        "Profile",
         iconRes = R.drawable.bookmarks_new,
         iconResSelected = R.drawable.bookmarks_new_selected
     )

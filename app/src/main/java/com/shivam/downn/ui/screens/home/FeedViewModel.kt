@@ -1,4 +1,4 @@
-package com.shivam.downn.ui.screens.feedscreen
+package com.shivam.downn.ui.screens.home
 
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel

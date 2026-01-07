@@ -1,5 +1,6 @@
-package com.shivam.downn.ui.screens.feedscreen
+package com.shivam.downn.ui.screens.home
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,7 +20,7 @@ import com.shivam.downn.ui.ActivityCard
 import com.shivam.downn.ui.CategoryChip
 
 @Composable
-fun FeedScreen(innerPadding: PaddingValues,onCardClick: () -> Unit) {
+fun FeedScreen(innerPadding: PaddingValues,onCardClick: () -> Unit,onJoinedClick:()-> Unit) {
 
     val viewModel = hiltViewModel<FeedViewModel>()
 //    val state by viewModel.state.collectAsState()
@@ -44,7 +45,11 @@ fun FeedScreen(innerPadding: PaddingValues,onCardClick: () -> Unit) {
         ) {
             ActivityList(
                 dummyActivities, paddingValues,
-                onCardClick = {onCardClick}
+                onCardClick = {onCardClick},
+                onJoinedClick={
+                    Log.d("MyTag","Feed Screen onJoinedClick")
+                    onJoinedClick()
+                }
             )
         }
     }
@@ -96,7 +101,8 @@ fun FeedTopBar() {
 fun ActivityList(
     activities: List<DummyData.ActivityItem>,
     paddingValues: PaddingValues,
-    onCardClick:()-> Unit
+    onCardClick:()-> Unit,
+    onJoinedClick: () -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(paddingValues),
@@ -119,8 +125,8 @@ fun ActivityList(
                 activity.participantCount,
                 activity.maxParticipants,
                 activity.participantAvatars,
-                {onCardClick},
-                {},
+                {onCardClick()},
+                {onJoinedClick()},
             )
         }
     }
