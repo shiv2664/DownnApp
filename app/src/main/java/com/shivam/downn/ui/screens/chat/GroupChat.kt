@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,6 +47,7 @@ data class QuickReply(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GroupChat(
+    innerPadding: PaddingValues,
     activityTitle: String,
     categoryIcon: @Composable () -> Unit,
     categoryColor: Color,
@@ -128,8 +130,8 @@ fun GroupChat(
             }
         },
         bottomBar = {
-            Column(modifier = Modifier.background(Color(0xFF0F172A))) {
-                Divider(color = Color(0xFF334155).copy(alpha = 0.5f), thickness = 0.5.dp)
+            Column(modifier = Modifier.padding(innerPadding).background(Color(0xFF0F172A))) {
+                HorizontalDivider(thickness = 0.5.dp, color = Color(0xFF334155).copy(alpha = 0.5f))
                 // Quick Replies
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
@@ -279,14 +281,14 @@ private fun ChatMessageItem(msg: Message) {
 @Composable
 fun GroupChatPreview() {
     GroupChat(
+        innerPadding = PaddingValues(0.dp),
         activityTitle = "Downtown Coffee Meetup",
         categoryIcon = {
             // Using an emoji as a simple icon for the preview
             Text("☕️", fontSize = 20.sp)
         },
         categoryColor = Color(0xFFFBBF24).copy(alpha = 0.2f),
-        participantCount = 12,
-        onClose = {}
-    )
+        participantCount = 12
+    ) {}
     // }
 }
