@@ -46,6 +46,7 @@ data class NotificationItem(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Notifications(
+    innerPaddingValues: PaddingValues,
     onNotificationClick: (NotificationItem) -> Unit = {},
     onMarkAllRead: () -> Unit = {}
 ) {
@@ -67,7 +68,7 @@ fun Notifications(
 
     Scaffold(
         topBar = {
-            Column(modifier = Modifier.background(Color.White)) {
+            Column(modifier = Modifier.background(Color(0xFF0F172A)).padding(innerPaddingValues)) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -75,11 +76,11 @@ fun Notifications(
                 ) {
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Icon(Icons.Default.NotificationsActive, contentDescription = null, tint = Color(0xFF9333EA), modifier = Modifier.size(28.dp))
-                            Text("Notifications", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
+                            Icon(Icons.Default.NotificationsActive, contentDescription = null, tint = Color(0xFFA855F7), modifier = Modifier.size(28.dp))
+                            Text("Notifications", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
                         }
                         if (unreadCount > 0) {
-                            Text("$unreadCount unread notifications", fontSize = 14.sp, color = Color(0xFF64748B), modifier = Modifier.padding(top = 4.dp))
+                            Text("$unreadCount unread notifications", fontSize = 14.sp, color = Color(0xFF94A3B8), modifier = Modifier.padding(top = 4.dp))
                         }
                     }
                     if (unreadCount > 0) {
@@ -103,13 +104,13 @@ fun Notifications(
                     FilterTab("Unread", filter == "unread", Modifier.weight(1f), unreadCount) { filter = "unread" }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                Divider(color = Color(0xFFE2E8F0), thickness = 1.dp)
+                Divider(color = Color(0xFF334155), thickness = 1.dp)
             }
         },
-        containerColor = Color(0xFFF8FAFC)
-    ) { padding ->
+        containerColor = Color(0xFF0F172A)
+    ) { it ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding),
+            modifier = Modifier.fillMaxSize().padding(innerPaddingValues),
             contentPadding = PaddingValues(bottom = 24.dp)
         ) {
             item {
@@ -179,9 +180,9 @@ private fun NotificationRow(notification: NotificationItem, onClick: (Notificati
         onClick = { onClick(notification) },
         modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
         shape = RoundedCornerShape(20.dp),
-        color = Color.White,
-        border = if (notification.isUnread) BorderStroke(2.dp, Color(0xFFF3E8FF)) else BorderStroke(1.dp, Color(0xFFF1F5F9)),
-        shadowElevation = 2.dp
+        color = Color(0xFF1E293B),
+        border = if (notification.isUnread) BorderStroke(2.dp, Color(0xFF3B82F6).copy(alpha = 0.3f)) else BorderStroke(1.dp, Color(0xFF334155)),
+        shadowElevation = 0.dp
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -214,12 +215,12 @@ private fun NotificationRow(notification: NotificationItem, onClick: (Notificati
 
             Column(modifier = Modifier.weight(1f)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
-                    Text(notification.title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B), modifier = Modifier.weight(1f))
+                    Text(notification.title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.weight(1f))
                     if (notification.isUnread) {
-                        Box(modifier = Modifier.size(8.dp).background(Color(0xFF9333EA), CircleShape).offset(y = 6.dp))
+                        Box(modifier = Modifier.size(8.dp).background(Color(0xFF3B82F6), CircleShape).offset(y = 6.dp))
                     }
                 }
-                Text(notification.description, fontSize = 14.sp, color = Color(0xFF64748B), modifier = Modifier.padding(top = 2.dp))
+                Text(notification.description, fontSize = 14.sp, color = Color(0xFFCBD5E1), modifier = Modifier.padding(top = 2.dp))
                 Text(notification.time, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color(0xFF94A3B8), modifier = Modifier.padding(top = 8.dp))
 
                 if (notification.actionable) {
@@ -283,7 +284,7 @@ private fun StatMetric(value: String, label: String) {
 @Preview
 @Composable
 fun NotificationsPreview(){
-    Notifications({},{})
+    Notifications(PaddingValues(0.dp),{},{})
 }
 
 

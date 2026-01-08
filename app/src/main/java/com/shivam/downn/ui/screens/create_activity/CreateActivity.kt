@@ -36,6 +36,7 @@ data class Category(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateActivity(
+    innerPadding: PaddingValues,
     onClose: () -> Unit,
     onPost: (String, String, String, String) -> Unit = { _, _, _, _ -> }
 ) {
@@ -104,10 +105,10 @@ fun CreateActivity(
             )
         },
         containerColor = Color(0xFF0F172A)
-    ) { padding ->
+    ) { it->
         Box(modifier = Modifier
             .fillMaxSize()
-            .padding(padding)) {
+            .padding(innerPadding)) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -369,8 +370,8 @@ private fun CategoryItem(category: Category, isSelected: Boolean, onClick: () ->
 fun CreateActivityPreview() {
     MaterialTheme {
         CreateActivity(
-            onClose = {},
-            onPost = { _, _, _, _ -> }
+            innerPadding = PaddingValues(0.dp),
+            onClose = {}
         )
     }
 }

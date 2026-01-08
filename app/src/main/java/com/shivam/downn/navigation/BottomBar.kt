@@ -1,6 +1,11 @@
 package com.shivam.downn.navigation
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -40,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -47,11 +53,34 @@ import androidx.navigation.compose.rememberNavController
 
 
 @Composable
-fun BottomBar(
+fun BottomBar(navController: NavHostController) {
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+
+    val bottomRoutes = remember {
+        itemsDataList.map { it.route }.toSet()
+    }
+
+    val shouldShowBottomBar =
+        currentDestination?.hierarchy?.any { it.route in bottomRoutes } == true
+
+    AnimatedVisibility(
+        visible = shouldShowBottomBar,
+        enter = slideInVertically { it } + fadeIn(),
+        exit = slideOutVertically { it } + fadeOut()
+    ) {
+        BottomBarContent(navController)
+    }
+}
+
+@Composable
+fun BottomBarContent(
     navController: NavHostController
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    val currentDestination = navBackStackEntry?.destination
+
 
     Box(
         modifier = Modifier
@@ -77,26 +106,38 @@ fun BottomBar(
 
             BottomNavItem(
                 label = "Home",
-                icon = if (currentRoute == itemsDataList[0].route) Icons.Filled.Home else Icons.Outlined.Home,
-                isActive = currentRoute == itemsDataList[0].route
+                icon = if (currentDestination?.hierarchy?.any { it.route == itemsDataList[0].route } == true) Icons.Filled.Home else Icons.Outlined.Home,
+                isActive = currentDestination?.hierarchy?.any { it.route == itemsDataList[0].route } == true
             ) {
+
                 navController.navigate(itemsDataList[0].route) {
-//                    popUpTo(navController.graph.findStartDestination().id) {
-//                        saveState = true
-//                    }
+                    popUpTo(navController.graph.findStartDestination().id) {
+                        saveState = true
+                    }
                     launchSingleTop = true
-//                    restoreState = true
+                    restoreState = true
                 }
+
+               /* navController.navigate(itemsDataList[0].route) {
+                    launchSingleTop = true
+                }*/
             }
 
             BottomNavItem(
                 label = "Explore",
-                icon = if (currentRoute == itemsDataList[1].route) Icons.Filled.Search else Icons.Outlined.Search,
-                isActive = currentRoute == itemsDataList[1].route
+                icon = if (currentDestination?.hierarchy?.any { it.route == itemsDataList[1].route } == true) Icons.Filled.Search else Icons.Outlined.Search,
+                isActive = currentDestination?.hierarchy?.any { it.route == itemsDataList[1].route } == true
             ) {
                 navController.navigate(itemsDataList[1].route) {
+                    popUpTo(navController.graph.findStartDestination().id) {
+                        saveState = true
+                    }
                     launchSingleTop = true
+                    restoreState = true
                 }
+                /*navController.navigate(itemsDataList[1].route) {
+                    launchSingleTop = true
+                }*/
             }
 
 
@@ -112,8 +153,15 @@ fun BottomBar(
                     )
                     .clickable {
                         navController.navigate(itemsDataList[2].route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
                             launchSingleTop = true
+                            restoreState = true
                         }
+                        /*navController.navigate(itemsDataList[2].route) {
+                            launchSingleTop = true
+                        }*/
                     },
                 contentAlignment = Alignment.Center
             ) {
@@ -128,22 +176,29 @@ fun BottomBar(
 
             BottomNavItem(
                 label = "Alerts",
-                icon = if (currentRoute == itemsDataList[3].route)
-                    Icons.Filled.Notifications else Icons.Outlined.Notifications,
-                isActive = currentRoute == itemsDataList[3].route,
+                icon = if (currentDestination?.hierarchy?.any { it.route == itemsDataList[3].route } == true) Icons.Filled.Notifications else Icons.Outlined.Notifications,
+                isActive = currentDestination?.hierarchy?.any { it.route == itemsDataList[3].route } == true,
             ) {
                 navController.navigate(itemsDataList[3].route) {
+                    popUpTo(navController.graph.findStartDestination().id) {
+                        saveState = true
+                    }
                     launchSingleTop = true
+                    restoreState = true
                 }
             }
 
             BottomNavItem(
                 label = "Profile",
-                icon = if (currentRoute == itemsDataList[4].route) Icons.Filled.Person else Icons.Outlined.Person,
-                isActive = currentRoute == itemsDataList[4].route
+                icon = if (currentDestination?.hierarchy?.any { it.route == itemsDataList[4].route } == true) Icons.Filled.Person else Icons.Outlined.Person,
+                isActive = currentDestination?.hierarchy?.any { it.route == itemsDataList[4].route } == true
             ) {
                 navController.navigate(itemsDataList[4].route) {
+                    popUpTo(navController.graph.findStartDestination().id) {
+                        saveState = true
+                    }
                     launchSingleTop = true
+                    restoreState = true
                 }
             }
         }
@@ -164,7 +219,9 @@ fun BottomNavItem(
     Column(
         modifier = Modifier
             .scale(scale)
-            .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {
+            .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }) {
                 onClick()
             },
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -209,7 +266,6 @@ fun BottomNavItem(
         )
     }
 }
-
 
 
 @Preview

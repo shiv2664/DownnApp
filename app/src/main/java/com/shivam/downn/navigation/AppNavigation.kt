@@ -1,31 +1,25 @@
 package com.shivam.downn.navigation
 
-import android.util.Log
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Coffee
 import androidx.compose.material.icons.outlined.Coffee
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.shivam.downn.react.ActivityDetail
+import com.shivam.downn.ui.screens.chat.GroupChat
 import com.shivam.downn.ui.screens.create_activity.CreateActivity
 import com.shivam.downn.ui.screens.explore.Explore
 import com.shivam.downn.ui.screens.home.FeedScreen
+import com.shivam.downn.ui.screens.auth.LoginScreen
 import com.shivam.downn.ui.screens.notification.Notifications
 import com.shivam.downn.ui.screens.profile.UserProfile
 
@@ -35,11 +29,18 @@ fun AppNavigation() {
     Scaffold(bottomBar = { BottomBar(navController) }) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = itemsDataList[0].route,
+            startDestination = "login",
         ) {
+            composable("login") {
+                LoginScreen(onLoginSuccess = {
+                    navController.navigate(itemsDataList[0].route) {
+                        popUpTo("login") { inclusive = true }
+                    }
+                })
+            }
 
             composable(
-                route = itemsDataList[0].route, enterTransition = {
+                route = itemsDataList[0].route, /*enterTransition = {
                     scaleIn(
                         initialScale = 0.0f,
                         transformOrigin = TransformOrigin(0.2f, 1.0f), // Left position (first item)
@@ -94,16 +95,16 @@ fun AppNavigation() {
                     ) + fadeOut(
                         animationSpec = tween(durationMillis = 300)
                     )
-                }
+                }*/
             ) {
-                FeedScreen(PaddingValues(0.dp),{},{
+                FeedScreen(innerPadding, {}, {
                     navController.navigate("activity_detail")
                 })
             }
 
             composable(
                 route = itemsDataList[1].route,
-                enterTransition = {
+               /* enterTransition = {
                     scaleIn(
                         initialScale = 0.0f,
                         transformOrigin = TransformOrigin(
@@ -161,12 +162,14 @@ fun AppNavigation() {
                     ) + fadeOut(
                         animationSpec = tween(durationMillis = 300)
                     )
-                }) {
-                Explore() {}
+                }*/
+            ) {
+                Explore(innerPadding) {}
             }
 
             composable(
-                route = itemsDataList[2].route, enterTransition = {
+                route = itemsDataList[2].route,
+               /* enterTransition = {
                     scaleIn(
                         initialScale = 0.0f,
                         transformOrigin = TransformOrigin(0.6f, 1.0f), // Left position (first item)
@@ -221,13 +224,14 @@ fun AppNavigation() {
                     ) + fadeOut(
                         animationSpec = tween(durationMillis = 300)
                     )
-                }
+                }*/
             ) {
-                CreateActivity({}, { _, _, _, _ -> })
+                CreateActivity(innerPadding,{}, { _, _, _, _ -> })
             }
 
             composable(
-                route = itemsDataList[3].route, enterTransition = {
+                route = itemsDataList[3].route,
+                /*enterTransition = {
                     scaleIn(
                         initialScale = 0.0f,
                         transformOrigin = TransformOrigin(0.8f, 1.0f), // Left position (first item)
@@ -282,14 +286,14 @@ fun AppNavigation() {
                     ) + fadeOut(
                         animationSpec = tween(durationMillis = 300)
                     )
-                }
+                }*/
             ) {
-                Notifications()
+                Notifications(innerPadding)
             }
 
             composable(
                 route = itemsDataList[4].route,
-                enterTransition = {
+                /*enterTransition = {
                     scaleIn(
                         initialScale = 0.0f,
                         transformOrigin = TransformOrigin(
@@ -347,13 +351,16 @@ fun AppNavigation() {
                     ) + fadeOut(
                         animationSpec = tween(durationMillis = 300)
                     )
-                }) {
-                UserProfile({}, {}, {})
+                }*/
+            ) {
+                UserProfile(innerPadding,{}, {}, {})
             }
 
 
-            composable(route="activity_detail") {
-                ActivityDetail(title = "Coffee at Blue Tokai ☕",
+            composable(route = "activity_detail") {
+                ActivityDetail(
+                    innerPadding,
+                    title = "Coffee at Blue Tokai ☕",
                     userName = "Rahul",
                     userAvatar = "",
                     distance = "0.8 km away",
@@ -373,7 +380,22 @@ fun AppNavigation() {
                     ),
                     description = "Anyone up for a quick coffee and chat this evening?",
                     onClose = {},
-                    onOpenChat = {})
+                    onOpenChat = {
+                        navController.navigate("group_chat")
+                    }
+                )
+            }
+
+            composable("group_chat") {
+                GroupChat(innerPadding,
+                    activityTitle = "Downtown Coffee Meetup",
+                    categoryIcon = {
+                        // Using an emoji as a simple icon for the preview
+                        Text("☕️", fontSize = 20.sp)
+                    },
+                    categoryColor = Color(0xFFFBBF24).copy(alpha = 0.2f),
+                    participantCount = 12,
+                    onClose = {})
             }
         }
     }

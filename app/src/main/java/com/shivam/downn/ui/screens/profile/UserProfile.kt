@@ -45,6 +45,7 @@ enum class ProfileTab { Recent, Stats }
 
 @Composable
 fun UserProfile(
+    innerPadding: PaddingValues,
     onClose: () -> Unit,
     onFollowClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {}
@@ -68,36 +69,22 @@ fun UserProfile(
             ProfileTopBar(onClose, onSettingsClick, onFollowClick)
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { /* Edit */ },
-                shape = CircleShape,
-                containerColor = Color.Transparent,
-                modifier = Modifier
-                    .size(64.dp)
-                    .background(
-                        Brush.horizontalGradient(listOf(Color(0xFF9333EA), Color(0xFFDB2777))),
-                        CircleShape
-                    )
-            ) {
-                Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color.White)
-            }
+            FabButton(innerPadding,)
         },
         containerColor = Color.Transparent
     ) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(Color(0xFFF5F3FF), Color(0xFFFDF2F8), Color(0xFFFFF7ED))
-                    )
-                )
-                .padding(padding)
-        ) {
+                .background(Color(0xFF0F172A))
+                .padding(0.dp,padding.calculateTopPadding(),0.dp,innerPadding.calculateBottomPadding()+padding.calculateBottomPadding())
+        )
+        {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 100.dp)
-            ) {
+            )
+            {
                 // Hero Card
                 item {
                     HeroCard()
@@ -145,9 +132,9 @@ private fun ProfileTopBar(onClose: () -> Unit, onSettingsClick: () -> Unit, onFo
                     .padding(8.dp)
                     .size(40.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .background(Color.White.copy(alpha = 0.8f))
+                    .background(Color.White.copy(alpha = 0.1f))
             ) {
-                Icon(Icons.Default.ChevronLeft, contentDescription = "Back")
+                Icon(Icons.Default.ChevronLeft, contentDescription = "Back", tint = Color.White)
             }
         },
         actions = {
@@ -171,12 +158,12 @@ private fun ProfileTopBar(onClose: () -> Unit, onSettingsClick: () -> Unit, onFo
                     .padding(8.dp)
                     .size(40.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .background(Color.White.copy(alpha = 0.8f))
+                    .background(Color.White.copy(alpha = 0.1f))
             ) {
-                Icon(Icons.Default.Settings, contentDescription = "Settings", tint = Color.Gray)
+                Icon(Icons.Default.Settings, contentDescription = "Settings", tint = Color.White)
             }
         },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White.copy(alpha = 0.7f))
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0F172A).copy(alpha = 0.7f))
     )
 }
 
@@ -187,8 +174,9 @@ private fun HeroCard() {
             .padding(20.dp)
             .fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+        border = BorderStroke(1.dp, Color(0xFF334155))
     ) {
         Column {
             Box(modifier = Modifier.height(160.dp)) {
@@ -208,14 +196,14 @@ private fun HeroCard() {
                 Surface(
                     modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
                     shape = RoundedCornerShape(16.dp),
-                    color = Color.White.copy(alpha = 0.9f)
+                    color = Color(0xFF0F172A).copy(alpha = 0.8f)
                 ) {
                     Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFEAB308), modifier = Modifier.size(16.dp))
-                            Text("4.9", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text("4.9", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.White)
                         }
-                        Text("Host Score", fontSize = 10.sp, color = Color.Gray)
+                        Text("Host Score", fontSize = 10.sp, color = Color(0xFF94A3B8))
                     }
                 }
             }
@@ -254,15 +242,15 @@ private fun HeroCard() {
                 }
 
                 Column(modifier = Modifier.padding(top = 80.dp, bottom = 24.dp)) {
-                    Text("Sarah Kim", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    Text("Sarah Kim", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 4.dp)) {
-                        Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color(0xFF9333EA), modifier = Modifier.size(16.dp))
-                        Text("San Francisco, CA", fontSize = 14.sp, color = Color.Gray)
+                        Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color(0xFFA855F7), modifier = Modifier.size(16.dp))
+                        Text("San Francisco, CA", fontSize = 14.sp, color = Color(0xFF94A3B8))
                     }
                     Text(
                         "Adventure seeker making friends one activity at a time ✨ Marathon runner & coffee enthusiast",
                         fontSize = 14.sp,
-                        color = Color(0xFF374151),
+                        color = Color(0xFFCBD5E1),
                         lineHeight = 20.sp,
                         modifier = Modifier.padding(top = 8.dp)
                     )
@@ -282,11 +270,11 @@ private fun HeroCard() {
 @Composable
 private fun StatItem(value: String, label: String, brush: Brush, modifier: Modifier = Modifier) {
     Column(
-        modifier = modifier.background(brush, RoundedCornerShape(16.dp)).padding(12.dp),
+        modifier = modifier.background(brush).padding(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(value, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-        Text(label, fontSize = 10.sp, color = Color.Gray, fontWeight = FontWeight.Medium)
+        Text(value, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
+        Text(label, fontSize = 10.sp, color = Color.White.copy(alpha = 0.7f), fontWeight = FontWeight.Medium)
     }
 }
 
@@ -294,8 +282,8 @@ private fun StatItem(value: String, label: String, brush: Brush, modifier: Modif
 private fun InterestsSection(tags: List<InterestTag>) {
     Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
         Row(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("Interests & Vibes", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            Text("Edit", color = Color(0xFF9333EA), fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.clickable { })
+            Text("Interests & Vibes", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.White)
+            Text("Edit", color = Color(0xFFA855F7), fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.clickable { })
         }
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
@@ -318,11 +306,14 @@ private fun InterestsSection(tags: List<InterestTag>) {
 @Composable
 private fun AchievementsSection() {
     Column(modifier = Modifier.padding(vertical = 12.dp)) {
-        Text("Achievements", fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 16.dp))
+        Text("Achievements", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.White, modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 16.dp))
         LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-             item { AchievementItem("Top Host", "Level 10", Icons.Default.Star, listOf(Color(0xFFFACC15), Color(0xFFF97316))) }
+/*             item { AchievementItem("Top Host", "Level 10", Icons.Default.Star, listOf(Color(0xFFFACC15), Color(0xFFF97316))) }
              item { AchievementItem("Connector", "Level 8", Icons.Default.Groups, listOf(Color(0xFFC084FC), Color(0xFFEC4899))) }
-             item { AchievementItem("Explorer", "100+ spots", Icons.Default.LocationOn, listOf(Color(0xFF60A5FA), Color(0xFF06B6D4))) }
+             item { AchievementItem("Explorer", "100+ spots", Icons.Default.LocationOn, listOf(Color(0xFF60A5FA), Color(0xFF06B6D4))) }*/
+            item { AchievementItem("Top Host", "Level 10", Icons.Default.Star, listOf(Color(0xFFFACC15), Color(0xFFF97316))) }
+            item { AchievementItem("Connector", "Level 8", Icons.Default.Groups, listOf(Color(0xFFC084FC), Color(0xFFEC4899))) }
+            item { AchievementItem("Explorer", "100+ spots", Icons.Default.LocationOn, listOf(Color(0xFF60A5FA), Color(0xFF06B6D4))) }
         }
     }
 }
@@ -333,8 +324,8 @@ private fun AchievementItem(title: String, subtitle: String, icon: ImageVector, 
         Box(
             modifier = Modifier
                 .size(80.dp)
-                .background(Brush.linearGradient(colors), RoundedCornerShape(24.dp))
-                .shadow(8.dp, RoundedCornerShape(24.dp)),
+                .background(Brush.linearGradient(colors), RoundedCornerShape(24.dp)),
+//                .shadow(8.dp, RoundedCornerShape(24.dp)),
             contentAlignment = Alignment.Center
         ) {
             Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(40.dp))
@@ -350,7 +341,7 @@ private fun ProfileTabs(activeTab: ProfileTab, onTabClick: (ProfileTab) -> Unit)
         modifier = Modifier
             .padding(20.dp)
             .fillMaxWidth()
-            .background(Color.White, RoundedCornerShape(100.dp))
+            .background(Color(0xFF1E293B), RoundedCornerShape(100.dp))
             .padding(6.dp)
     ) {
         TabItem("Recent Activities", activeTab == ProfileTab.Recent, Modifier.weight(1f)) { onTabClick(ProfileTab.Recent) }
@@ -373,7 +364,7 @@ private fun TabItem(label: String, isActive: Boolean, modifier: Modifier = Modif
     ) {
         Text(
             text = label,
-            color = if (isActive) Color.White else Color.Gray,
+            color = if (isActive) Color.White else Color(0xFF94A3B8),
             fontWeight = FontWeight.SemiBold,
             fontSize = 14.sp
         )
@@ -385,8 +376,9 @@ private fun ActivityListItem(activity: PastActivity) {
     Card(
         modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp).fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = BorderStroke(1.dp, Color(0xFF334155))
     ) {
         Row(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             AsyncImage(
@@ -428,11 +420,12 @@ private fun StatsSection() {
         // Activity Breakdown
         Card(
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            modifier = Modifier.fillMaxWidth()
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+            modifier = Modifier.fillMaxWidth(),
+            border = BorderStroke(1.dp, Color(0xFF334155))
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
-                Text("Activity Breakdown", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text("Activity Breakdown", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.White)
                 Spacer(modifier = Modifier.height(16.dp))
                 StatsLinearProgress("Coffee Meetups", "45", 0.75f, Color(0xFFFBBF24))
                 StatsLinearProgress("Outdoor Adventures", "32", 0.55f, Color(0xFF4ADE80))
@@ -453,7 +446,7 @@ private fun StatsLinearProgress(label: String, value: String, progress: Float, c
             progress = { progress },
             modifier = Modifier.fillMaxWidth().height(8.dp).padding(top = 4.dp).clip(CircleShape),
             color = color,
-            trackColor = Color(0xFFF3F4F6)
+            trackColor = Color(0xFF334155)
         )
     }
 }
@@ -476,16 +469,43 @@ private fun FlowRow(
 }
 
 
-@Preview(showBackground = true, showSystemUi = true)
+@Composable
+@Preview
+fun FabButton(innerPadding: PaddingValues=PaddingValues(0.dp)){
+    Box(
+        modifier = Modifier
+            .padding(
+                bottom = innerPadding.calculateBottomPadding(),
+                end = 16.dp
+            )
+            .size(64.dp)
+            .clip(CircleShape)
+            .background(
+                Brush.horizontalGradient(
+                    listOf(Color(0xFF9333EA), Color(0xFFDB2777))
+                )
+            )
+            .clickable { },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            Icons.Default.Edit,
+            contentDescription = "Edit",
+            tint = Color.White
+        )
+    }
+
+}
+
+
 @Composable
 fun UserProfilePreview() {
     // It's a good practice to wrap your preview in your app's theme
     // to ensure colors, fonts, and other theme attributes are applied correctly.
     // YourAppTheme {
     UserProfile(
-        onClose = {},
-        onFollowClick = {},
-        onSettingsClick = {}
+        innerPadding = PaddingValues(0.dp),
+        onClose = {}
     )
     // }
 }

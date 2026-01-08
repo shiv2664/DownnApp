@@ -27,10 +27,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -53,6 +51,7 @@ data class MapActivity(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Explore(
+    innerPadding: PaddingValues,
     onActivityClick: (MapActivity) -> Unit = {}
 ) {
     var selectedFilter by remember { mutableStateOf("all") }
@@ -70,7 +69,7 @@ fun Explore(
         MapActivity(3, "Bridge Walk", "Mike R.", "https://images.unsplash.com/photo-1567516364473-233c4b6fcfbe", "1.2 mi", 6, Icons.Default.Flight, Color(0xFF3B82F6), Brush.linearGradient(listOf(Color(0xFF60A5FA), Color(0xFF06B6D4))), "2h ago", 0.8f, 0.7f),
     )
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
         // Map Background
         AsyncImage(
             model = "https://images.unsplash.com/photo-1590393820812-8a2ed3ece96f",
@@ -130,8 +129,8 @@ fun Explore(
                     }
                 ),
             shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
-            color = Color.White,
-            shadowElevation = 16.dp
+            color = Color(0xFF1E293B),
+            shadowElevation = 0.dp
         ) {
             Column {
                 // Drag Handle
@@ -139,7 +138,7 @@ fun Explore(
                     modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Box(modifier = Modifier.size(width = 40.dp, height = 4.dp).background(Color(0xFFE2E8F0), CircleShape))
+                Box(modifier = Modifier.size(width = 40.dp, height = 4.dp).background(Color(0xFF334155), CircleShape))
                 }
 
                 // Header
@@ -149,8 +148,8 @@ fun Explore(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        Text("${activities.size} Activities Nearby", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                        Text("Tap a pin to see details", fontSize = 14.sp, color = Color.Gray)
+                        Text("${activities.size} Activities Nearby", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text("Tap a pin to see details", fontSize = 14.sp, color = Color(0xFF94A3B8))
                     }
                     if (sheetOffset > 200.dp) {
                         IconButton(onClick = { sheetOffset = 120.dp; selectedPinId = null }) {
@@ -186,13 +185,13 @@ private fun FilterChip(label: String, icon: ImageVector, isActive: Boolean, onCl
     ) {
         Row(
             modifier = Modifier
-                .background(if (isActive) Brush.horizontalGradient(listOf(Color(0xFF9333EA), Color(0xFFDB2777))) else Brush.linearGradient(listOf(Color.White, Color.White)))
+                .background(if (isActive) Brush.horizontalGradient(listOf(Color(0xFF9333EA), Color(0xFFDB2777))) else Brush.linearGradient(listOf(Color(0xFF334155), Color(0xFF334155))))
                 .padding(horizontal = 16.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp), tint = if (isActive) Color.White else Color(0xFF475569))
-            Text(label, color = if (isActive) Color.White else Color(0xFF475569), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp), tint = if (isActive) Color.White else Color(0xFF94A3B8))
+            Text(label, color = if (isActive) Color.White else Color(0xFF94A3B8), fontSize = 14.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -240,9 +239,9 @@ private fun ActivityListItem(activity: MapActivity, isSelected: Boolean, onClick
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        color = Color.White,
-        border = BorderStroke(2.dp, if (isSelected) Color(0xFF9333EA) else Color(0xFFF1F5F9)),
-        shadowElevation = 2.dp
+        color = Color(0xFF0F172A),
+        border = BorderStroke(2.dp, if (isSelected) Color(0xFFA855F7) else Color(0xFF334155)),
+        shadowElevation = 0.dp
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -255,8 +254,8 @@ private fun ActivityListItem(activity: MapActivity, isSelected: Boolean, onClick
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.SpaceBetween) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(activity.title, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A), maxLines = 1)
-                            Text("${activity.userName} · ${activity.timePosted}", fontSize = 13.sp, color = Color.Gray)
+                            Text(activity.title, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1)
+                            Text("${activity.userName} · ${activity.timePosted}", fontSize = 13.sp, color = Color(0xFF94A3B8))
                         }
                         Box(
                             modifier = Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(activity.categoryColor),
@@ -267,12 +266,12 @@ private fun ActivityListItem(activity: MapActivity, isSelected: Boolean, onClick
                     }
                     Row(modifier = Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Icon(Icons.Default.Place, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(14.dp))
-                            Text(activity.distance, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color.Gray)
+                            Icon(Icons.Default.Place, contentDescription = null, tint = Color(0xFF94A3B8), modifier = Modifier.size(14.dp))
+                            Text(activity.distance, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color(0xFF94A3B8))
                         }
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Icon(Icons.Default.Groups, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(14.dp))
-                            Text("${activity.participantCount} joined", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color.Gray)
+                            Icon(Icons.Default.Groups, contentDescription = null, tint = Color(0xFF94A3B8), modifier = Modifier.size(14.dp))
+                            Text("${activity.participantCount} joined", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color(0xFF94A3B8))
                         }
                     }
                 }
@@ -295,5 +294,5 @@ private fun ActivityListItem(activity: MapActivity, isSelected: Boolean, onClick
 @Preview
 @Composable
 fun ExplorePreview(){
-    Explore()
+    Explore(PaddingValues(0.dp))
 }
