@@ -1,5 +1,6 @@
 package com.shivam.downn.ui.screens.create_activity
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,10 +22,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 
 data class Category(
     val id: String,
@@ -38,14 +41,24 @@ data class Category(
 fun CreateActivity(
     innerPadding: PaddingValues,
     onClose: () -> Unit,
-    onPost: (String, String, String, String) -> Unit = { _, _, _, _ -> }
+    viewModel: CreateActivityViewModel = hiltViewModel()
 ) {
     var title by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
     var selectedCategoryId by remember { mutableStateOf("") }
     var time by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
+    
+    val state by viewModel.state.collectAsState()
+    val context = LocalContext.current
 
     val categories = listOf(
+        Category(
+            "SPORTS",
+            "Sports",
+            Icons.Default.SportsBasketball,
+            listOf(Color(0xFF3B82F6), Color(0xFF06B6D4))
+        ),
         Category(
             "travel",
             "Travel",
@@ -74,6 +87,14 @@ fun CreateActivity(
 
     val isFormValid =
         title.isNotEmpty() && selectedCategoryId.isNotEmpty() && time.isNotEmpty() && location.isNotEmpty()
+
+    LaunchedEffect(state) {
+        if (state is CreateActivityState.Success) {
+            Toast.makeText(context, "Activity Created!", Toast.LENGTH_SHORT).show()
+            onClose()
+            viewModel.resetState()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -105,10 +126,10 @@ fun CreateActivity(
             )
         },
         containerColor = Color(0xFF0F172A)
-    ) { it->
+    ) { paddingValues ->
         Box(modifier = Modifier
             .fillMaxSize()
-            .padding(innerPadding)) {
+            .padding(paddingValues)) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -118,7 +139,6 @@ fun CreateActivity(
             ) {
                 // Title Input
                 InputLabel("What's happening?")
-
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
@@ -130,7 +150,7 @@ fun CreateActivity(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(140.dp),
+                        .height(100.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = Color(0xFF1E293B).copy(alpha = 0.5f),
@@ -143,6 +163,31 @@ fun CreateActivity(
                     )
                 )
 
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                InputLabel("Description")
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    placeholder = {
+                        Text(
+                            "Add some details about the activity...",
+                            color = Color(0xFF64748B)
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFF1E293B).copy(alpha = 0.5f),
+                        unfocusedContainerColor = Color(0xFF1E293B).copy(alpha = 0.5f),
+                        focusedBorderColor = Color(0xFFA855F7),
+                        unfocusedBorderColor = Color(0xFF334155),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White
+                    )
+                )
 
                 Spacer(modifier = Modifier.height(32.dp))
 
@@ -150,7 +195,7 @@ fun CreateActivity(
                 InputLabel("Category")
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
-                    modifier = Modifier.height(280.dp),
+                    modifier = Modifier.height(300.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     userScrollEnabled = false
@@ -172,7 +217,7 @@ fun CreateActivity(
                 OutlinedTextField(
                     value = time,
                     onValueChange = { time = it },
-                    placeholder = { Text("Add date and time", color = Color(0xFF64748B)) },
+                    placeholder = { Text("2026-02-01T09:00:00", color = Color(0xFF64748B)) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
                     leadingIcon = {
@@ -199,7 +244,7 @@ fun CreateActivity(
                 OutlinedTextField(
                     value = location,
                     onValueChange = { location = it },
-                    placeholder = { Text("Add location", color = Color(0xFF64748B)) },
+                    placeholder = { Text("Bear Creek Trail (Denver)", color = Color(0xFF64748B)) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
                     leadingIcon = {
@@ -219,32 +264,13 @@ fun CreateActivity(
                     )
                 )
 
-                Spacer(modifier = Modifier.height(32.dp))
-
-                // Add Photos Button
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(64.dp)
-                        .border(2.dp, Color(0xFF334155), RoundedCornerShape(16.dp))
-                        .clickable { /* Add photos */ },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Image,
-                            contentDescription = null,
-                            tint = Color(0xFF94A3B8)
-                        )
-                        Text(
-                            "Add Photos",
-                            color = Color(0xFF94A3B8),
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
+                if (state is CreateActivityState.Error) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = (state as CreateActivityState.Error).message,
+                        color = Color.Red,
+                        fontSize = 14.sp
+                    )
                 }
             }
 
@@ -266,8 +292,18 @@ fun CreateActivity(
                     .padding(bottom = 8.dp)
             ) {
                 Button(
-                    onClick = { onPost(title, selectedCategoryId, time, location) },
-                    enabled = isFormValid,
+                    onClick = { 
+                        viewModel.createActivity(
+                            title = title,
+                            description = description,
+                            category = selectedCategoryId,
+                            city = "Denver", // Hardcoded for now as per curl example
+                            locationName = location,
+                            scheduledTime = time,
+                            maxParticipants = 10 // Default
+                        )
+                    },
+                    enabled = isFormValid && state !is CreateActivityState.Loading,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(60.dp),
@@ -294,12 +330,16 @@ fun CreateActivity(
                             ),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            "POST ACTIVITY",
-                            color = if (isFormValid) Color.White else Color(0xFF475569),
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        if (state is CreateActivityState.Loading) {
+                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                        } else {
+                            Text(
+                                "POST ACTIVITY",
+                                color = if (isFormValid) Color.White else Color(0xFF475569),
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }
@@ -323,7 +363,7 @@ private fun CategoryItem(category: Category, isSelected: Boolean, onClick: () ->
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(130.dp)
+            .height(100.dp)
             .clip(RoundedCornerShape(16.dp))
             .then(
                 if (isSelected) Modifier.background(Brush.linearGradient(category.gradient))
@@ -332,34 +372,24 @@ private fun CategoryItem(category: Category, isSelected: Boolean, onClick: () ->
                     .border(2.dp, Color(0xFF334155), RoundedCornerShape(16.dp))
             )
             .clickable { onClick() }
-            .padding(16.dp),
+            .padding(12.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(
-                        if (isSelected) Color.White.copy(alpha = 0.2f) else Color(0xFF334155).copy(
-                            alpha = 0.5f
-                        )
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    category.icon,
-                    contentDescription = null,
-                    tint = if (isSelected) Color.White else Color(0xFFCBD5E1)
-                )
-            }
+            Icon(
+                category.icon,
+                contentDescription = null,
+                tint = if (isSelected) Color.White else Color(0xFFCBD5E1),
+                modifier = Modifier.size(24.dp)
+            )
             Text(
                 category.name,
                 color = if (isSelected) Color.White else Color(0xFFCBD5E1),
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Medium,
+                fontSize = 12.sp
             )
         }
     }

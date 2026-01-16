@@ -226,7 +226,7 @@ fun AppNavigation() {
                     )
                 }*/
             ) {
-                CreateActivity(innerPadding,{}, { _, _, _, _ -> })
+                CreateActivity(innerPadding,{})
             }
 
             composable(

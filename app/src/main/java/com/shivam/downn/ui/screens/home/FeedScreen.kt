@@ -10,22 +10,27 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.shivam.downn.ActivityCategory
-import com.shivam.downn.DummyData
-import com.shivam.downn.DummyData.dummyActivities
+import com.shivam.downn.data.models.ActivityResponse
 import com.shivam.downn.ui.ActivityCard
 import com.shivam.downn.ui.CategoryChip
 
 @Composable
-fun FeedScreen(innerPadding: PaddingValues,onCardClick: () -> Unit,onJoinedClick:()-> Unit) {
-
+fun FeedScreen(innerPadding: PaddingValues, onCardClick: () -> Unit, onJoinedClick: () -> Unit) {
     val viewModel = hiltViewModel<FeedViewModel>()
-//    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsState()
+
     Scaffold(
-        topBar = { FeedTopBar() },
+        topBar = { 
+            FeedTopBar(onCategorySelected = { category ->
+                viewModel.fetchActivities(category)
+            }) 
+        },
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
             FloatingActionButton(
@@ -43,21 +48,42 @@ fun FeedScreen(innerPadding: PaddingValues,onCardClick: () -> Unit,onJoinedClick
             modifier = Modifier
                 .fillMaxSize()
         ) {
-            ActivityList(
-                dummyActivities, paddingValues,
-                onCardClick = {onCardClick},
-                onJoinedClick={
-                    Log.d("MyTag","Feed Screen onJoinedClick")
-                    onJoinedClick()
+            when (val currentState = state) {
+                is FeedState.Loading -> {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
-            )
+                is FeedState.Error -> {
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(text = "Error: ${currentState.message}", color = Color.Red)
+                        Button(onClick = { viewModel.fetchActivities() }) {
+                            Text("Retry")
+                        }
+                    }
+                }
+                is FeedState.Success -> {
+                    ActivityList(
+                        activities = currentState.activities,
+                        paddingValues = paddingValues,
+                        onCardClick = onCardClick,
+                        onJoinClick = { activityId ->
+                            viewModel.joinActivity(activityId)
+                            onJoinedClick()
+                        }
+                    )
+                }
+            }
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FeedTopBar() {
+fun FeedTopBar(onCategorySelected: (String) -> Unit) {
+    var selectedCategory by remember { mutableStateOf("All") }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -80,8 +106,11 @@ fun FeedTopBar() {
                 CategoryChip(
                     label = "All",
                     emoji = "🌟",
-                    isSelected = true,
-                    onClick = {  }
+                    isSelected = selectedCategory == "All",
+                    onClick = { 
+                        selectedCategory = "All"
+                        onCategorySelected("SPORTS") // Defaulting to SPORTS as per requirement for now
+                    }
                 )
             }
 
@@ -89,8 +118,11 @@ fun FeedTopBar() {
                 CategoryChip(
                     label = category.displayName,
                     emoji = category.emoji,
-                    isSelected =true,
-                    onClick = { }
+                    isSelected = selectedCategory == category.displayName,
+                    onClick = { 
+                        selectedCategory = category.displayName
+                        onCategorySelected(category.name)
+                    }
                 )
             }
         }
@@ -99,14 +131,14 @@ fun FeedTopBar() {
 
 @Composable
 fun ActivityList(
-    activities: List<DummyData.ActivityItem>,
+    activities: List<ActivityResponse>,
     paddingValues: PaddingValues,
-    onCardClick:()-> Unit,
-    onJoinedClick: () -> Unit
+    onCardClick: () -> Unit,
+    onJoinClick: (Int) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(paddingValues),
-        contentPadding = PaddingValues(16.dp, end = 16.dp, bottom = 120.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 120.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         items(
@@ -114,19 +146,19 @@ fun ActivityList(
             key = { it.id }
         ) { activity ->
             ActivityCard(
-                activity?.userName?:"",
-                activity?.userAvatar?:"",
-                activity.activityTitle,
-                activity?.description?:"",
-                activity.category,
-                activity.categoryEmoji,
-                activity.timeAgo,
-                activity.distance,
-                activity.participantCount,
-                activity.maxParticipants,
-                activity.participantAvatars,
-                {onCardClick()},
-                {onJoinedClick()},
+                userName = activity.userName ?: "Unknown",
+                userAvatar = activity.userAvatar ?: "",
+                activityTitle = activity.title,
+                description = activity.description,
+                category = activity.category,
+                categoryEmoji = "📍", // Default emoji or map from category
+                timeAgo = activity.timeAgo ?: "Just now",
+                distance = activity.distance ?: "Nearby",
+                participantCount = activity.participantCount,
+                maxParticipants = activity.maxParticipants,
+                participantAvatars = activity.participantAvatars,
+                onCardClick = onCardClick,
+                onJoinClick = { onJoinClick(activity.id) }
             )
         }
     }

@@ -63,7 +63,6 @@ dependencies {
 
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.hilt.android)
-//    implementation(libs.androidx.room.compiler)
     ksp(libs.hilt.android.compiler)
     implementation(libs.androidx.compose.navigation)
     implementation(libs.coil.compose)
@@ -76,7 +75,13 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
 
-    implementation("androidx.compose.material3:material3-android:1.4.0-alpha14")
+    val paging_version = "3.3.6"
+    implementation("androidx.paging:paging-runtime:$paging_version")
+    implementation("androidx.paging:paging-compose:$paging_version")
+
+//    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
+
+//    implementation("androidx.compose.material3:material3-android:1.4.0-alpha14")
 
     implementation("androidx.compose.material:material-icons-extended")
 
