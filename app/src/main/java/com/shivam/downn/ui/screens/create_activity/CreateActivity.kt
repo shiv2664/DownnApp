@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -39,17 +40,46 @@ data class Category(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateActivity(
-    innerPadding: PaddingValues,
+    outerPadding: PaddingValues,
     onClose: () -> Unit,
     viewModel: CreateActivityViewModel = hiltViewModel()
+) {
+    val state by viewModel.state.collectAsState()
+
+    CreateActivityContent(
+        state = state,
+        outerPadding = outerPadding,
+        onClose = onClose,
+        onCreateActivity = { title, description, category, location, time ->
+            viewModel.createActivity(
+                title = title,
+                description = description,
+                category = category,
+                city = "Denver",
+                locationName = location,
+                scheduledTime = time,
+                maxParticipants = 10
+            )
+        },
+        onResetState = { viewModel.resetState() }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CreateActivityContent(
+    state: CreateActivityState,
+    outerPadding: PaddingValues,
+    onClose: () -> Unit,
+    onCreateActivity: (String, String, String, String, String) -> Unit,
+    onResetState: () -> Unit
 ) {
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var selectedCategoryId by remember { mutableStateOf("") }
     var time by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
-    
-    val state by viewModel.state.collectAsState()
+
     val context = LocalContext.current
 
     val categories = listOf(
@@ -92,7 +122,7 @@ fun CreateActivity(
         if (state is CreateActivityState.Success) {
             Toast.makeText(context, "Activity Created!", Toast.LENGTH_SHORT).show()
             onClose()
-            viewModel.resetState()
+            onResetState()
         }
     }
 
@@ -101,12 +131,12 @@ fun CreateActivity(
             TopAppBar(
                 title = {
                     Text(
-                        "Create Activity",
+                        text = "Create Activity",
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
                 },
-                navigationIcon = {
+                /*navigationIcon = {
                     IconButton(
                         onClick = onClose,
                         modifier = Modifier
@@ -121,21 +151,31 @@ fun CreateActivity(
                             tint = Color(0xFFCBD5E1)
                         )
                     }
-                },
+                },*/
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0F172A))
             )
         },
         containerColor = Color(0xFF0F172A)
     ) { paddingValues ->
-        Box(modifier = Modifier
-            .fillMaxSize()
-            .padding(paddingValues)) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(
+                    start = paddingValues.calculateStartPadding(LayoutDirection.Ltr),
+                    end = paddingValues.calculateStartPadding(LayoutDirection.Ltr),
+                    top = paddingValues.calculateTopPadding(),
+                    bottom = 20.dp
+                )
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp, vertical = 24.dp)
-                    .padding(bottom = 100.dp)
+                    .padding(
+                        bottom = outerPadding.calculateBottomPadding(),
+                        start = 20.dp,
+                        end = 20.dp
+                    )
             ) {
                 // Title Input
                 InputLabel("What's happening?")
@@ -164,7 +204,7 @@ fun CreateActivity(
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 InputLabel("Description")
                 OutlinedTextField(
                     value = description,
@@ -193,20 +233,30 @@ fun CreateActivity(
 
                 // Category Selector
                 InputLabel("Category")
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    modifier = Modifier.height(300.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    userScrollEnabled = false
+
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(categories) { category ->
-                        val isSelected = selectedCategoryId == category.id
-                        CategoryItem(
-                            category = category,
-                            isSelected = isSelected,
-                            onClick = { selectedCategoryId = category.id }
-                        )
+                    categories.chunked(2).forEach { rowItems ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            rowItems.forEach { category ->
+                                val isSelected = selectedCategoryId == category.id
+                                Box(modifier = Modifier.weight(1f)) {
+                                    CategoryItem(
+                                        category = category,
+                                        isSelected = isSelected,
+                                        onClick = { selectedCategoryId = category.id }
+                                    )
+                                }
+                            }
+                            // Add an empty space if the row has only one item
+                            if (rowItems.size == 1) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
+                        }
                     }
                 }
 
@@ -272,36 +322,12 @@ fun CreateActivity(
                         fontSize = 14.sp
                     )
                 }
-            }
 
-            // Post Button Overlay
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                Color.Transparent,
-                                Color(0xFF0F172A).copy(alpha = 0.9f),
-                                Color(0xFF0F172A)
-                            )
-                        )
-                    )
-                    .padding(20.dp)
-                    .padding(bottom = 8.dp)
-            ) {
+                Spacer(modifier = Modifier.height(32.dp))
+
                 Button(
-                    onClick = { 
-                        viewModel.createActivity(
-                            title = title,
-                            description = description,
-                            category = selectedCategoryId,
-                            city = "Denver", // Hardcoded for now as per curl example
-                            locationName = location,
-                            scheduledTime = time,
-                            maxParticipants = 10 // Default
-                        )
+                    onClick = {
+                        onCreateActivity(title, description, selectedCategoryId, location, time)
                     },
                     enabled = isFormValid && state !is CreateActivityState.Loading,
                     modifier = Modifier
@@ -313,7 +339,8 @@ fun CreateActivity(
                         disabledContainerColor = Color(0xFF1E293B)
                     ),
                     contentPadding = PaddingValues()
-                ) {
+                )
+                {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -331,7 +358,10 @@ fun CreateActivity(
                         contentAlignment = Alignment.Center
                     ) {
                         if (state is CreateActivityState.Loading) {
-                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                modifier = Modifier.size(24.dp)
+                            )
                         } else {
                             Text(
                                 "POST ACTIVITY",
@@ -342,6 +372,7 @@ fun CreateActivity(
                         }
                     }
                 }
+
             }
         }
     }
@@ -399,9 +430,12 @@ private fun CategoryItem(category: Category, isSelected: Boolean, onClick: () ->
 @Composable
 fun CreateActivityPreview() {
     MaterialTheme {
-        CreateActivity(
-            innerPadding = PaddingValues(0.dp),
-            onClose = {}
+        CreateActivityContent(
+            state = CreateActivityState.Idle,
+            outerPadding = PaddingValues(0.dp),
+            onClose = {},
+            onCreateActivity = { _, _, _, _, _ -> },
+            onResetState = {}
         )
     }
 }

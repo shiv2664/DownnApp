@@ -7,17 +7,26 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.shivam.downn.ui.theme.DownnTheme
 import com.shivam.downn.navigation.AppNavigation
+import com.shivam.downn.data.repository.AuthRepository
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    
+    @Inject
+    lateinit var authRepository: AuthRepository
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        
+        val startDestination = if (authRepository.isUserLoggedIn()) "home" else "login"
+        
         setContent {
             DownnTheme {
-                AppNavigation()
+                AppNavigation(startDestination = startDestination)
             }
         }
     }

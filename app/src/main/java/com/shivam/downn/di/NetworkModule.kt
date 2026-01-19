@@ -3,6 +3,7 @@ package com.shivam.downn.di
 import com.shivam.downn.data.api.ActivityApi
 import com.shivam.downn.data.api.AuthApi
 import com.shivam.downn.data.api.AuthInterceptor
+import com.shivam.downn.data.api.ConnectivityInterceptor
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -18,8 +19,12 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(authInterceptor: AuthInterceptor): OkHttpClient {
+    fun provideOkHttpClient(
+        authInterceptor: AuthInterceptor,
+        connectivityInterceptor: ConnectivityInterceptor
+    ): OkHttpClient {
         return OkHttpClient.Builder()
+            .addInterceptor(connectivityInterceptor)
             .addInterceptor(authInterceptor)
             .build()
     }

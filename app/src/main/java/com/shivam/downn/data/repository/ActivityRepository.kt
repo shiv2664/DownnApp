@@ -37,6 +37,19 @@ class ActivityRepository @Inject constructor(
         }
     }
 
+    suspend fun getActivityById(activityId: Int): Result<ActivityResponse> {
+        return try {
+            val response = activityApi.getActivityById(activityId)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(Exception("Fetch failed: ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun joinActivity(activityId: Int): Result<JoinResponse> {
         return try {
             val response = activityApi.joinActivity(activityId)

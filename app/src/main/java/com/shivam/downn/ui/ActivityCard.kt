@@ -72,7 +72,7 @@ fun ActivityCard(
     distance: String="",
     participantCount: Int=0,
     maxParticipants: Int?=0,
-    participantAvatars: List<String> =emptyList(),
+    participantAvatars: List<String>? =emptyList(),
     onCardClick: () -> Unit,
     onJoinClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -82,8 +82,9 @@ fun ActivityCard(
         modifier = modifier
             .fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, Color(0xFF334155)),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = Color(0xFF1E293B) // Slightly lighter than background for contrast
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -132,12 +133,13 @@ fun ActivityCard(
                         Text(
                             text = userName,
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White
                         )
                         Text(
                             text = timeAgo,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = Color(0xFF94A3B8)
                         )
                     }
                 }
@@ -171,7 +173,8 @@ fun ActivityCard(
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                color = Color.White
             )
 
             // Description (if exists)
@@ -180,7 +183,7 @@ fun ActivityCard(
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = Color(0xFFCBD5E1),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -202,7 +205,7 @@ fun ActivityCard(
                 Text(
                     text = distance,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = Color(0xFF3B82F6),
                     fontWeight = FontWeight.Medium
                 )
             }
@@ -220,7 +223,7 @@ fun ActivityCard(
                     horizontalArrangement = Arrangement.spacedBy((-12).dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    participantAvatars.take(3).forEach { avatar ->
+                    participantAvatars?.take(3)?.forEach { avatar ->
                         AsyncImage(
                             model = avatar,
                             contentDescription = "Participant",
@@ -258,7 +261,7 @@ fun ActivityCard(
                             "$participantCount joined"
                         },
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = Color(0xFF94A3B8)
                     )
                 }
 

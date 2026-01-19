@@ -19,6 +19,9 @@ interface ActivityApi {
     @GET("api/activities/recent")
     suspend fun getRecentActivities(): Response<List<ActivityResponse>>
 
+    @GET("api/activities/{id}")
+    suspend fun getActivityById(@Path("id") activityId: Int): Response<ActivityResponse>
+
     @POST("api/activities/{id}/join")
     suspend fun joinActivity(@Path("id") activityId: Int): Response<JoinResponse>
 }

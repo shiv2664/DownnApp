@@ -86,7 +86,7 @@ fun BottomBarContent(
         modifier = Modifier
             .fillMaxWidth()
             .background(Color(0xFF0F172A).copy(alpha = 0.95f))
-            .padding(bottom = 12.dp)
+            .padding(bottom = 20.dp)
     ) {
         // Divider
         Box(
@@ -141,36 +141,18 @@ fun BottomBarContent(
             }
 
 
-            Box(
-                modifier = Modifier
-                    .offset(y = (-24).dp)
-                    .size(56.dp)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.linearGradient(
-                            listOf(Color(0xFFA855F7), Color(0xFFEC4899))
-                        )
-                    )
-                    .clickable {
-                        navController.navigate(itemsDataList[2].route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                        /*navController.navigate(itemsDataList[2].route) {
-                            launchSingleTop = true
-                        }*/
-                    },
-                contentAlignment = Alignment.Center
+            BottomNavItem(
+                label = "Create",
+                icon = if (currentDestination?.hierarchy?.any { it.route == itemsDataList[2].route } == true) Icons.Filled.Add else Icons.Default.Add,
+                isActive = currentDestination?.hierarchy?.any { it.route == itemsDataList[2].route } == true
             ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Create",
-                    tint = Color.White,
-                    modifier = Modifier.size(28.dp)
-                )
+                navController.navigate(itemsDataList[2].route) {
+                    popUpTo(navController.graph.findStartDestination().id) {
+                        saveState = true
+                    }
+                    launchSingleTop = true
+                    restoreState = true
+                }
             }
 
 

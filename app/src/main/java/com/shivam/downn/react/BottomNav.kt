@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 sealed class BottomNavTab(val route: String, val label: String) {
     object Home : BottomNavTab("home", "Home")
     object Explore : BottomNavTab("explore", "Explore")
+    object Create : BottomNavTab("create_post", "Create")
     object Notifications : BottomNavTab("notifications", "Alerts")
     object Profile : BottomNavTab("profile", "Profile")
 }
@@ -74,27 +75,13 @@ fun BottomNav(
                 onClick = { onTabSelected(BottomNavTab.Explore) }
             )
 
-            // Create FAB
-            Box(
-                modifier = Modifier
-                    .offset(y = (-24).dp)
-                    .size(56.dp)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.linearGradient(
-                            colors = listOf(Color(0xFFA855F7), Color(0xFFEC4899)) // Purple-500 to Pink-500
-                        )
-                    )
-                    .clickable { onCreateClick() },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Create",
-                    tint = Color.White,
-                    modifier = Modifier.size(28.dp)
-                )
-            }
+            // Create
+            NavItem(
+                label = "Create",
+                icon = if (activeTab == BottomNavTab.Create) Icons.Filled.Add else Icons.Outlined.Add,
+                isActive = activeTab == BottomNavTab.Create,
+                onClick = { onTabSelected(BottomNavTab.Create) }
+            )
 
             // Alerts
             NavItem(

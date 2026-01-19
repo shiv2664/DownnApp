@@ -7,6 +7,7 @@ import com.shivam.downn.data.models.AuthResponse
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import androidx.core.content.edit
 
 @Singleton
 class PrefsManager @Inject constructor(
@@ -33,6 +34,6 @@ class PrefsManager @Inject constructor(
     }
 
     fun clear() {
-        prefs.edit().clear().apply()
+        prefs.edit { clear() }
     }
 }

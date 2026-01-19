@@ -1,6 +1,5 @@
 package com.shivam.downn.ui.screens.home
 
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.shivam.downn.ActivityCategory
@@ -21,7 +21,11 @@ import com.shivam.downn.ui.ActivityCard
 import com.shivam.downn.ui.CategoryChip
 
 @Composable
-fun FeedScreen(innerPadding: PaddingValues, onCardClick: () -> Unit, onJoinedClick: () -> Unit) {
+fun FeedScreen(
+    innerPadding: PaddingValues,
+    onCardClick: (Int) -> Unit,
+    onJoinedClick: () -> Unit
+) {
     val viewModel = hiltViewModel<FeedViewModel>()
     val state by viewModel.state.collectAsState()
 
@@ -46,7 +50,7 @@ fun FeedScreen(innerPadding: PaddingValues, onCardClick: () -> Unit, onJoinedCli
     ) { paddingValues ->
         Box(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxSize().background(Color(0xFF0F172A))
         ) {
             when (val currentState = state) {
                 is FeedState.Loading -> {
@@ -87,12 +91,12 @@ fun FeedTopBar(onCategorySelected: (String) -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
+            .background(Color(0xFF0F172A))
     ) {
         TopAppBar(
-            title = { Text("Downn") },
+            title = { Text("Downn", color = Color.White) },
             colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.surface
+                containerColor = Color(0xFF0F172A)
             )
         )
 
@@ -133,7 +137,7 @@ fun FeedTopBar(onCategorySelected: (String) -> Unit) {
 fun ActivityList(
     activities: List<ActivityResponse>,
     paddingValues: PaddingValues,
-    onCardClick: () -> Unit,
+    onCardClick: (Int) -> Unit,
     onJoinClick: (Int) -> Unit
 ) {
     LazyColumn(
@@ -157,7 +161,7 @@ fun ActivityList(
                 participantCount = activity.participantCount,
                 maxParticipants = activity.maxParticipants,
                 participantAvatars = activity.participantAvatars,
-                onCardClick = onCardClick,
+                onCardClick = { onCardClick(activity.id) },
                 onJoinClick = { onJoinClick(activity.id) }
             )
         }

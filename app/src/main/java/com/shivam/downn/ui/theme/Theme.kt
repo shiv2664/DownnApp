@@ -47,9 +47,11 @@ fun DownnTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.background.toArgb()
-            WindowCompat.getInsetsController(window, view)
-                .isAppearanceLightStatusBars = !darkTheme
+            // Using our premium dark color for status bar
+            window.statusBarColor = Color(0xFF0F172A).toArgb()
+            
+            // Ensuring status bar icons are white (light)
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
         }
     }
 
