@@ -5,17 +5,17 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TimeInput
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.*
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,6 +29,14 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+
+import androidx.compose.material3.TimePickerDialog
+import androidx.compose.material3.TimeInput
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.Text
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 
 data class Category(
     val id: String,
@@ -264,28 +272,81 @@ fun CreateActivityContent(
 
                 // Time Input
                 InputLabel("When?")
-                OutlinedTextField(
-                    value = time,
-                    onValueChange = { time = it },
-                    placeholder = { Text("2026-02-01T09:00:00", color = Color(0xFF64748B)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    leadingIcon = {
+                var showTimePicker by remember { mutableStateOf(false) }
+                val selectedTime = remember { mutableStateOf<Pair<Int, Int>?>(null) }
+
+                val currentCalendar = Calendar.getInstance()
+                val currentHour = currentCalendar.get(Calendar.HOUR_OF_DAY)
+                val currentMinute = currentCalendar.get(Calendar.MINUTE)
+                val timePickerState = rememberTimePickerState(initialHour = currentHour, initialMinute = currentMinute, is24Hour = false)
+
+                val formattedDateTime by remember(selectedTime.value) {
+                    derivedStateOf {
+                        if (selectedTime.value != null) {
+                            val timePair = selectedTime.value!!
+                            val todayCalendar = Calendar.getInstance().apply { // This captures today's date automatically
+                                set(Calendar.HOUR_OF_DAY, timePair.first)
+                                set(Calendar.MINUTE, timePair.second)
+                                set(Calendar.SECOND, 0) // Explicitly set seconds to 0
+                                set(Calendar.MILLISECOND, 0) // Explicitly set milliseconds to 0
+                            }
+                            val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+                            sdf.format(todayCalendar.time)
+                        } else {
+                            ""
+                        }
+                    }
+                }
+
+                LaunchedEffect(formattedDateTime) {
+                    time = formattedDateTime
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color(0xFF1E293B).copy(alpha = 0.5f))
+                        .border(1.dp, Color(0xFF334155), RoundedCornerShape(16.dp))
+                        .clickable { showTimePicker = true } // Directly show time picker
+                        .padding(16.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         Icon(
-                            Icons.Default.CalendarToday,
+                            Icons.Default.Schedule, // Use Schedule icon
                             contentDescription = null,
                             tint = Color(0xFF94A3B8)
                         )
-                    },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFF1E293B).copy(alpha = 0.5f),
-                        unfocusedContainerColor = Color(0xFF1E293B).copy(alpha = 0.5f),
-                        focusedBorderColor = Color(0xFFA855F7),
-                        unfocusedBorderColor = Color(0xFF334155),
-                        unfocusedTextColor = Color.White,
-                        focusedTextColor = Color.White
-                    )
-                )
+                        Text(
+                            text = if (formattedDateTime.isNotEmpty()) formattedDateTime else "Select Time (Today)", // Updated placeholder
+                            color = if (formattedDateTime.isNotEmpty()) Color.White else Color(0xFF64748B),
+                            fontSize = 16.sp
+                        )
+                    }
+                }
+
+                if (showTimePicker) {
+                    TimePickerDialog(
+                        onDismissRequest = { showTimePicker = false },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                selectedTime.value =
+                                    Pair(timePickerState.hour, timePickerState.minute)
+                                showTimePicker = false
+                            }) { Text("OK") }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showTimePicker = false }) { Text("Cancel") }
+                        },
+                        title = {Text("Pick Time")}
+                    ) {
+                        TimeInput(state = timePickerState)
+                    }
+                }
+
 
                 Spacer(modifier = Modifier.height(32.dp))
 

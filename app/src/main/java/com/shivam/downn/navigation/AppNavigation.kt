@@ -8,7 +8,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.shivam.downn.react.ActivityDetailScreen
+import com.shivam.downn.ui.screens.activity_detail.ActivityDetailScreen
 import com.shivam.downn.ui.screens.chat.GroupChat
 import com.shivam.downn.ui.screens.create_activity.CreateActivity
 import com.shivam.downn.ui.screens.explore.Explore
@@ -16,6 +16,9 @@ import com.shivam.downn.ui.screens.home.FeedScreen
 import com.shivam.downn.ui.screens.auth.LoginScreen
 import com.shivam.downn.ui.screens.notification.Notifications
 import com.shivam.downn.ui.screens.profile.UserProfile
+import com.shivam.downn.ui.screens.profile.EditProfileScreen
+import com.shivam.downn.ui.screens.profile.PublicProfile
+import com.shivam.downn.ui.screens.settings.SettingsScreen
 
 @Composable
 fun AppNavigation(startDestination: String = "login") {
@@ -59,7 +62,42 @@ fun AppNavigation(startDestination: String = "login") {
 
             composable(
                 route = itemsDataList[4].route) {
-                UserProfile(innerPadding,{}, {}, {})
+                UserProfile(
+                    outerPadding = innerPadding,
+                    onClose = { navController.navigateUp() },
+                    onSettingsClick = { navController.navigate("settings") },
+                    onEditClick = { navController.navigate("edit_profile") }
+                )
+            }
+
+
+            composable("edit_profile") {
+                EditProfileScreen(
+                    onClose = { navController.navigateUp() },
+                    onSave = { name, bio, location ->
+                        // In a real app, update ViewModel here
+                        navController.navigateUp()
+                    }
+                )
+            }
+
+            composable("settings") {
+                SettingsScreen(
+                    onClose = { navController.navigateUp() },
+                    onLogout = {
+                        // In a real app, clear session and navigate to login
+                        navController.navigate("login") {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
+            composable("public_profile/{userId}") {
+                PublicProfile(
+                    onClose = { navController.navigateUp() },
+                    onFollowClick = { /* Handle follow */ }
+                )
             }
 
 
@@ -67,13 +105,13 @@ fun AppNavigation(startDestination: String = "login") {
                 val activityId = backStackEntry.arguments?.getString("activityId")?.toIntOrNull() ?: 1
                 ActivityDetailScreen(
                     activityId = activityId,
-                    innerPadding = innerPadding,
                     onClose = { navController.navigateUp() },
-                    onOpenChat = { navController.navigate("group_chat") }
+                    onOpenChat = { navController.navigate("group_chat/$activityId") },
+                    onViewProfile = { userId -> navController.navigate("public_profile/$userId") }
                 )
             }
 
-            composable("group_chat") {
+            composable("group_chat/{activityId}") {
                 GroupChat(innerPadding,
                     activityTitle = "Downtown Coffee Meetup",
                     categoryIcon = {

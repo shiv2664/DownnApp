@@ -1,4 +1,4 @@
-package com.shivam.downn.react
+package com.shivam.downn.ui.screens.activity_detail
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

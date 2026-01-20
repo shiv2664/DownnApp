@@ -1,4 +1,4 @@
-package com.shivam.downn.react
+package com.shivam.downn.ui.screens.activity_detail
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -42,10 +42,10 @@ data class ChatPreview(
 
 @Composable
 fun ActivityDetail(
-    outerPadding: PaddingValues,
     activity: ActivityResponse,
     onClose: () -> Unit,
-    onOpenChat: () -> Unit
+    onOpenChat: () -> Unit,
+    onViewProfile: (userId: Long) -> Unit
 ) {
 
     val title = activity.title
@@ -81,11 +81,13 @@ fun ActivityDetail(
         ChatPreview(2, "Mike R.", "Should I bring anything?", "5m ago"),
     )
 
-    Scaffold() { innerPadding ->
+    Scaffold(
+        containerColor = Color(0xFF0F172A),
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
+    ){ innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
                 .background(Color(0xFF0F172A))
         )
         {
@@ -152,10 +154,10 @@ fun ActivityDetail(
                         ) {
                             InfoChip(
                                 Icons.Default.Schedule,
-                                activity.scheduledTime,
+                                activity.scheduledTime ?: "TBD",
                                 Color(0xFFA855F7)
                             )
-                            InfoChip(Icons.Default.Place, distance, Color(0xFF3B82F6))
+                            InfoChip(Icons.Default.Place, distance ?: "Nearby", Color(0xFF3B82F6))
                         }
                     }
 
@@ -210,7 +212,7 @@ fun ActivityDetail(
                                     )
                                 }
                                 Button(
-                                    onClick = { },
+                                    onClick = { onViewProfile(1) },
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = Color(
                                             0xFF334155
@@ -344,7 +346,7 @@ fun ActivityDetail(
                                     )
                                     Column {
                                         Text(
-                                            text = activity.locationName,
+                                            text = activity.locationName ?: "Unknown Location",
                                             color = Color.White,
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 14.sp
@@ -474,6 +476,7 @@ fun ActivityDetail(
                                 )
                             )
                         )
+                        .statusBarsPadding()
                         .padding(16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 )
@@ -523,6 +526,7 @@ fun ActivityDetail(
                                 bottomEnd = 0.dp
                             )
                         )
+                        .navigationBarsPadding()
                         .padding(
                             vertical = 20.dp
                         )
@@ -671,7 +675,6 @@ fun AvatarsItem(avatar: String = "", name: String = "") {
 @Composable
 fun ActivityDetailPreview() {
     ActivityDetail(
-        outerPadding = PaddingValues(0.dp),
         activity = ActivityResponse(
             title = "Coffee at Blue Tokai ☕",
             userName = "Rahul",
@@ -680,14 +683,16 @@ fun ActivityDetailPreview() {
             participantCount = 3,
             description = "Anyone up for a quick coffee and chat this evening?",
             id = 123,
-            category = "",
-            city = "",
-            locationName = "",
-            scheduledTime = "",
+            category = "FOOD",
+            city = "Delhi",
+            locationName = "Blue Tokai",
+            scheduledTime = "Today 5:00 PM",
             maxParticipants = 10,
-            timeAgo = ""
+            timeAgo = "2h ago",
+            userId = 1
         ),
         onClose = {},
-        onOpenChat = {}
+        onOpenChat = {},
+        onViewProfile = {}
     )
 }

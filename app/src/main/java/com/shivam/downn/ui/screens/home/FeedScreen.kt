@@ -12,7 +12,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.shivam.downn.ActivityCategory
@@ -22,7 +21,7 @@ import com.shivam.downn.ui.CategoryChip
 
 @Composable
 fun FeedScreen(
-    innerPadding: PaddingValues,
+    outerPadding: PaddingValues,
     onCardClick: (Int) -> Unit,
     onJoinedClick: () -> Unit
 ) {
@@ -35,18 +34,7 @@ fun FeedScreen(
                 viewModel.fetchActivities(category)
             }) 
         },
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = {},
-                containerColor = MaterialTheme.colorScheme.primary
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Create Activity"
-                )
-            }
-        }
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -153,7 +141,7 @@ fun ActivityList(
                 userName = activity.userName ?: "Unknown",
                 userAvatar = activity.userAvatar ?: "",
                 activityTitle = activity.title,
-                description = activity.description,
+                description = activity.description?:"",
                 category = activity.category,
                 categoryEmoji = "📍", // Default emoji or map from category
                 timeAgo = activity.timeAgo ?: "Just now",

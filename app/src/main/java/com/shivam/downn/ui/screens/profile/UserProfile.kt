@@ -14,9 +14,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -24,6 +24,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.shivam.downn.data.models.InterestTag
+import androidx.compose.foundation.layout.FlowRow
 
 data class PastActivity(
     val id: Int,
@@ -35,29 +37,49 @@ data class PastActivity(
     val location: String
 )
 
-data class InterestTag(
-    val id: Int,
-    val name: String,
-    val colors: List<Color>
-)
 
 enum class ProfileTab { Recent, Stats }
 
 @Composable
 fun UserProfile(
-    innerPadding: PaddingValues,
+    outerPadding: PaddingValues,
+    onClose: () -> Unit,
+    onSettingsClick: () -> Unit = {},
+    onEditClick: () -> Unit = {}
+) {
+    ProfileContent(
+        isOwnProfile = true,
+        outerPadding = outerPadding,
+        onClose = onClose,
+        onSettingsClick = onSettingsClick,
+        onEditClick = onEditClick
+    )
+}
+
+@Composable
+fun ProfileContent(
+    isOwnProfile: Boolean,
+    outerPadding: PaddingValues,
     onClose: () -> Unit,
     onFollowClick: () -> Unit = {},
-    onSettingsClick: () -> Unit = {}
+    onSettingsClick: () -> Unit = {},
+    onEditClick: () -> Unit = {}
 ) {
     var activeTab by remember { mutableStateOf(ProfileTab.Recent) }
+    var showInterestsSheet by remember { mutableStateOf(false) }
 
-    val interestTags = listOf(
+    val allInterests = listOf(
         InterestTag(1, "☕ Coffee", listOf(Color(0xFFFBBF24), Color(0xFFF97316))),
         InterestTag(2, "🏔️ Hiking", listOf(Color(0xFF4ADE80), Color(0xFF059669))),
         InterestTag(3, "🎵 Live Music", listOf(Color(0xFFC084FC), Color(0xFFEC4899))),
         InterestTag(4, "🍕 Foodie", listOf(Color(0xFFF87171), Color(0xFFF97316))),
+        InterestTag(5, "🎮 Gaming", listOf(Color(0xFF60A5FA), Color(0xFF3B82F6))),
+        InterestTag(6, "🎨 Art", listOf(Color(0xFFF472B6), Color(0xFFDB2777))),
+        InterestTag(7, "🎬 Movies", listOf(Color(0xFF94A3B8), Color(0xFF475569))),
+        InterestTag(8, "🏀 Sports", listOf(Color(0xFFFB923C), Color(0xFFEA580C)))
     )
+
+    var selectedInterests by remember { mutableStateOf(allInterests.take(4)) }
 
     val pastActivities = listOf(
         PastActivity(1, "https://images.unsplash.com/photo-1640350408899-9d432cc32bca", "Beach Sunset Vibes", 8, 24, "Dec 28", "Santa Monica"),
@@ -66,10 +88,12 @@ fun UserProfile(
 
     Scaffold(
         topBar = {
-            ProfileTopBar(onClose, onSettingsClick, onFollowClick)
+            ProfileTopBar(isOwnProfile, onClose, onSettingsClick, onFollowClick)
         },
         floatingActionButton = {
-            FabButton(innerPadding,)
+            if (isOwnProfile) {
+                FabButton(outerPadding, onEditClick)
+            }
         },
         containerColor = Color.Transparent
     ) { padding ->
@@ -77,90 +101,103 @@ fun UserProfile(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFF0F172A))
-                .padding(0.dp,padding.calculateTopPadding(),0.dp,innerPadding.calculateBottomPadding()+padding.calculateBottomPadding())
-        )
-        {
+                .padding(0.dp, padding.calculateTopPadding(), 0.dp, outerPadding.calculateBottomPadding() + padding.calculateBottomPadding())
+        ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 100.dp)
-            )
-            {
-                // Hero Card
+            ) {
+                item { HeroCard() }
                 item {
-                    HeroCard()
+                    InterestsSection(selectedInterests, isOwnProfile) {
+                        showInterestsSheet = true
+                    }
                 }
+                item { AchievementsSection() }
+                item { ProfileTabs(activeTab) { activeTab = it } }
 
-                // Interests
-                item {
-                    InterestsSection(interestTags)
-                }
-
-                // Achievements
-                item {
-                    AchievementsSection()
-                }
-
-                // Tabs
-                item {
-                    ProfileTabs(activeTab) { activeTab = it }
-                }
-
-                // Tab Content
                 if (activeTab == ProfileTab.Recent) {
                     items(pastActivities) { activity ->
                         ActivityListItem(activity)
                     }
                 } else {
-                    item {
-                        StatsSection()
-                    }
+                    item { StatsSection() }
                 }
             }
+        }
+
+        if (showInterestsSheet && isOwnProfile) {
+            InterestsBottomSheet(
+                allInterests = allInterests,
+                selectedInterests = selectedInterests,
+                onDismiss = { showInterestsSheet = false },
+                onInterestsChanged = { selectedInterests = it }
+            )
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ProfileTopBar(onClose: () -> Unit, onSettingsClick: () -> Unit, onFollowClick: () -> Unit) {
+private fun ProfileTopBar(
+    isOwnProfile: Boolean,
+    onClose: () -> Unit,
+    onSettingsClick: () -> Unit,
+    onFollowClick: () -> Unit
+) {
     TopAppBar(
-        title = {},
+        title = {
+            Text(
+                modifier = Modifier.padding(start = 8.dp),
+                text = if (isOwnProfile) "My Profile" else "Sarah Kim",
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
+        },
         navigationIcon = {
-            IconButton(
-                onClick = onClose,
-                modifier = Modifier
-                    .padding(8.dp)
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color.White.copy(alpha = 0.1f))
-            ) {
-                Icon(Icons.Default.ChevronLeft, contentDescription = "Back", tint = Color.White)
+            if (!isOwnProfile) {
+                IconButton(
+                    onClick = onClose,
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color.White.copy(alpha = 0.1f))
+                ) {
+                    Icon(Icons.Default.ChevronLeft, contentDescription = "Back", tint = Color.White)
+                }
             }
         },
         actions = {
-            Button(
-                onClick = onFollowClick,
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                contentPadding = PaddingValues(0.dp),
-                modifier = Modifier
-                    .height(36.dp)
-                    .background(
-                        Brush.horizontalGradient(listOf(Color(0xFF9333EA), Color(0xFFDB2777))),
-                        CircleShape
-                    )
-                    .padding(horizontal = 16.dp)
-            ) {
-                Text("Follow", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            if (!isOwnProfile) {
+                Button(
+                    onClick = onFollowClick,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                    contentPadding = PaddingValues(0.dp),
+                    modifier = Modifier
+                        .padding(4.dp)
+                        .height(36.dp)
+                        .background(
+                            Brush.horizontalGradient(listOf(Color(0xFF9333EA), Color(0xFFDB2777))),
+                            CircleShape
+                        )
+                        .padding(horizontal = 16.dp)
+                ) {
+                    Text("Follow", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                }
             }
-            IconButton(
-                onClick = onSettingsClick,
-                modifier = Modifier
-                    .padding(8.dp)
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color.White.copy(alpha = 0.1f))
-            ) {
-                Icon(Icons.Default.Settings, contentDescription = "Settings", tint = Color.White)
+
+            if (isOwnProfile) {
+                IconButton(
+                    onClick = onSettingsClick,
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color.White.copy(alpha = 0.1f))
+                ) {
+                    Icon(Icons.Default.Settings, contentDescription = "Settings", tint = Color.White)
+                }
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0F172A).copy(alpha = 0.7f))
@@ -257,9 +294,9 @@ private fun HeroCard() {
 
                     // Quick Stats
                     Row(modifier = Modifier.padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        StatItem("127", "Activities", Brush.linearGradient(listOf(Color(0xFFF3E8FF), Color(0xFFFAE8FF))), Modifier.weight(1f))
-                        StatItem("2.4K", "Friends", Brush.linearGradient(listOf(Color(0xFFDBEAFE), Color(0xFFCFFAFE))), Modifier.weight(1f))
-                        StatItem("89%", "Join Rate", Brush.linearGradient(listOf(Color(0xFFFFEDD5), Color(0xFFFEF3C7))), Modifier.weight(1f))
+                        StatItem("127", "Activities", Brush.linearGradient( listOf(Color(0xFFFBBF24), Color(0xFFF97316))), Modifier.weight(1f))
+                        StatItem("2.4K", "Friends", Brush.linearGradient(listOf(Color(0xFF4ADE80), Color(0xFF059669))), Modifier.weight(1f))
+                        StatItem("89%", "Join Rate", Brush.linearGradient(listOf(Color(0xFFC084FC), Color(0xFFEC4899))), Modifier.weight(1f))
                     }
                 }
             }
@@ -270,20 +307,41 @@ private fun HeroCard() {
 @Composable
 private fun StatItem(value: String, label: String, brush: Brush, modifier: Modifier = Modifier) {
     Column(
-        modifier = modifier.background(brush).padding(12.dp),
+        modifier = modifier
+            .background(brush, RoundedCornerShape(16.dp))
+            .border(0.5.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
+            .padding(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(value, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
-        Text(label, fontSize = 10.sp, color = Color.White.copy(alpha = 0.7f), fontWeight = FontWeight.Medium)
+        Text(label, fontSize = 10.sp, color = Color.White, fontWeight = FontWeight.Medium)
     }
 }
 
 @Composable
-private fun InterestsSection(tags: List<InterestTag>) {
+private fun InterestsSection(
+    tags: List<InterestTag>,
+    isOwnProfile: Boolean,
+    onEditInterestsClick: () -> Unit
+) {
     Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
-        Row(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text("Interests & Vibes", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.White)
-            Text("Edit", color = Color(0xFFA855F7), fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.clickable { })
+            if (isOwnProfile) {
+                Text(
+                    "Edit",
+                    color = Color(0xFFA855F7),
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp,
+                    modifier = Modifier.clickable { onEditInterestsClick() }
+                )
+            }
         }
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
@@ -330,8 +388,8 @@ private fun AchievementItem(title: String, subtitle: String, icon: ImageVector, 
         ) {
             Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(40.dp))
         }
-        Text(title, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
-        Text(subtitle, fontSize = 12.sp, color = Color.Gray)
+        Text(title, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.padding(top = 8.dp))
+        Text(subtitle, fontSize = 12.sp, color = Color(0xFFE0E0E0))
     }
 }
 
@@ -388,10 +446,10 @@ private fun ActivityListItem(activity: PastActivity) {
                 contentScale = ContentScale.Crop
             )
             Column(modifier = Modifier.weight(1f)) {
-                Text(activity.title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(activity.title, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.White)
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.Gray)
-                    Text(activity.location, color = Color.Gray, fontSize = 14.sp)
+                    Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color(0xFFE0E0E0))
+                    Text(activity.location, color = Color(0xFFE0E0E0), fontSize = 14.sp)
                 }
                 Row(modifier = Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     StatBadge(Icons.Default.Groups, activity.participants.toString(), Color(0xFFF3E8FF), Color(0xFF7C3AED))
@@ -439,7 +497,7 @@ private fun StatsSection() {
 private fun StatsLinearProgress(label: String, value: String, progress: Float, color: Color) {
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(label, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Text(label, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color.White)
             Text(value, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF9333EA))
         }
         LinearProgressIndicator(
@@ -470,13 +528,12 @@ private fun FlowRow(
 
 
 @Composable
-@Preview
-fun FabButton(innerPadding: PaddingValues=PaddingValues(0.dp)){
+fun FabButton(innerPadding: PaddingValues=PaddingValues(0.dp), onEditClick: () -> Unit = {}){
     Box(
         modifier = Modifier
             .padding(
                 bottom = innerPadding.calculateBottomPadding(),
-                end = 16.dp
+                end = 4.dp
             )
             .size(64.dp)
             .clip(CircleShape)
@@ -485,7 +542,7 @@ fun FabButton(innerPadding: PaddingValues=PaddingValues(0.dp)){
                     listOf(Color(0xFF9333EA), Color(0xFFDB2777))
                 )
             )
-            .clickable { },
+            .clickable { onEditClick() },
         contentAlignment = Alignment.Center
     ) {
         Icon(
@@ -498,14 +555,93 @@ fun FabButton(innerPadding: PaddingValues=PaddingValues(0.dp)){
 }
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
+private fun InterestsBottomSheet(
+    allInterests: List<InterestTag>,
+    selectedInterests: List<InterestTag>,
+    onDismiss: () -> Unit,
+    onInterestsChanged: (List<InterestTag>) -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = Color(0xFF1E293B),
+        dragHandle = { BottomSheetDefaults.DragHandle(color = Color(0xFF334155)) }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp)
+                .padding(bottom = 40.dp)
+        ) {
+            Text(
+                "Select Interests",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                modifier = Modifier.padding(bottom = 24.dp)
+            )
+
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                allInterests.forEach { tag ->
+                    val isSelected = selectedInterests.any { it.id == tag.id }
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(
+                                brush = if (isSelected) Brush.horizontalGradient(tag.colors) else SolidColor(Color(0xFF0F172A)),
+                                shape = RoundedCornerShape(16.dp),
+                                alpha = 1f
+                            )
+                            .border(
+                                1.dp,
+                                if (isSelected) Color.Transparent else Color(0xFF334155),
+                                RoundedCornerShape(16.dp)
+                            )
+                            .clickable {
+                                val newList = if (isSelected) {
+                                    selectedInterests.filter { it.id != tag.id }
+                                } else {
+                                    selectedInterests + tag
+                                }
+                                onInterestsChanged(newList)
+                            }
+                            .padding(horizontal = 16.dp, vertical = 10.dp)
+                    ) {
+                        Text(
+                            tag.name,
+                            color = if (isSelected) Color.White else Color(0xFF94A3B8),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+@Preview
 fun UserProfilePreview() {
-    // It's a good practice to wrap your preview in your app's theme
-    // to ensure colors, fonts, and other theme attributes are applied correctly.
-    // YourAppTheme {
-    UserProfile(
-        innerPadding = PaddingValues(0.dp),
+    ProfileContent(
+        isOwnProfile = true,
+        outerPadding = PaddingValues(0.dp),
         onClose = {}
     )
-    // }
+}
+
+@Composable
+@Preview
+fun PublicProfilePreview() {
+    ProfileContent(
+        isOwnProfile = false,
+        outerPadding = PaddingValues(0.dp),
+        onClose = {}
+    )
 }

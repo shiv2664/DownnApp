@@ -46,7 +46,7 @@ data class NotificationItem(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Notifications(
-    innerPaddingValues: PaddingValues,
+    outerPadding: PaddingValues,
     onNotificationClick: (NotificationItem) -> Unit = {},
     onMarkAllRead: () -> Unit = {}
 ) {
@@ -58,235 +58,488 @@ fun Notifications(
     val orangeAmber = Brush.linearGradient(listOf(Color(0xFFF97316), Color(0xFFF59E0B)))
 
     val mockNotifications = listOf(
-        NotificationItem(1, NotificationType.Invite, "Sarah invited you to join", "Beach Sunset Vibes happening tonight at 7 PM", "5 min ago", "https://images.unsplash.com/photo-1566330429822-c413e4bc27a5", Icons.Default.Place, pinkPurple, pinkPurple, true, true),
-        NotificationItem(2, NotificationType.Follow, "Alex Rivera started following you", "Check out their profile and follow back!", "15 min ago", "https://images.unsplash.com/photo-1638996030249-abc99a735463", Icons.Default.PersonAdd, blueCyan, blueCyan, true, true),
-        NotificationItem(3, NotificationType.Message, "New message in Coffee Crawl", "Jordan: \"See you all at 3pm! Can't wait 🎉\"", "32 min ago", "https://images.unsplash.com/flagged/photo-1596479042555-9265a7fa7983", Icons.Default.ChatBubble, greenEmerald, greenEmerald, true),
-        NotificationItem(4, NotificationType.Reminder, "Activity starting in 1 hour", "Morning Coffee Run with Alex and 2 others", "1 hr ago", null, Icons.Default.Schedule, orangeAmber, orangeAmber, true),
+        NotificationItem(
+            1,
+            NotificationType.Invite,
+            "Sarah invited you to join",
+            "Beach Sunset Vibes happening tonight at 7 PM",
+            "5 min ago",
+            "https://images.unsplash.com/photo-1566330429822-c413e4bc27a5",
+            Icons.Default.Place,
+            pinkPurple,
+            pinkPurple,
+            true,
+            true
+        ),
+        NotificationItem(
+            2,
+            NotificationType.Follow,
+            "Alex Rivera started following you",
+            "Check out their profile and follow back!",
+            "15 min ago",
+            "https://images.unsplash.com/photo-1638996030249-abc99a735463",
+            Icons.Default.PersonAdd,
+            blueCyan,
+            blueCyan,
+            true,
+            true
+        ),
+        NotificationItem(
+            3,
+            NotificationType.Message,
+            "New message in Coffee Crawl",
+            "Jordan: \"See you all at 3pm! Can't wait 🎉\"",
+            "32 min ago",
+            "https://images.unsplash.com/flagged/photo-1596479042555-9265a7fa7983",
+            Icons.Default.ChatBubble,
+            greenEmerald,
+            greenEmerald,
+            true
+        ),
+        NotificationItem(
+            4,
+            NotificationType.Reminder,
+            "Activity starting in 1 hour",
+            "Morning Coffee Run with Alex and 2 others",
+            "1 hr ago",
+            null,
+            Icons.Default.Schedule,
+            orangeAmber,
+            orangeAmber,
+            true
+        ),
     )
 
     val unreadCount = mockNotifications.count { it.isUnread }
 
     Scaffold(
         topBar = {
-            Column(modifier = Modifier.background(Color(0xFF0F172A)).padding(innerPaddingValues)) {
+            TopAppBar(
+                title = {
+                    Text(modifier = Modifier.padding(8.dp),
+                        text = "Notification",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0F172A))) },
+//            TopBar(outerPadding=outerPadding,unreadCount=unreadCount,filter = filter, onFilterChange = { filter = it })
+
+                containerColor = Color(0xFF0F172A)
+            ) { innerPadding ->
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = outerPadding.calculateBottomPadding(), top = innerPadding.calculateTopPadding()),
+                    contentPadding = PaddingValues(bottom = 24.dp)
+                ) {
+                    item {
+                        SectionHeader("Today")
+                    }
+                    items(mockNotifications) { notification ->
+                        NotificationRow(notification, onNotificationClick)
+                    }
+
+                    item {
+                        Spacer(modifier = Modifier.height(24.dp))
+                        WeeklyStatsCard()
+                    }
+                }
+            }
+        }
+
+        @Composable
+        private fun FilterTab(
+            label: String,
+            isActive: Boolean,
+            modifier: Modifier = Modifier,
+            count: Int = 0,
+            onClick: () -> Unit
+        ) {
+            Surface(
+                onClick = onClick,
+                modifier = modifier.height(44.dp),
+                shape = RoundedCornerShape(12.dp),
+                color = if (isActive) Color.Transparent else Color(0xFFF1F5F9),
+                contentColor = if (isActive) Color.White else Color(0xFF64748B)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .then(
+                            if (isActive) Modifier.background(
+                                Brush.horizontalGradient(
+                                    listOf(
+                                        Color(
+                                            0xFF9333EA
+                                        ), Color(0xFFDB2777)
+                                    )
+                                )
+                            )
+                            else Modifier
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(label, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                        if (count > 0) {
+                            Box(
+                                modifier = Modifier
+                                    .background(
+                                        if (isActive) Color.White.copy(alpha = 0.25f) else Color(
+                                            0xFF9333EA
+                                        ), CircleShape
+                                    )
+                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    count.toString(),
+                                    color = Color.White,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        @Composable
+        private fun SectionHeader(title: String) {
+            Text(
+                text = title.uppercase(),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF94A3B8),
+                letterSpacing = 1.sp,
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
+            )
+        }
+
+        @Composable
+        private fun NotificationRow(
+            notification: NotificationItem,
+            onClick: (NotificationItem) -> Unit
+        ) {
+            Surface(
+                onClick = { onClick(notification) },
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
+                shape = RoundedCornerShape(20.dp),
+                color = Color(0xFF1E293B),
+                border = if (notification.isUnread) BorderStroke(
+                    2.dp,
+                    Color(0xFF3B82F6).copy(alpha = 0.3f)
+                ) else BorderStroke(1.dp, Color(0xFF334155)),
+                shadowElevation = 0.dp
+            ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
+                    modifier = Modifier.padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Icon / Avatar
+                    Box(contentAlignment = Alignment.BottomEnd) {
+                        if (notification.avatar != null) {
+                            AsyncImage(
+                                model = notification.avatar,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                                    .border(2.dp, Color.White, CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .offset(x = 4.dp, y = 4.dp)
+                                    .clip(CircleShape)
+                                    .background(notification.iconBg)
+                                    .padding(4.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    notification.icon,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                            }
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(notification.iconBg),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    notification.icon,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Text(
+                                notification.title,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (notification.isUnread) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .background(Color(0xFF3B82F6), CircleShape)
+                                        .offset(y = 6.dp)
+                                )
+                            }
+                        }
+                        Text(
+                            notification.description,
+                            fontSize = 14.sp,
+                            color = Color(0xFFCBD5E1),
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+                        Text(
+                            notification.time,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color(0xFF94A3B8),
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+
+                        if (notification.actionable) {
+                            Row(
+                                modifier = Modifier.padding(top = 12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Button(
+                                    onClick = { },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(36.dp),
+                                    shape = RoundedCornerShape(10.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                                    contentPadding = PaddingValues()
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(notification.gradient),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            if (notification.type == NotificationType.Invite) "Accept" else "Follow Back",
+                                            color = Color.White,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                                if (notification.type == NotificationType.Invite) {
+                                    Button(
+                                        onClick = { },
+                                        modifier = Modifier
+                                            .weight(0.5f)
+                                            .height(36.dp),
+                                        shape = RoundedCornerShape(10.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Color(
+                                                0xFFF1F5F9
+                                            )
+                                        )
+                                    ) {
+                                        Text(
+                                            "Decline",
+                                            color = Color(0xFF64748B),
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        @Composable
+        private fun WeeklyStatsCard() {
+            Card(
+                modifier = Modifier
+                    .padding(horizontal = 20.dp)
+                    .fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .background(
+                            Brush.linearGradient(
+                                listOf(
+                                    Color(0xFF9333EA),
+                                    Color(0xFFDB2777)
+                                )
+                            )
+                        )
+                        .padding(24.dp)
+                ) {
+                    Column {
+                        Text(
+                            "This Week's Activity",
+                            color = Color.White,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Row(
+                            modifier = Modifier
+                                .padding(top = 16.dp)
+                                .fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            StatMetric("12", "New Invites")
+                            StatMetric("28", "New Followers")
+                            StatMetric("64", "Reactions")
+                        }
+                    }
+                }
+            }
+        }
+
+        @Composable
+        private fun StatMetric(value: String, label: String) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(value, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                Text(label, color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
+            }
+        }
+
+        @Composable
+        fun TopBar(
+            outerPadding: PaddingValues,
+            unreadCount: Int,
+            filter: String,
+            onMarkAllRead: () -> Unit = {},
+            onFilterChange: (String) -> Unit
+        ) {
+            Column(modifier = Modifier
+                .background(Color(0xFF0F172A))
+                .padding(outerPadding)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Icon(Icons.Default.NotificationsActive, contentDescription = null, tint = Color(0xFFA855F7), modifier = Modifier.size(28.dp))
-                            Text("Notifications", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.NotificationsActive,
+                                contentDescription = null,
+                                tint = Color(0xFFA855F7),
+                                modifier = Modifier.size(28.dp)
+                            )
+                            Text(
+                                "Notifications",
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
                         }
                         if (unreadCount > 0) {
-                            Text("$unreadCount unread notifications", fontSize = 14.sp, color = Color(0xFF94A3B8), modifier = Modifier.padding(top = 4.dp))
+                            Text(
+                                "$unreadCount unread notifications",
+                                fontSize = 14.sp,
+                                color = Color(0xFF94A3B8),
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
                         }
                     }
                     if (unreadCount > 0) {
                         TextButton(
                             onClick = onMarkAllRead,
-                            colors = ButtonDefaults.textButtonColors(containerColor = Color(0xFFF3E8FF)),
+                            colors = ButtonDefaults.textButtonColors(
+                                containerColor = Color(
+                                    0xFFF3E8FF
+                                )
+                            ),
                             shape = RoundedCornerShape(100.dp),
                             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                         ) {
-                            Text("Mark all read", color = Color(0xFF7E22CE), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                "Mark all read",
+                                color = Color(0xFF7E22CE),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
                         }
                     }
                 }
 
                 // Filter Tabs
+
+                // Filter Tabs
                 Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterTab(
+                        "All",
+                        filter == "all",
+                        Modifier.weight(1f)
+                    ) {
+                        onFilterChange("all")
+                    }
+
+                    FilterTab(
+                        "Unread",
+                        filter == "unread",
+                        Modifier.weight(1f),
+                        unreadCount
+                    ) {
+                        onFilterChange("unread")
+                    }
+                }
+
+                /*Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     FilterTab("All", filter == "all", Modifier.weight(1f)) { filter = "all" }
                     FilterTab("Unread", filter == "unread", Modifier.weight(1f), unreadCount) { filter = "unread" }
-                }
+                }*/
                 Spacer(modifier = Modifier.height(8.dp))
                 Divider(color = Color(0xFF334155), thickness = 1.dp)
             }
-        },
-        containerColor = Color(0xFF0F172A)
-    ) { it ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(innerPaddingValues),
-            contentPadding = PaddingValues(bottom = 24.dp)
-        ) {
-            item {
-                SectionHeader("Today")
-            }
-            items(mockNotifications) { notification ->
-                NotificationRow(notification, onNotificationClick)
-            }
-
-            item {
-                Spacer(modifier = Modifier.height(24.dp))
-                WeeklyStatsCard()
-            }
         }
-    }
-}
 
-@Composable
-private fun FilterTab(label: String, isActive: Boolean, modifier: Modifier = Modifier, count: Int = 0, onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        modifier = modifier.height(44.dp),
-        shape = RoundedCornerShape(12.dp),
-        color = if (isActive) Color.Transparent else Color(0xFFF1F5F9),
-        contentColor = if (isActive) Color.White else Color(0xFF64748B)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .then(
-                    if (isActive) Modifier.background(Brush.horizontalGradient(listOf(Color(0xFF9333EA), Color(0xFFDB2777))))
-                    else Modifier
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(label, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                if (count > 0) {
-                    Box(
-                        modifier = Modifier
-                            .background(if (isActive) Color.White.copy(alpha = 0.25f) else Color(0xFF9333EA), CircleShape)
-                            .padding(horizontal = 8.dp, vertical = 2.dp)
-                    ) {
-                        Text(count.toString(), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
+        @Preview
+        @Composable
+        fun NotificationsPreview() {
+            Notifications(PaddingValues(0.dp), {}, {})
         }
-    }
-}
-
-@Composable
-private fun SectionHeader(title: String) {
-    Text(
-        text = title.uppercase(),
-        fontSize = 12.sp,
-        fontWeight = FontWeight.Bold,
-        color = Color(0xFF94A3B8),
-        letterSpacing = 1.sp,
-        modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
-    )
-}
-
-@Composable
-private fun NotificationRow(notification: NotificationItem, onClick: (NotificationItem) -> Unit) {
-    Surface(
-        onClick = { onClick(notification) },
-        modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
-        shape = RoundedCornerShape(20.dp),
-        color = Color(0xFF1E293B),
-        border = if (notification.isUnread) BorderStroke(2.dp, Color(0xFF3B82F6).copy(alpha = 0.3f)) else BorderStroke(1.dp, Color(0xFF334155)),
-        shadowElevation = 0.dp
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // Icon / Avatar
-            Box(contentAlignment = Alignment.BottomEnd) {
-                if (notification.avatar != null) {
-                    AsyncImage(
-                        model = notification.avatar,
-                        contentDescription = null,
-                        modifier = Modifier.size(48.dp).clip(CircleShape).border(2.dp, Color.White, CircleShape),
-                        contentScale = ContentScale.Crop
-                    )
-                    Box(
-                        modifier = Modifier.size(24.dp).offset(x = 4.dp, y = 4.dp).clip(CircleShape).background(notification.iconBg).padding(4.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(notification.icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
-                    }
-                } else {
-                    Box(
-                        modifier = Modifier.size(48.dp).clip(RoundedCornerShape(14.dp)).background(notification.iconBg),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(notification.icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
-                    }
-                }
-            }
-
-            Column(modifier = Modifier.weight(1f)) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
-                    Text(notification.title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.weight(1f))
-                    if (notification.isUnread) {
-                        Box(modifier = Modifier.size(8.dp).background(Color(0xFF3B82F6), CircleShape).offset(y = 6.dp))
-                    }
-                }
-                Text(notification.description, fontSize = 14.sp, color = Color(0xFFCBD5E1), modifier = Modifier.padding(top = 2.dp))
-                Text(notification.time, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color(0xFF94A3B8), modifier = Modifier.padding(top = 8.dp))
-
-                if (notification.actionable) {
-                    Row(modifier = Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
-                            onClick = { },
-                            modifier = Modifier.weight(1f).height(36.dp),
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                            contentPadding = PaddingValues()
-                        ) {
-                            Box(modifier = Modifier.fillMaxSize().background(notification.gradient), contentAlignment = Alignment.Center) {
-                                Text(if (notification.type == NotificationType.Invite) "Accept" else "Follow Back", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                        if (notification.type == NotificationType.Invite) {
-                            Button(
-                                onClick = { },
-                                modifier = Modifier.weight(0.5f).height(36.dp),
-                                shape = RoundedCornerShape(10.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF1F5F9))
-                            ) {
-                                Text("Decline", color = Color(0xFF64748B), fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun WeeklyStatsCard() {
-    Card(
-        modifier = Modifier.padding(horizontal = 20.dp).fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
-    ) {
-        Box(modifier = Modifier.background(Brush.linearGradient(listOf(Color(0xFF9333EA), Color(0xFFDB2777)))).padding(24.dp)) {
-            Column {
-                Text("This Week's Activity", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                Row(modifier = Modifier.padding(top = 16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    StatMetric("12", "New Invites")
-                    StatMetric("28", "New Followers")
-                    StatMetric("64", "Reactions")
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun StatMetric(value: String, label: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-        Text(label, color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
-    }
-}
-
-@Preview
-@Composable
-fun NotificationsPreview(){
-    Notifications(PaddingValues(0.dp),{},{})
-}
-
 
 
 /*enum class AlertVariant {

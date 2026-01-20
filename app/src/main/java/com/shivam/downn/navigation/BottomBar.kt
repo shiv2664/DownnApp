@@ -19,12 +19,16 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.AddCircleOutline
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.AddCircleOutline
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
@@ -143,8 +147,8 @@ fun BottomBarContent(
 
             BottomNavItem(
                 label = "Create",
-                icon = if (currentDestination?.hierarchy?.any { it.route == itemsDataList[2].route } == true) Icons.Filled.Add else Icons.Default.Add,
-                isActive = currentDestination?.hierarchy?.any { it.route == itemsDataList[2].route } == true
+                icon = if (currentDestination?.hierarchy?.any { it.route == itemsDataList[2].route } == true) Icons.Filled.AddCircle else Icons.Outlined.AddCircleOutline,
+                isActive = currentDestination?.hierarchy?.any { it.route == itemsDataList[2].route } == true,
             ) {
                 navController.navigate(itemsDataList[2].route) {
                     popUpTo(navController.graph.findStartDestination().id) {
@@ -194,12 +198,13 @@ fun BottomNavItem(
     icon: ImageVector,
     isActive: Boolean,
     unreadCount: Int = 0,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     val scale by animateFloatAsState(if (isActive) 1.1f else 1f)
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .scale(scale)
             .clickable(
                 indication = null,
@@ -210,12 +215,11 @@ fun BottomNavItem(
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Box(contentAlignment = Alignment.TopEnd) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                modifier = Modifier.size(24.dp),
-                tint = if (isActive) Color(0xFFC084FC) else Color(0xFF94A3B8)
-            )
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = label,
+                                modifier = Modifier.size(24.dp),
+                                tint = Color.White            )
 
             if (unreadCount > 0) {
                 Box(
@@ -253,5 +257,5 @@ fun BottomNavItem(
 @Preview
 @Composable
 fun BottomBarPreview() {
-    BottomBar(navController = rememberNavController())
+    BottomBarContent(navController = rememberNavController())
 }
