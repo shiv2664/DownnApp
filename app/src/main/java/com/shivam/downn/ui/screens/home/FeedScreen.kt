@@ -16,6 +16,7 @@ import com.shivam.downn.data.network.NetworkResult
 
 import com.shivam.downn.SocialCategory
 import com.shivam.downn.data.models.SocialResponse
+import com.shivam.downn.data.models.SocialType
 
 @Composable
 fun FeedScreen(
@@ -125,13 +126,49 @@ fun MoveList(
     onCardClick: (Int) -> Unit,
     onJoinClick: (Int) -> Unit
 ) {
+    val businessItems = listOf(
+        SocialResponse(
+            id = 16,
+            userName = "The Daily Grind",
+            userAvatar = "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=150",
+            title = "Live Jazz Night 🎷",
+            description = "Join us for a chill evening of live jazz and 20% off all brews!",
+            category = "Food",
+            city = "Delhi",
+            locationName = "The Daily Grind",
+            scheduledTime = "2026-01-21T20:00:00",
+            maxParticipants = 100,
+            participantCount = 45,
+            socialType = SocialType.BUSINESS,
+            timeAgo = "Just now",
+            distance = "0.5 km away"
+        ),
+        SocialResponse(
+            id = 17,
+            userName = "Club Social",
+            userAvatar = "https://images.unsplash.com/photo-1566737236500-c8ac1f852382?w=150",
+            title = "Friday Night Fever 🕺",
+            description = "The biggest party in town. Special discount for groups of 4!",
+            category = "Party",
+            city = "Delhi",
+            locationName = "Club Social",
+            scheduledTime = "2026-01-21T22:00:00",
+            maxParticipants = 500,
+            participantCount = 120,
+            socialType = SocialType.BUSINESS,
+            timeAgo = "2h ago",
+            distance = "1.2 km away"
+        )
+    )
+    val displaySocials = businessItems + socials
+
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(paddingValues),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 120.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         items(
-            items = socials,
+            items = displaySocials,
             key = { it.id }
         ) { social ->
             MoveCard(

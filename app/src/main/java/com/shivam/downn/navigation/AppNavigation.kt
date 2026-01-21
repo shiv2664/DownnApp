@@ -19,6 +19,7 @@ import com.shivam.downn.ui.screens.profile.UserProfile
 import com.shivam.downn.ui.screens.profile.EditProfileScreen
 import com.shivam.downn.ui.screens.profile.PublicProfile
 import com.shivam.downn.ui.screens.profile.BusinessProfileScreen
+import com.shivam.downn.ui.screens.chat.LiveBoardScreen
 import com.shivam.downn.ui.screens.settings.SettingsScreen
 
 @Composable
@@ -126,11 +127,11 @@ fun AppNavigation(startDestination: String = "login") {
                 )
             }
 
-            composable("group_chat/{socialId}") {
+            composable("group_chat/{socialId}") { backStackEntry ->
+                val socialId = backStackEntry.arguments?.getString("socialId")?.toIntOrNull() ?: 1
                 GroupChat(innerPadding,
                     socialTitle = "Downtown Coffee Meetup",
                     categoryIcon = {
-                        // Using an emoji as a simple icon for the preview
                         Text("☕️", fontSize = 20.sp)
                     },
                     categoryColor = Color(0xFFFBBF24).copy(alpha = 0.2f),
@@ -138,6 +139,18 @@ fun AppNavigation(startDestination: String = "login") {
                     onClose = {
                         navController.navigateUp()
                     }
+                )
+            }
+
+            composable("live_board/{socialId}") { backStackEntry ->
+                val socialId = backStackEntry.arguments?.getString("socialId")?.toIntOrNull() ?: 1
+                // Mock data for demo
+                LiveBoardScreen(
+                    socialId = socialId,
+                    socialTitle = if (socialId == 16) "Live Jazz Night 🎷" else "Friday Night Fever 🕺",
+                    businessName = if (socialId == 16) "The Daily Grind" else "Club Social",
+                    businessAvatar = "",
+                    onClose = { navController.navigateUp() }
                 )
             }
         }

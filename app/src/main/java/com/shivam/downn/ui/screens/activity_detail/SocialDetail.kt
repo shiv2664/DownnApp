@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.shivam.downn.data.models.SocialResponse
+import com.shivam.downn.data.models.SocialType
 
 data class Participant(
     val id: Int,
@@ -53,15 +54,24 @@ fun SocialDetail(
     val userAvatar = social.userAvatar ?: ""
     val distance = social.distance ?: "Nearby"
     val participantCount = social.participantCount
+    val isBusiness = social.socialType == SocialType.BUSINESS
+    val primaryColor = if (isBusiness) Color(0xFFF97316) else Color(0xFFA855F7)
+    val secondaryColor = if (isBusiness) Color(0xFFFDBA74) else Color(0xFF3B82F6)
+    val accentBrush = if (isBusiness) {
+        Brush.horizontalGradient(listOf(Color(0xFFFDBA74), Color(0xFFF97316)))
+    } else {
+        Brush.horizontalGradient(listOf(Color(0xFF9333EA), Color(0xFFDB2777)))
+    }
+
     val categoryIcon = @Composable {
         Icon(
-            imageVector = Icons.Outlined.Coffee,
+            imageVector = if (isBusiness) Icons.Default.Verified else Icons.Outlined.Coffee,
             contentDescription = null,
             tint = Color.White,
             modifier = Modifier.size(20.dp)
         )
     }
-    val categoryColor = Color(0xFFA855F7)
+    val categoryColor = primaryColor
     val images = emptyList<String>() // You can add images from API if available
     val description: String? = social.description
 
@@ -155,9 +165,12 @@ fun SocialDetail(
                             InfoChip(
                                 Icons.Default.Schedule,
                                 social.scheduledTime ?: "TBD",
-                                Color(0xFFA855F7)
+                                primaryColor
                             )
-                            InfoChip(Icons.Default.Place, distance ?: "Nearby", Color(0xFF3B82F6))
+                            InfoChip(Icons.Default.Place, distance ?: "Nearby", secondaryColor)
+                            if (isBusiness) {
+                                InfoChip(Icons.Default.Star, "4.9", Color(0xFFF59E0B))
+                            }
                         }
                     }
 
@@ -193,20 +206,30 @@ fun SocialDetail(
                                         .clip(CircleShape)
                                         .border(
                                             2.dp,
-                                            Color(0xFFA855F7).copy(alpha = 0.5f),
+                                            primaryColor.copy(alpha = 0.5f),
                                             CircleShape
                                         ),
                                     contentScale = ContentScale.Crop
                                 )
                                 Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Text(
+                                            userName,
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 16.sp
+                                        )
+                                        if (isBusiness) {
+                                            Icon(
+                                                Icons.Default.Verified,
+                                                contentDescription = null,
+                                                tint = Color(0xFF3B82F6),
+                                                modifier = Modifier.size(14.dp)
+                                            )
+                                        }
+                                    }
                                     Text(
-                                        userName,
-                                        color = Color.White,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 16.sp
-                                    )
-                                    Text(
-                                        "Member since 2024",
+                                        if (isBusiness) "Verified Business" else "Member since 2024",
                                         color = Color(0xFF94A3B8),
                                         fontSize = 12.sp
                                     )
@@ -284,7 +307,7 @@ fun SocialDetail(
                             )
                             Text(
                                 "See all",
-                                color = Color(0xFFA855F7),
+                                color = primaryColor,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Medium
                             )
@@ -294,7 +317,7 @@ fun SocialDetail(
                             horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             items(participants) { participant ->
-                                AvatarsItem(participant.avatar, participant.name)
+                                AvatarsItem(participant.avatar, participant.name, accentBrush)
                             }
                         }
                     }
@@ -317,7 +340,7 @@ fun SocialDetail(
                             modifier = Modifier
                                 .padding(top = 16.dp)
                                 .fillMaxWidth()
-                                .height(200.dp)
+                                .height(if (isBusiness) 240.dp else 200.dp)
                                 .clip(RoundedCornerShape(24.dp))
                                 .background(
                                     Brush.linearGradient(
@@ -329,29 +352,55 @@ fun SocialDetail(
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
-                            Surface(
-                                shape = RoundedCornerShape(16.dp),
-                                color = Color(0xFF1E293B),
-                                border = BorderStroke(1.dp, Color(0xFF334155))
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Surface(
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = Color(0xFF1E293B),
+                                    border = BorderStroke(1.dp, Color(0xFF334155))
                                 ) {
-                                    Icon(
-                                        Icons.Default.Place,
-                                        contentDescription = null,
-                                        tint = Color(0xFFF87171)
-                                    )
-                                    Column {
-                                        Text(
-                                            text = social.locationName ?: "Unknown Location",
-                                            color = Color.White,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 14.sp
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Place,
+                                            contentDescription = null,
+                                            tint = Color(0xFFF87171)
                                         )
-                                        Text(distance, color = Color(0xFF94A3B8), fontSize = 12.sp)
+                                        Column {
+                                            Text(
+                                                text = social.locationName ?: "Unknown Location",
+                                                color = Color.White,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp
+                                            )
+                                            Text(distance, color = Color(0xFF94A3B8), fontSize = 12.sp)
+                                        }
+                                    }
+                                }
+
+                                if (isBusiness) {
+                                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                        Button(
+                                            onClick = {},
+                                            modifier = Modifier.height(44.dp),
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF334155)),
+                                            shape = RoundedCornerShape(12.dp)
+                                        ) {
+                                            Icon(Icons.Default.Directions, contentDescription = null, modifier = Modifier.size(18.dp))
+                                            Spacer(Modifier.width(8.dp))
+                                            Text("Directions", fontSize = 12.sp)
+                                        }
+                                        Button(
+                                            onClick = {},
+                                            modifier = Modifier.size(44.dp),
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF334155)),
+                                            shape = RoundedCornerShape(12.dp),
+                                            contentPadding = PaddingValues(0.dp)
+                                        ) {
+                                            Icon(Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        }
                                     }
                                 }
                             }
@@ -400,14 +449,7 @@ fun SocialDetail(
                                         modifier = Modifier
                                             .size(32.dp)
                                             .clip(CircleShape)
-                                            .background(
-                                                Brush.linearGradient(
-                                                    listOf(
-                                                        Color(0xFF9333EA),
-                                                        Color(0xFFDB2777)
-                                                    )
-                                                )
-                                            )
+                                            .background(accentBrush)
                                     )
                                     Column {
                                         Row(
@@ -441,7 +483,7 @@ fun SocialDetail(
                             ) {
                                 Text(
                                     "View all messages",
-                                    color = Color(0xFFA855F7),
+                                    color = primaryColor,
                                     fontWeight = FontWeight.SemiBold
                                 )
                             }
@@ -539,24 +581,24 @@ fun SocialDetail(
                                 .weight(1f)
                                 .height(56.dp),
                             shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
-                            border = BorderStroke(2.dp, Color(0xFFA855F7))
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.ChatBubble,
-                                    contentDescription = null,
-                                    tint = Color(0xFFA855F7)
-                                )
-                                Text(
-                                    "CHAT",
-                                    color = Color(0xFFA855F7),
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
+                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
+                             border = BorderStroke(2.dp, primaryColor)
+                         ) {
+                             Row(
+                                 verticalAlignment = Alignment.CenterVertically,
+                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
+                             ) {
+                                 Icon(
+                                     Icons.Default.ChatBubble,
+                                     contentDescription = null,
+                                     tint = primaryColor
+                                 )
+                                 Text(
+                                     "CHAT",
+                                     color = primaryColor,
+                                     fontWeight = FontWeight.Bold
+                                 )
+                             }
                         }
                         Button(
                             onClick = { },
@@ -570,14 +612,7 @@ fun SocialDetail(
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .background(
-                                        Brush.horizontalGradient(
-                                            listOf(
-                                                Color(0xFF9333EA),
-                                                Color(0xFFDB2777)
-                                            )
-                                        )
-                                    ),
+                                     .background(accentBrush),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
@@ -630,7 +665,8 @@ private fun InfoChip(
 }
 
 @Composable
-fun AvatarsItem(avatar: String = "", name: String = "") {
+fun AvatarsItem(avatar: String = "", name: String = "", brush: Brush? = null) {
+    val defaultBrush = Brush.linearGradient(listOf(Color(0xFF9333EA), Color(0xFFDB2777)))
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.width(64.dp)
@@ -640,14 +676,7 @@ fun AvatarsItem(avatar: String = "", name: String = "") {
             modifier = Modifier
                 .size(64.dp)
                 .clip(CircleShape)
-                .background(
-                    Brush.linearGradient(
-                        listOf(
-                            Color(0xFF9333EA),
-                            Color(0xFFDB2777)
-                        )
-                    )
-                )
+                .background(brush ?: defaultBrush)
                 .padding(2.dp)
         ) {
             AsyncImage(
