@@ -18,14 +18,16 @@ import androidx.compose.ui.platform.LocalView
 import android.app.Activity
 import androidx.core.view.WindowCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.shivam.downn.data.network.NetworkResult
+import com.shivam.downn.data.models.SocialResponse
 
 @Composable
-fun ActivityDetailScreen(
-    activityId: Int,
+fun SocialDetailScreen(
+    socialId: Int,
     onClose: () -> Unit,
     onOpenChat: () -> Unit,
     onViewProfile: (userId: Int) -> Unit,
-    viewModel: ActivityDetailViewModel = hiltViewModel()
+    viewModel: SocialDetailViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
     val view = LocalView.current
@@ -38,25 +40,25 @@ fun ActivityDetailScreen(
         }
     }
 
-    LaunchedEffect(activityId) {
-        viewModel.loadActivityDetails(activityId)
+    LaunchedEffect(socialId) {
+        viewModel.loadSocialDetails(socialId)
     }
 
     when (val currentState = state) {
-        is ActivityDetailState.Loading -> {
+        is NetworkResult.Loading -> {
             Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0F172A)), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
         }
-        is ActivityDetailState.Error -> {
+        is NetworkResult.Error -> {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(text = "Error: ${currentState.message}", color = Color.Red)
             }
         }
-        is ActivityDetailState.Success -> {
-            val activity = currentState.activity
-            ActivityDetail(
-                activity = activity,
+        is NetworkResult.Success -> {
+            val social = currentState.data ?: return
+            SocialDetail(
+                social = social,
                 onClose = onClose,
                 onOpenChat = onOpenChat,
                 onViewProfile = {id-> onViewProfile(id.toInt())}

@@ -11,35 +11,31 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.shivam.downn.data.network.NetworkResult
+import kotlinx.coroutines.flow.asStateFlow
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val repository: AuthRepository
 ) : ViewModel() {
 
-    private val _authState = MutableStateFlow<AuthState?>(AuthState.Idle)
-    val authState: StateFlow<AuthState?> = _authState as StateFlow<AuthState?>
+    private val _authState = MutableStateFlow<NetworkResult<AuthResponse?>?>(null)
+    val authState: StateFlow<NetworkResult<AuthResponse?>?> = _authState.asStateFlow()
 
     fun login(authRequest: AuthRequest) {
         viewModelScope.launch {
-            _authState.value = AuthState.Loading
-            val result = repository.login(authRequest)
-            result.onSuccess {
-                _authState.value = AuthState.Success(it)
-            }.onFailure {
-                _authState.value = AuthState.Error(it.message ?: "Unknown error")
+            _authState.value = NetworkResult.Loading()
+            repository.login(authRequest).collect { it ->
+                _authState.value = it
             }
         }
     }
 
     fun register(registerRequest: RegisterRequest) {
         viewModelScope.launch {
-            _authState.value = AuthState.Loading
-            val result = repository.register(registerRequest)
-            result.onSuccess {
-                _authState.value = AuthState.Success(it)
-            }.onFailure {
-                _authState.value = AuthState.Error(it.message ?: "Unknown error")
+            _authState.value = NetworkResult.Loading()
+            repository.register(registerRequest).collect { it ->
+                _authState.value = it
             }
         }
     }

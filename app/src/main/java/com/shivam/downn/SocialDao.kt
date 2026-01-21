@@ -2,7 +2,7 @@ package com.shivam.downn
 
 import com.google.gson.annotations.SerializedName
 
-data class ActivityDto(
+data class SocialDto(
     @SerializedName("id") val id: String,
     @SerializedName("userId") val userId: String,
     @SerializedName("userName") val userName: String,
@@ -28,14 +28,14 @@ data class UserDto(
     @SerializedName("createdAt") val createdAt: Long
 )
 
-data class Activity(
+data class Social(
     val id: String,
     val userId: String,
     val userName: String,
     val userAvatar: String?,
     val title: String,
     val description: String?,
-    val category: ActivityCategory,
+    val category: SocialCategory,
     val location: Location,
     val timestamp: Long,
     val participants: List<String>,
@@ -60,7 +60,7 @@ data class Location(
     val name: String
 )
 
-enum class ActivityCategory(val displayName: String, val emoji: String) {
+enum class SocialCategory(val displayName: String, val emoji: String) {
     TRAVEL("Travel", "✈️"),
     PARTY("Party", "🎉"),
     FOOD("Food", "🍔"),
@@ -70,7 +70,7 @@ enum class ActivityCategory(val displayName: String, val emoji: String) {
     OTHER("Other", "📌")
 }
 
-data class ActivityEntity(
+data class SocialEntity(
     val id: String,
     val userId: String,
     val userName: String,
@@ -103,11 +103,11 @@ object DummyData {
         "https://i.pravatar.cc/150?img=10"
     )
 
-    data class ActivityItem(
+    data class SocialItem(
         val id: String,
         val userName: String,
         val userAvatar: String?,
-        val activityTitle: String,
+        val moveTitle: String,
         val description: String?,
         val category: String,
         val categoryEmoji: String,
@@ -115,15 +115,16 @@ object DummyData {
         val distance: String,
         val participantCount: Int,
         val maxParticipants: Int?,
-        val participantAvatars: List<String>
+        val participantAvatars: List<String>,
+        val socialType: com.shivam.downn.data.models.SocialType = com.shivam.downn.data.models.SocialType.PERSONAL
     )
 
-    val dummyActivities = listOf(
-        ActivityItem(
+    val dummySocials = listOf(
+        SocialItem(
             id = "1",
             userName = "Priya Sharma",
             userAvatar = avatarUrls[0],
-            activityTitle = "Exploring Hauz Khas Village tonight! 🌙",
+            moveTitle = "Exploring Hauz Khas Village tonight! 🌙",
             description = "Looking for cool people to check out the cafes and art galleries. Let's make it a vibe!",
             category = "Travel",
             categoryEmoji = "✈️",
@@ -133,11 +134,11 @@ object DummyData {
             maxParticipants = 8,
             participantAvatars = listOf(avatarUrls[1], avatarUrls[2], avatarUrls[3], avatarUrls[4])
         ),
-        ActivityItem(
+        SocialItem(
             id = "2",
             userName = "Rohan Mehta",
             userAvatar = avatarUrls[1],
-            activityTitle = "Club hopping in Cyber Hub 🎉",
+            moveTitle = "Club hopping in Cyber Hub 🎉",
             description = "Anyone down to hit up some clubs tonight? Got a crew of 3, looking for more fun people!",
             category = "Party",
             categoryEmoji = "🎉",
@@ -154,11 +155,11 @@ object DummyData {
                 avatarUrls[0]
             )
         ),
-        ActivityItem(
+        SocialItem(
             id = "3",
             userName = "Ananya Gupta",
             userAvatar = avatarUrls[2],
-            activityTitle = "Late night momos at Majnu ka Tilla?",
+            moveTitle = "Late night momos at Majnu ka Tilla?",
             description = "Craving some good Tibetan food. Who's in?",
             category = "Food",
             categoryEmoji = "🍔",
@@ -168,11 +169,11 @@ object DummyData {
             maxParticipants = 6,
             participantAvatars = listOf(avatarUrls[3], avatarUrls[4])
         ),
-        ActivityItem(
+        SocialItem(
             id = "4",
             userName = "Arjun Singh",
             userAvatar = avatarUrls[3],
-            activityTitle = "Trekking to Nag Tibba this weekend",
+            moveTitle = "Trekking to Nag Tibba this weekend",
             description = "Planning a 2-day trek. Need experienced trekkers. Leaving Friday evening from Delhi.",
             category = "Travel",
             categoryEmoji = "✈️",
@@ -188,11 +189,11 @@ object DummyData {
                 avatarUrls[9]
             )
         ),
-        ActivityItem(
+        SocialItem(
             id = "5",
             userName = "Sneha Patel",
             userAvatar = avatarUrls[4],
-            activityTitle = "Stand-up comedy show at Canvas Laugh Club",
+            moveTitle = "Stand-up comedy show at Canvas Laugh Club",
             description = "Got an extra ticket! Show starts at 8 PM. Let's share an Uber too?",
             category = "Events",
             categoryEmoji = "🎭",
@@ -202,11 +203,11 @@ object DummyData {
             maxParticipants = 2,
             participantAvatars = listOf(avatarUrls[0])
         ),
-        ActivityItem(
+        SocialItem(
             id = "6",
             userName = "Kabir Malhotra",
             userAvatar = avatarUrls[5],
-            activityTitle = "Sunday football at JNU grounds ⚽",
+            moveTitle = "Sunday football at JNU grounds ⚽",
             description = "We have 8 players, need 3 more for a proper match. All skill levels welcome!",
             category = "Sports",
             categoryEmoji = "⚽",
@@ -225,11 +226,11 @@ object DummyData {
                 avatarUrls[8]
             )
         ),
-        ActivityItem(
+        SocialItem(
             id = "7",
             userName = "Diya Kapoor",
             userAvatar = avatarUrls[6],
-            activityTitle = "Photography walk at India Gate 📸",
+            moveTitle = "Photography walk at India Gate 📸",
             description = "Golden hour shoot tomorrow morning. Bring your cameras and let's capture some magic!",
             category = "Hobby",
             categoryEmoji = "🎨",
@@ -239,11 +240,11 @@ object DummyData {
             maxParticipants = 8,
             participantAvatars = listOf(avatarUrls[9], avatarUrls[0], avatarUrls[1])
         ),
-        ActivityItem(
+        SocialItem(
             id = "8",
             userName = "Vikram Reddy",
             userAvatar = avatarUrls[7],
-            activityTitle = "Board game night at my place 🎲",
+            moveTitle = "Board game night at my place 🎲",
             description = "Got Catan, Codenames, and more. BYOB. Let's have a chill evening!",
             category = "Hobby",
             categoryEmoji = "🎨",
@@ -253,11 +254,11 @@ object DummyData {
             maxParticipants = 8,
             participantAvatars = listOf(avatarUrls[2], avatarUrls[3], avatarUrls[4], avatarUrls[5])
         ),
-        ActivityItem(
+        SocialItem(
             id = "9",
             userName = "Meera Joshi",
             userAvatar = avatarUrls[8],
-            activityTitle = "Brunch at SodaBottleOpenerWala",
+            moveTitle = "Brunch at SodaBottleOpenerWala",
             description = "Solo traveler here! Looking for people to grab brunch with. Love trying new places!",
             category = "Food",
             categoryEmoji = "🍔",
@@ -267,11 +268,11 @@ object DummyData {
             maxParticipants = 6,
             participantAvatars = listOf(avatarUrls[6], avatarUrls[7])
         ),
-        ActivityItem(
+        SocialItem(
             id = "10",
             userName = "Aditya Chopra",
             userAvatar = avatarUrls[9],
-            activityTitle = "Rishikesh rafting trip next weekend! 🌊",
+            moveTitle = "Rishikesh rafting trip next weekend! 🌊",
             description = "Planning camping + rafting. 2 nights, 3 days. Cost around ₹3500 per person. Adventure seekers only!",
             category = "Travel",
             categoryEmoji = "✈️",
@@ -289,11 +290,11 @@ object DummyData {
                 avatarUrls[6]
             )
         ),
-        ActivityItem(
+        SocialItem(
             id = "11",
             userName = "Tanya Verma",
             userAvatar = avatarUrls[0],
-            activityTitle = "Sunset at Lodhi Garden 🌅",
+            moveTitle = "Sunset at Lodhi Garden 🌅",
             description = "Just moved to Delhi. Would love to explore with some friendly faces!",
             category = "Travel",
             categoryEmoji = "✈️",
@@ -303,11 +304,11 @@ object DummyData {
             maxParticipants = 5,
             participantAvatars = listOf(avatarUrls[8])
         ),
-        ActivityItem(
+        SocialItem(
             id = "12",
             userName = "Rahul Bhatia",
             userAvatar = avatarUrls[1],
-            activityTitle = "Open mic poetry night at Cha Bar",
+            moveTitle = "Open mic poetry night at Cha Bar",
             description = "Performing some of my work tonight. Come support! Starts at 7:30 PM.",
             category = "Events",
             categoryEmoji = "🎭",
@@ -327,11 +328,11 @@ object DummyData {
                 avatarUrls[0]
             )
         ),
-        ActivityItem(
+        SocialItem(
             id = "13",
             userName = "Simran Kaur",
             userAvatar = null, // No avatar example
-            activityTitle = "Yoga session at Nehru Park 🧘‍♀️",
+            moveTitle = "Yoga session at Nehru Park 🧘‍♀️",
             description = "Free morning yoga class tomorrow at 6 AM. All levels welcome. Bring your own mat!",
             category = "Sports",
             categoryEmoji = "⚽",
@@ -347,11 +348,11 @@ object DummyData {
                 avatarUrls[5]
             )
         ),
-        ActivityItem(
+        SocialItem(
             id = "14",
             userName = "Nikhil Desai",
             userAvatar = avatarUrls[2],
-            activityTitle = "Movie marathon: Marvel Phase 4 🎬",
+            moveTitle = "Movie marathon: Marvel Phase 4 🎬",
             description = "Starting at noon Saturday. Got popcorn and snacks covered. Just bring yourself!",
             category = "Events",
             categoryEmoji = "🎭",
@@ -361,11 +362,11 @@ object DummyData {
             maxParticipants = 8,
             participantAvatars = listOf(avatarUrls[6], avatarUrls[7], avatarUrls[8])
         ),
-        ActivityItem(
+        SocialItem(
             id = "15",
             userName = "Ishita Nair",
             userAvatar = avatarUrls[3],
-            activityTitle = "Book club meet: Discussing 'Midnight's Children'",
+            moveTitle = "Book club meet: Discussing 'Midnight's Children'",
             description = "Monthly book club. Coffee and discussion at Kunzum Travel Cafe this Sunday 4 PM.",
             category = "Hobby",
             categoryEmoji = "🎨",
@@ -381,6 +382,36 @@ object DummyData {
                 avatarUrls[3],
                 avatarUrls[4]
             )
+        ),
+        SocialItem(
+            id = "16",
+            userName = "The Daily Grind",
+            userAvatar = "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=150",
+            moveTitle = "Live Jazz Night 🎷",
+            description = "Join us for a chill evening of live jazz and 20% off all brews!",
+            category = "Food",
+            categoryEmoji = "☕️",
+            timeAgo = "Just now",
+            distance = "0.5 km away",
+            participantCount = 45,
+            maxParticipants = 100,
+            participantAvatars = emptyList(),
+            socialType = com.shivam.downn.data.models.SocialType.BUSINESS
+        ),
+        SocialItem(
+            id = "17",
+            userName = "Club Social",
+            userAvatar = "https://images.unsplash.com/photo-1566737236500-c8ac1f852382?w=150",
+            moveTitle = "Friday Night Fever 🕺",
+            description = "The biggest party in town. Special discount for groups of 4!",
+            category = "Party",
+            categoryEmoji = "🎉",
+            timeAgo = "2h ago",
+            distance = "1.2 km away",
+            participantCount = 120,
+            maxParticipants = 500,
+            participantAvatars = emptyList(),
+            socialType = com.shivam.downn.data.models.SocialType.BUSINESS
         )
     )
 }

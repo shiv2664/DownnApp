@@ -2,51 +2,43 @@ package com.shivam.downn.ui.screens.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.shivam.downn.data.models.ActivityResponse
-import com.shivam.downn.data.repository.ActivityRepository
+import com.shivam.downn.data.models.SocialResponse
+import com.shivam.downn.data.repository.SocialRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.shivam.downn.data.network.NetworkResult
 
-sealed class FeedState {
-    object Loading : FeedState()
-    data class Success(val activities: List<ActivityResponse>) : FeedState()
-    data class Error(val message: String) : FeedState()
-}
 
 @HiltViewModel
 class FeedViewModel @Inject constructor(
-    private val activityRepository: ActivityRepository
+    private val socialRepository: SocialRepository
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow<FeedState>(FeedState.Loading)
-    val state: StateFlow<FeedState> = _state as StateFlow<FeedState>
+    private val _state = MutableStateFlow<NetworkResult<List<SocialResponse>>>(NetworkResult.Loading())
+    val state: StateFlow<NetworkResult<List<SocialResponse>>> = _state
 
     init {
-        fetchActivities()
+        fetchSocials()
     }
 
-    fun fetchActivities(category: String? = "SPORTS") {
+    fun fetchSocials(category: String? = "SPORTS") {
         viewModelScope.launch {
-            _state.value = FeedState.Loading
-            val result = activityRepository.getActivitiesByCity("Denver", category)
-            result.onSuccess {
-                _state.value = FeedState.Success(it)
-            }.onFailure {
-                _state.value = FeedState.Error(it.message ?: "Unknown error")
+            _state.value = NetworkResult.Loading()
+            socialRepository.getSocialsByCity("Denver", category).collect {
+                _state.value = it
             }
         }
     }
 
-    fun joinActivity(activityId: Int) {
+    fun joinSocial(socialId: Int) {
         viewModelScope.launch {
-            val result = activityRepository.joinActivity(activityId)
-            result.onSuccess {
-                fetchActivities()
-            }.onFailure {
-                // Handle failure
+            socialRepository.joinSocial(socialId).collect { result ->
+                if (result is NetworkResult.Success) {
+                    fetchSocials()
+                }
             }
         }
     }

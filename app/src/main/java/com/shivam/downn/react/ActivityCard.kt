@@ -1,3 +1,4 @@
+/*
 package com.shivam.downn.react
 
 import androidx.compose.foundation.background
@@ -157,7 +158,9 @@ fun ActivityCard(
 
                 // Join Button
                 Button(
-                    onClick = { /* Handle Join */ },
+                    onClick = { */
+/* Handle Join *//*
+ },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
@@ -324,3 +327,4 @@ fun ActivityCardNoImagePreview() {
     // }
 }
 
+*/

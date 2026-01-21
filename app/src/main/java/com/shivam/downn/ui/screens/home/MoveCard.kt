@@ -1,9 +1,7 @@
-package com.shivam.downn.ui
+package com.shivam.downn.ui.screens.home
 
-import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,15 +18,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
@@ -41,7 +35,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SegmentedButtonDefaults.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
@@ -49,22 +42,25 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.shivam.downn.data.models.SocialType
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.material.icons.filled.Verified
 
 @Composable
-fun ActivityCard(
+fun MoveCard(
     userName: String="",
     userAvatar: String="",
-    activityTitle: String="",
+    moveTitle: String="",
     description: String="",
     category: String="",
     categoryEmoji: String="",
@@ -73,20 +69,28 @@ fun ActivityCard(
     participantCount: Int=0,
     maxParticipants: Int?=0,
     participantAvatars: List<String>? =emptyList(),
+    socialType: SocialType = SocialType.PERSONAL,
     onCardClick: () -> Unit,
     onJoinClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isBusiness = socialType == SocialType.BUSINESS
+    val cardBorder = if (isBusiness) {
+        BorderStroke(2.dp, Brush.horizontalGradient(listOf(Color(0xFFFDBA74), Color(0xFFF97316))))
+    } else {
+        BorderStroke(1.dp, Color(0xFF334155))
+    }
+
     Card(
         onClick = onCardClick,
         modifier = modifier
             .fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, Color(0xFF334155)),
+        border = cardBorder,
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF1E293B) // Slightly lighter than background for contrast
+            containerColor = Color(0xFF1E293B)
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isBusiness) 8.dp else 2.dp)
     ) {
         Column(
             modifier = Modifier
@@ -130,16 +134,27 @@ fun ActivityCard(
                     }
 
                     Column {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = userName,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White
+                            )
+                            if (isBusiness) {
+                                Icon(
+                                    imageVector = Icons.Default.Verified,
+                                    contentDescription = "Verified Business",
+                                    tint = Color(0xFF3B82F6),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
                         Text(
-                            text = userName,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.White
-                        )
-                        Text(
-                            text = timeAgo,
+                            text = if (isBusiness) "Official Move • $timeAgo" else timeAgo,
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF94A3B8)
+                            color = if (isBusiness) Color(0xFFFDBA74) else Color(0xFF94A3B8),
+                            fontWeight = if (isBusiness) FontWeight.Medium else FontWeight.Normal
                         )
                     }
                 }
@@ -167,9 +182,9 @@ fun ActivityCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Activity Title
+            // Move Title
             Text(
-                text = activityTitle,
+                text = moveTitle,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 maxLines = 2,
@@ -269,18 +284,18 @@ fun ActivityCard(
                     onClick = { onJoinClick()},
                     modifier = Modifier.height(40.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
+                        containerColor = if (isBusiness) Color(0xFFF97316) else MaterialTheme.colorScheme.primary
                     ),
                     shape = RoundedCornerShape(20.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Add,
+                        imageVector = if (isBusiness) Icons.Default.Add else Icons.Default.Add,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "JOIN",
+                        text = "I'M DOWN",
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -371,7 +386,7 @@ fun PostCreationCard(
         ) {
             // Title
             Text(
-                text = "What are you downn for?",
+                text = "What's the move?",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
             )
@@ -532,7 +547,7 @@ fun PostCreationCard(
                     )
                 } else {
                     Text(
-                        text = "POST ACTIVITY",
+                        text = "POST MOVE",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -548,7 +563,7 @@ fun PostCreationCard(
 
 @Composable
 fun EmptyState(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     title: String,
     description: String,
     actionText: String? = null,
@@ -580,7 +595,7 @@ fun EmptyState(
             text = description,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            textAlign = TextAlign.Center
         )
 
         if (actionText != null && onActionClick != null) {
@@ -653,7 +668,7 @@ fun ErrorView(
             text = message,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            textAlign = TextAlign.Center
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -725,15 +740,15 @@ fun CategoryChip(
     }
 }
 
-@Preview(showBackground = true, name = "Default Activity Card")
+@Preview(showBackground = true, name = "Default Move Card")
 @Composable
-fun ActivityCardPreview() {
+fun MoveCardPreview() {
     // You might need to wrap it in your app's theme for correct styling
     // MaterialTheme {
-    ActivityCard(
+    MoveCard(
         userName = "Jane Doe",
         userAvatar = "https://example.com/avatar.jpg", // Replace with a valid image URL or leave empty
-        activityTitle = "Evening Jog in the Park",
+        moveTitle = "Evening Jog in the Park",
         description = "A relaxing jog to unwind after a long day. Everyone is welcome, no matter the pace!",
         category = "Running",
         categoryEmoji = "🏃‍♀️",
@@ -755,12 +770,12 @@ fun ActivityCardPreview() {
 
 @Preview(showBackground = true, name = "Card with No Description")
 @Composable
-fun ActivityCardNoDescriptionPreview() {
+fun MoveCardNoDescriptionPreview() {
     // MaterialTheme {
-    ActivityCard(
+    MoveCard(
         userName = "John Smith",
         userAvatar = "", // Example of no user avatar
-        activityTitle = "Morning Coffee Meetup",
+        moveTitle = "Morning Coffee Meetup",
         description = "", // Empty description
         category = "Social",
         categoryEmoji = "☕",
@@ -777,12 +792,12 @@ fun ActivityCardNoDescriptionPreview() {
 
 @Preview(showBackground = true, name = "Card with Unlimited Participants")
 @Composable
-fun ActivityCardUnlimitedParticipantsPreview() {
+fun MoveCardUnlimitedParticipantsPreview() {
     // MaterialTheme {
-    ActivityCard(
+    MoveCard(
         userName = "Community Event",
         userAvatar = "",
-        activityTitle = "Local Park Cleanup",
+        moveTitle = "Local Park Cleanup",
         description = "Let's make our park beautiful again. Gloves and bags will be provided.",
         category = "Volunteering",
         categoryEmoji = "🌍",

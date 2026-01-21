@@ -29,14 +29,21 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.shivam.downn.data.network.NetworkResult
 
 import androidx.compose.material3.TimePickerDialog
-import androidx.compose.material3.TimeInput
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
+import com.shivam.downn.data.models.SocialResponse
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.shape.CircleShape
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 
 data class Category(
     val id: String,
@@ -47,19 +54,19 @@ data class Category(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CreateActivity(
+fun StartMove(
     outerPadding: PaddingValues,
     onClose: () -> Unit,
-    viewModel: CreateActivityViewModel = hiltViewModel()
+    viewModel: StartMoveViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
 
-    CreateActivityContent(
-        state = state,
+    StartMoveContent(
+        state,
         outerPadding = outerPadding,
         onClose = onClose,
-        onCreateActivity = { title, description, category, location, time ->
-            viewModel.createActivity(
+        onCreateSocial = { title, description, category, location, time ->
+            viewModel.createSocial(
                 title = title,
                 description = description,
                 category = category,
@@ -75,11 +82,11 @@ fun CreateActivity(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CreateActivityContent(
-    state: CreateActivityState,
+fun StartMoveContent(
+    state: NetworkResult<SocialResponse?>?,
     outerPadding: PaddingValues,
     onClose: () -> Unit,
-    onCreateActivity: (String, String, String, String, String) -> Unit,
+    onCreateSocial: (String, String, String, String, String) -> Unit,
     onResetState: () -> Unit
 ) {
     var title by remember { mutableStateOf("") }
@@ -87,6 +94,13 @@ fun CreateActivityContent(
     var selectedCategoryId by remember { mutableStateOf("") }
     var time by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        selectedImageUri = uri
+    }
 
     val context = LocalContext.current
 
@@ -123,12 +137,11 @@ fun CreateActivityContent(
         ),
     )
 
-    val isFormValid =
-        title.isNotEmpty() && selectedCategoryId.isNotEmpty() && time.isNotEmpty() && location.isNotEmpty()
+    val isFormValid = title.isNotEmpty() && description.isNotEmpty() && selectedCategoryId.isNotEmpty() && time.isNotEmpty() && location.isNotEmpty()
 
     LaunchedEffect(state) {
-        if (state is CreateActivityState.Success) {
-            Toast.makeText(context, "Activity Created!", Toast.LENGTH_SHORT).show()
+        if (state is NetworkResult.Success) {
+            Toast.makeText(context, "Move Created!", Toast.LENGTH_SHORT).show()
             onClose()
             onResetState()
         }
@@ -139,7 +152,7 @@ fun CreateActivityContent(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Create Activity",
+                        text = "Start a Move",
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
@@ -185,6 +198,60 @@ fun CreateActivityContent(
                         end = 20.dp
                     )
             ) {
+                // Move Image section
+                InputLabel("Move Photo")
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color(0xFF1E293B).copy(alpha = 0.5f))
+                        .border(1.dp, Color(0xFF334155), RoundedCornerShape(20.dp))
+                        .clickable { photoPickerLauncher.launch("image/*") },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (selectedImageUri != null) {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            AsyncImage(
+                                model = selectedImageUri,
+                                contentDescription = "Activity Image",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                            // Change overlay
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black.copy(alpha = 0.3f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Icon(Icons.Default.Edit, contentDescription = null, tint = Color.White)
+                                    Text("Change Photo", color = Color.White, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            // Remove button
+                            IconButton(
+                                onClick = { selectedImageUri = null },
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(8.dp)
+                                    .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                                    .size(32.dp)
+                            ) {
+                                Icon(Icons.Default.Close, contentDescription = "Remove", tint = Color.White, modifier = Modifier.size(16.dp))
+                            }
+                        }
+                    } else {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, tint = Color(0xFF94A3B8), modifier = Modifier.size(40.dp))
+                            Text("Add Move Photo", color = Color(0xFF94A3B8), fontWeight = FontWeight.Medium)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
                 // Title Input
                 InputLabel("What's happening?")
                 OutlinedTextField(
@@ -219,7 +286,7 @@ fun CreateActivityContent(
                     onValueChange = { description = it },
                     placeholder = {
                         Text(
-                            "Add some details about the activity...",
+                            "Add some details about the move...",
                             color = Color(0xFF64748B)
                         )
                     },
@@ -375,22 +442,24 @@ fun CreateActivityContent(
                     )
                 )
 
-                if (state is CreateActivityState.Error) {
+                if (state is NetworkResult.Error) {
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = (state as CreateActivityState.Error).message,
-                        color = Color.Red,
-                        fontSize = 14.sp
-                    )
+                    state.message?.let {
+                        Text(
+                            text = it,
+                            color = Color.Red,
+                            fontSize = 14.sp
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))
 
                 Button(
                     onClick = {
-                        onCreateActivity(title, description, selectedCategoryId, location, time)
+                        onCreateSocial(title, description, selectedCategoryId, location, time)
                     },
-                    enabled = isFormValid && state !is CreateActivityState.Loading,
+                    enabled = isFormValid && state !is NetworkResult.Loading,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(60.dp),
@@ -418,14 +487,14 @@ fun CreateActivityContent(
                             ),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (state is CreateActivityState.Loading) {
+                        if (state is NetworkResult.Loading) {
                             CircularProgressIndicator(
                                 color = Color.White,
                                 modifier = Modifier.size(24.dp)
                             )
                         } else {
                             Text(
-                                "POST ACTIVITY",
+                                "POST MOVE",
                                 color = if (isFormValid) Color.White else Color(0xFF475569),
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold
@@ -489,13 +558,13 @@ private fun CategoryItem(category: Category, isSelected: Boolean, onClick: () ->
 
 @Preview(showBackground = true, backgroundColor = 0xFF0F172A)
 @Composable
-fun CreateActivityPreview() {
+fun StartMovePreview() {
     MaterialTheme {
-        CreateActivityContent(
-            state = CreateActivityState.Idle,
+        StartMoveContent(
+            state = null,
             outerPadding = PaddingValues(0.dp),
             onClose = {},
-            onCreateActivity = { _, _, _, _, _ -> },
+            onCreateSocial = { _, _, _, _, _ -> },
             onResetState = {}
         )
     }

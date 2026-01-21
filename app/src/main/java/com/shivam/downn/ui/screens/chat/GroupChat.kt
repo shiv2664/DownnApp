@@ -48,7 +48,7 @@ data class QuickReply(
 @Composable
 fun GroupChat(
     innerPadding: PaddingValues,
-    activityTitle: String,
+    socialTitle: String,
     categoryIcon: @Composable () -> Unit,
     categoryColor: Color,
     participantCount: Int,
@@ -80,7 +80,7 @@ fun GroupChat(
                                 categoryIcon()
                             }
                             Column {
-                                Text(activityTitle, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                Text(socialTitle, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                     Icon(Icons.Default.Groups, contentDescription = null, modifier = Modifier.size(12.dp), tint = Color(0xFF94A3B8))
                                     Text("$participantCount members", color = Color(0xFF94A3B8), fontSize = 12.sp)
@@ -100,7 +100,7 @@ fun GroupChat(
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0F172A))
                 )
-                // Pinned Activity Info
+                // Pinned Move Info
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -113,7 +113,7 @@ fun GroupChat(
                     Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Icon(Icons.Default.PushPin, contentDescription = null, tint = Color(0xFFD8B4FE), modifier = Modifier.size(16.dp).offset(y = 2.dp))
                         Column {
-                            Text("Activity Details", color = Color(0xFFD8B4FE), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                            Text("Move Details", color = Color(0xFFD8B4FE), fontSize = 12.sp, fontWeight = FontWeight.Medium)
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
                                 Icon(Icons.Default.Schedule, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color(0xFFCBD5E1))
                                 Text("Today at 3:00 PM", color = Color(0xFFCBD5E1), fontSize = 12.sp)
@@ -282,7 +282,7 @@ private fun ChatMessageItem(msg: Message) {
 fun GroupChatPreview() {
     GroupChat(
         innerPadding = PaddingValues(0.dp),
-        activityTitle = "Downtown Coffee Meetup",
+        socialTitle = "Downtown Coffee Meetup",
         categoryIcon = {
             // Using an emoji as a simple icon for the preview
             Text("☕️", fontSize = 20.sp)

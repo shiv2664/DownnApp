@@ -1,6 +1,6 @@
 package com.shivam.downn.di
 
-import com.shivam.downn.data.api.ActivityApi
+import com.shivam.downn.data.api.SocialApi
 import com.shivam.downn.data.api.AuthApi
 import com.shivam.downn.data.api.AuthInterceptor
 import com.shivam.downn.data.api.ConnectivityInterceptor
@@ -47,7 +47,7 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideActivityApi(retrofit: Retrofit): ActivityApi {
-        return retrofit.create(ActivityApi::class.java)
+    fun provideSocialApi(retrofit: Retrofit): SocialApi {
+        return retrofit.create(SocialApi::class.java)
     }
 }

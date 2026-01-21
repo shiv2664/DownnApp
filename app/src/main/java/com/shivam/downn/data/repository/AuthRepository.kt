@@ -5,6 +5,10 @@ import com.shivam.downn.data.local.PrefsManager
 import com.shivam.downn.data.models.AuthRequest
 import com.shivam.downn.data.models.AuthResponse
 import com.shivam.downn.data.models.RegisterRequest
+import com.shivam.downn.data.network.NetworkResult
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import com.shivam.downn.data.models.LogoutResponse
 import retrofit2.Response
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -14,37 +18,39 @@ class AuthRepository @Inject constructor(
     private val authApi: AuthApi,
     private val prefsManager: PrefsManager
 ) {
-    suspend fun login(request: AuthRequest): Result<AuthResponse?> {
-        return try {
+    fun login(request: AuthRequest): Flow<NetworkResult<AuthResponse?>> = flow {
+
+        try {
             val response = authApi.login(request)
             if (response.isSuccessful && response.body() != null) {
                 val authResponse = response.body()
                 authResponse?.let {
                     prefsManager.saveAuthResponse(authResponse)
                 }
-                Result.success(authResponse)
+                emit(NetworkResult.Success(response.body()))
+                return@flow
             } else {
-                Result.failure(Exception("Login failed: ${response.message()}"))
+                emit(NetworkResult.Error(response.message()))
             }
         } catch (e: Exception) {
-            Result.failure(e)
+            emit(NetworkResult.Error(message = e.localizedMessage))
         }
     }
 
-    suspend fun register(request: RegisterRequest): Result<AuthResponse?> {
-        return try {
+    fun register(request: RegisterRequest): Flow<NetworkResult<AuthResponse?>> = flow {
+        try {
             val response = authApi.register(request)
             if (response.isSuccessful && response.body() != null) {
                 val authResponse = response.body()
                 authResponse?.let {
                     prefsManager.saveAuthResponse(authResponse)
                 }
-                Result.success(authResponse)
+                emit(NetworkResult.Success(authResponse))
             } else {
-                Result.failure(Exception("Registration failed: ${response.message()}"))
+                emit(NetworkResult.Error("Registration failed: ${response.message()}"))
             }
         } catch (e: Exception) {
-            Result.failure(e)
+            emit(NetworkResult.Error(e.localizedMessage ?: "Unknown error"))
         }
     }
 
@@ -52,7 +58,22 @@ class AuthRepository @Inject constructor(
         return prefsManager.getToken() != null
     }
 
-    fun logout() {
-        prefsManager.clear()
+    fun logout(): Flow<NetworkResult<String?>> = flow {
+        emit(NetworkResult.Loading())
+        try {
+            val response = authApi.logout()
+            
+            if (response.isSuccessful) {
+                prefsManager.clear()
+                val message = response.body()?.message ?: "Successfully logged out"
+                emit(NetworkResult.Success(message))
+            } else {
+                emit(NetworkResult.Error("Remote logout failed: ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            // Local logout still happened
+            prefsManager.clear()
+            emit(NetworkResult.Error(e.localizedMessage ?: "Network error during logout"))
+        }
     }
 }

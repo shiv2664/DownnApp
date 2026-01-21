@@ -1,5 +1,8 @@
 package com.shivam.downn.ui.screens.profile
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -35,6 +38,13 @@ fun EditProfileScreen(
     var name by remember { mutableStateOf("Sarah Kim") }
     var bio by remember { mutableStateOf("Adventure seeker making friends one activity at a time ✨ Marathon runner & coffee enthusiast") }
     var location by remember { mutableStateOf("San Francisco, CA") }
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        selectedImageUri = uri
+    }
 
     Scaffold(
         topBar = {
@@ -79,7 +89,7 @@ fun EditProfileScreen(
                     border = BorderStroke(2.dp, Brush.linearGradient(listOf(Color(0xFF9333EA), Color(0xFFDB2777))))
                 ) {
                     AsyncImage(
-                        model = "https://images.unsplash.com/photo-1566330429822-c413e4bc27a5",
+                        model = selectedImageUri ?: "https://images.unsplash.com/photo-1566330429822-c413e4bc27a5",
                         contentDescription = "Profile Photo",
                         modifier = Modifier.clip(CircleShape),
                         contentScale = ContentScale.Crop
@@ -91,7 +101,7 @@ fun EditProfileScreen(
                         .clip(CircleShape)
                         .background(Color(0xFF9333EA))
                         .border(2.dp, Color(0xFF0F172A), CircleShape)
-                        .clickable { /* Photo Picker */ },
+                        .clickable { photoPickerLauncher.launch("image/*") },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(Icons.Default.CameraAlt, contentDescription = "Edit Photo", tint = Color.White, modifier = Modifier.size(18.dp))

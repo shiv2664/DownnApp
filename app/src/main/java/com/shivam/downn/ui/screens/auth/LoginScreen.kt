@@ -34,9 +34,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.shivam.downn.R
 import com.shivam.downn.data.models.AuthRequest
+import com.shivam.downn.data.models.AuthResponse
 import com.shivam.downn.data.models.RegisterRequest
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import com.shivam.downn.data.network.NetworkResult
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,13 +47,13 @@ fun LoginScreen(
     val authState by viewModel.authState.collectAsState()
 
     LaunchedEffect(authState) {
-        if (authState is AuthState.Success) {
+        if (authState is NetworkResult.Success) {
             onLoginSuccess()
         }
     }
 
     LoginContent(
-        authState = authState,
+        authState,
         onLoginClick = { email, password ->
             viewModel.login(AuthRequest(email, password))
         },
@@ -66,7 +66,7 @@ fun LoginScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginContent(
-    authState: AuthState?,
+    authState: NetworkResult<AuthResponse?>?,
     onLoginClick: (String, String) -> Unit,
     onRegisterClick: (String, String, String, String) -> Unit
 ) {
@@ -219,13 +219,17 @@ fun LoginContent(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            if (authState is AuthState.Error) {
-                Text(
-                    text = (authState as AuthState.Error).message,
-                    color = Color.Red,
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
+
+
+            if (authState is NetworkResult.Error) {
+                authState.message?.let {
+                    Text(
+                        text = it,
+                        color = Color.Red,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                }
             }
 
             Button(
@@ -243,9 +247,9 @@ fun LoginContent(
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFFA855F7)
                 ),
-                enabled = authState !is AuthState.Loading
+                enabled = authState !is NetworkResult.Loading
             ) {
-                if (authState is AuthState.Loading) {
+                if (authState is NetworkResult.Loading) {
                     CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
                 } else {
                     Text(if (isRegisterMode) "Create Account" else "Sign In", fontWeight = FontWeight.Bold, fontSize = 16.sp)
@@ -299,7 +303,7 @@ fun LoginContent(
 @Composable
 fun PreviewLoginScreen() {
     LoginContent(
-        authState = AuthState.Idle,
+        authState = null,
         onLoginClick = { _, _ -> },
         onRegisterClick = { _, _, _, _ -> }
     )

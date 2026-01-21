@@ -27,7 +27,7 @@ import coil.compose.AsyncImage
 import com.shivam.downn.data.models.InterestTag
 import androidx.compose.foundation.layout.FlowRow
 
-data class PastActivity(
+data class PastSocial(
     val id: Int,
     val image: String,
     val title: String,
@@ -81,9 +81,9 @@ fun ProfileContent(
 
     var selectedInterests by remember { mutableStateOf(allInterests.take(4)) }
 
-    val pastActivities = listOf(
-        PastActivity(1, "https://images.unsplash.com/photo-1640350408899-9d432cc32bca", "Beach Sunset Vibes", 8, 24, "Dec 28", "Santa Monica"),
-        PastActivity(2, "https://images.unsplash.com/photo-1595368062405-e4d7840cba14", "Mountain Hiking", 5, 31, "Dec 20", "Yosemite"),
+    val pastSocials = listOf(
+        PastSocial(1, "https://images.unsplash.com/photo-1640350408899-9d432cc32bca", "Beach Sunset Vibes", 8, 24, "Dec 28", "Santa Monica"),
+        PastSocial(2, "https://images.unsplash.com/photo-1595368062405-e4d7840cba14", "Mountain Hiking", 5, 31, "Dec 20", "Yosemite"),
     )
 
     Scaffold(
@@ -117,8 +117,8 @@ fun ProfileContent(
                 item { ProfileTabs(activeTab) { activeTab = it } }
 
                 if (activeTab == ProfileTab.Recent) {
-                    items(pastActivities) { activity ->
-                        ActivityListItem(activity)
+                    items(pastSocials) { social ->
+                        SocialListItem(social)
                     }
                 } else {
                     item { StatsSection() }
@@ -344,7 +344,7 @@ private fun InterestsSection(
             }
         }
         FlowRow(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -402,7 +402,7 @@ private fun ProfileTabs(activeTab: ProfileTab, onTabClick: (ProfileTab) -> Unit)
             .background(Color(0xFF1E293B), RoundedCornerShape(100.dp))
             .padding(6.dp)
     ) {
-        TabItem("Recent Activities", activeTab == ProfileTab.Recent, Modifier.weight(1f)) { onTabClick(ProfileTab.Recent) }
+        TabItem("Recent Moves", activeTab == ProfileTab.Recent, Modifier.weight(1f)) { onTabClick(ProfileTab.Recent) }
         TabItem("My Stats", activeTab == ProfileTab.Stats, Modifier.weight(1f)) { onTabClick(ProfileTab.Stats) }
     }
 }
@@ -430,7 +430,7 @@ private fun TabItem(label: String, isActive: Boolean, modifier: Modifier = Modif
 }
 
 @Composable
-private fun ActivityListItem(activity: PastActivity) {
+private fun SocialListItem(social: PastSocial) {
     Card(
         modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp).fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -440,20 +440,20 @@ private fun ActivityListItem(activity: PastActivity) {
     ) {
         Row(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             AsyncImage(
-                model = activity.image,
-                contentDescription = activity.title,
+                model = social.image,
+                contentDescription = social.title,
                 modifier = Modifier.size(96.dp).clip(RoundedCornerShape(16.dp)),
                 contentScale = ContentScale.Crop
             )
             Column(modifier = Modifier.weight(1f)) {
-                Text(activity.title, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.White)
+                Text(social.title, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.White)
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color(0xFFE0E0E0))
-                    Text(activity.location, color = Color(0xFFE0E0E0), fontSize = 14.sp)
+                    Text(social.location, color = Color(0xFFE0E0E0), fontSize = 14.sp)
                 }
                 Row(modifier = Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StatBadge(Icons.Default.Groups, activity.participants.toString(), Color(0xFFF3E8FF), Color(0xFF7C3AED))
-                    StatBadge(Icons.Default.Favorite, activity.likes.toString(), Color(0xFFFCE7F3), Color(0xFFDB2777))
+                    StatBadge(Icons.Default.Groups, social.participants.toString(), Color(0xFFF3E8FF), Color(0xFF7C3AED))
+                    StatBadge(Icons.Default.Favorite, social.likes.toString(), Color(0xFFFCE7F3), Color(0xFFDB2777))
                 }
             }
         }

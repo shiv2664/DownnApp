@@ -20,3 +20,7 @@ data class AuthResponse(
     @SerializedName("email") val email: String,
     @SerializedName("name") val name: String
 )
+
+data class LogoutResponse(
+    @SerializedName("message") val message: String
+)

@@ -99,7 +99,7 @@ fun Notifications(
         NotificationItem(
             4,
             NotificationType.Reminder,
-            "Activity starting in 1 hour",
+            "Move starting in 1 hour",
             "Morning Coffee Run with Alex and 2 others",
             "1 hr ago",
             null,
@@ -402,7 +402,7 @@ fun Notifications(
                 ) {
                     Column {
                         Text(
-                            "This Week's Activity",
+                            "This Week's Moves",
                             color = Color.White,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold

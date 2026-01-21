@@ -8,9 +8,9 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.shivam.downn.ui.screens.activity_detail.ActivityDetailScreen
+import com.shivam.downn.ui.screens.activity_detail.SocialDetailScreen
 import com.shivam.downn.ui.screens.chat.GroupChat
-import com.shivam.downn.ui.screens.create_activity.CreateActivity
+import com.shivam.downn.ui.screens.create_activity.StartMove
 import com.shivam.downn.ui.screens.explore.Explore
 import com.shivam.downn.ui.screens.home.FeedScreen
 import com.shivam.downn.ui.screens.auth.LoginScreen
@@ -18,6 +18,7 @@ import com.shivam.downn.ui.screens.notification.Notifications
 import com.shivam.downn.ui.screens.profile.UserProfile
 import com.shivam.downn.ui.screens.profile.EditProfileScreen
 import com.shivam.downn.ui.screens.profile.PublicProfile
+import com.shivam.downn.ui.screens.profile.BusinessProfileScreen
 import com.shivam.downn.ui.screens.settings.SettingsScreen
 
 @Composable
@@ -38,10 +39,15 @@ fun AppNavigation(startDestination: String = "login") {
 
             composable(
                 route = itemsDataList[0].route) {
-                FeedScreen(innerPadding, { activityId ->
-                    navController.navigate("activity_detail/$activityId")
+                FeedScreen({ socialId ->
+                    // Logic to check if socialId belongs to a business (for demo purposes)
+                    if (socialId >= 16) {
+                        navController.navigate("business_profile/$socialId")
+                    } else {
+                        navController.navigate("social_detail/$socialId")
+                    }
                 }, {
-                    navController.navigate("activity_detail/1")
+                    navController.navigate("social_detail/1")
                 })
             }
 
@@ -52,7 +58,7 @@ fun AppNavigation(startDestination: String = "login") {
 
             composable(
                 route = itemsDataList[2].route) {
-                CreateActivity(innerPadding,{})
+                StartMove(innerPadding,{})
             }
 
             composable(
@@ -101,19 +107,28 @@ fun AppNavigation(startDestination: String = "login") {
             }
 
 
-            composable(route = "activity_detail/{activityId}") { backStackEntry ->
-                val activityId = backStackEntry.arguments?.getString("activityId")?.toIntOrNull() ?: 1
-                ActivityDetailScreen(
-                    activityId = activityId,
+            composable(route = "social_detail/{socialId}") { backStackEntry ->
+                val socialId = backStackEntry.arguments?.getString("socialId")?.toIntOrNull() ?: 1
+                SocialDetailScreen(
+                    socialId = socialId,
                     onClose = { navController.navigateUp() },
-                    onOpenChat = { navController.navigate("group_chat/$activityId") },
+                    onOpenChat = { navController.navigate("group_chat/$socialId") },
                     onViewProfile = { userId -> navController.navigate("public_profile/$userId") }
                 )
             }
 
-            composable("group_chat/{activityId}") {
+            composable(route = "business_profile/{businessId}") { backStackEntry ->
+                val businessId = backStackEntry.arguments?.getString("businessId")?.toIntOrNull() ?: 16
+                BusinessProfileScreen(
+                    businessId = businessId,
+                    onClose = { navController.navigateUp() },
+                    onMoveClick = { moveId -> navController.navigate("social_detail/$moveId") }
+                )
+            }
+
+            composable("group_chat/{socialId}") {
                 GroupChat(innerPadding,
-                    activityTitle = "Downtown Coffee Meetup",
+                    socialTitle = "Downtown Coffee Meetup",
                     categoryIcon = {
                         // Using an emoji as a simple icon for the preview
                         Text("☕️", fontSize = 20.sp)

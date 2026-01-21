@@ -5,8 +5,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,14 +12,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.shivam.downn.ActivityCategory
-import com.shivam.downn.data.models.ActivityResponse
-import com.shivam.downn.ui.ActivityCard
-import com.shivam.downn.ui.CategoryChip
+import com.shivam.downn.data.network.NetworkResult
+
+import com.shivam.downn.SocialCategory
+import com.shivam.downn.data.models.SocialResponse
 
 @Composable
 fun FeedScreen(
-    outerPadding: PaddingValues,
     onCardClick: (Int) -> Unit,
     onJoinedClick: () -> Unit
 ) {
@@ -31,7 +28,7 @@ fun FeedScreen(
     Scaffold(
         topBar = { 
             FeedTopBar(onCategorySelected = { category ->
-                viewModel.fetchActivities(category)
+                viewModel.fetchSocials(category)
             }) 
         },
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
@@ -41,27 +38,27 @@ fun FeedScreen(
                 .fillMaxSize().background(Color(0xFF0F172A))
         ) {
             when (val currentState = state) {
-                is FeedState.Loading -> {
+                is NetworkResult.Loading -> {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
-                is FeedState.Error -> {
+                is NetworkResult.Error -> {
                     Column(
                         modifier = Modifier.align(Alignment.Center),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(text = "Error: ${currentState.message}", color = Color.Red)
-                        Button(onClick = { viewModel.fetchActivities() }) {
+                        Button(onClick = { viewModel.fetchSocials() }) {
                             Text("Retry")
                         }
                     }
                 }
-                is FeedState.Success -> {
-                    ActivityList(
-                        activities = currentState.activities,
+                is NetworkResult.Success -> {
+                    MoveList(
+                        socials = currentState.data ?: emptyList(),
                         paddingValues = paddingValues,
                         onCardClick = onCardClick,
-                        onJoinClick = { activityId ->
-                            viewModel.joinActivity(activityId)
+                        onJoinClick = { socialId ->
+                            viewModel.joinSocial(socialId)
                             onJoinedClick()
                         }
                     )
@@ -106,9 +103,9 @@ fun FeedTopBar(onCategorySelected: (String) -> Unit) {
                 )
             }
 
-            items(ActivityCategory.entries.toTypedArray()) { category ->
+            items(SocialCategory.entries.toTypedArray()) { category ->
                 CategoryChip(
-                    label = category.displayName,
+                    label = category.displayName.replace("Activity", "Move"),
                     emoji = category.emoji,
                     isSelected = selectedCategory == category.displayName,
                     onClick = { 
@@ -122,8 +119,8 @@ fun FeedTopBar(onCategorySelected: (String) -> Unit) {
 }
 
 @Composable
-fun ActivityList(
-    activities: List<ActivityResponse>,
+fun MoveList(
+    socials: List<SocialResponse>,
     paddingValues: PaddingValues,
     onCardClick: (Int) -> Unit,
     onJoinClick: (Int) -> Unit
@@ -134,23 +131,24 @@ fun ActivityList(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         items(
-            items = activities,
+            items = socials,
             key = { it.id }
-        ) { activity ->
-            ActivityCard(
-                userName = activity.userName ?: "Unknown",
-                userAvatar = activity.userAvatar ?: "",
-                activityTitle = activity.title,
-                description = activity.description?:"",
-                category = activity.category,
+        ) { social ->
+            MoveCard(
+                userName = social.userName ?: "Unknown",
+                userAvatar = social.userAvatar ?: "",
+                moveTitle = social.title,
+                description = social.description?:"",
+                category = social.category,
                 categoryEmoji = "📍", // Default emoji or map from category
-                timeAgo = activity.timeAgo ?: "Just now",
-                distance = activity.distance ?: "Nearby",
-                participantCount = activity.participantCount,
-                maxParticipants = activity.maxParticipants,
-                participantAvatars = activity.participantAvatars,
-                onCardClick = { onCardClick(activity.id) },
-                onJoinClick = { onJoinClick(activity.id) }
+                timeAgo = social.timeAgo ?: "Just now",
+                distance = social.distance ?: "Nearby",
+                participantCount = social.participantCount,
+                maxParticipants = social.maxParticipants,
+                participantAvatars = social.participantAvatars,
+                socialType = social.socialType,
+                onCardClick = { onCardClick(social.id) },
+                onJoinClick = { onJoinClick(social.id) }
             )
         }
     }

@@ -2,7 +2,12 @@ package com.shivam.downn.data.models
 
 import com.google.gson.annotations.SerializedName
 
-data class ActivityResponse(
+enum class SocialType {
+    PERSONAL,
+    BUSINESS
+}
+
+data class SocialResponse(
     @SerializedName("id") val id: Int,
     @SerializedName("title") val title: String,
     @SerializedName("description") val description: String?,
@@ -21,10 +26,11 @@ data class ActivityResponse(
     @SerializedName("distance") val distance: String? = null,
     @SerializedName("participantAvatars") val participantAvatars: List<String> = emptyList(),
     @SerializedName("isActive") val isActive: Boolean = true,
-    @SerializedName("createdAt") val createdAt: String? = null
+    @SerializedName("createdAt") val createdAt: String? = null,
+    @SerializedName("socialType") val socialType: SocialType = SocialType.PERSONAL
 )
 
-data class CreateActivityRequest(
+data class CreateSocialRequest(
     @SerializedName("title") val title: String,
     @SerializedName("description") val description: String,
     @SerializedName("category") val category: String,

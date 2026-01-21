@@ -16,16 +16,35 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.shivam.downn.data.network.NetworkResult
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     onClose: () -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    viewModel: SettingsViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
+    val logoutState by viewModel.logoutState.collectAsState()
+
+    LaunchedEffect(logoutState) {
+        if (logoutState is NetworkResult.Success) {
+            val message = (logoutState as NetworkResult.Success<String?>).data ?: "Logged out successfully"
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            onLogout()
+            viewModel.resetLogoutState()
+        }
+    }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -79,7 +98,9 @@ fun SettingsScreen(
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onLogout() },
+                    .clickable(enabled = logoutState !is NetworkResult.Loading) { 
+                        viewModel.logout() 
+                    },
                 shape = RoundedCornerShape(20.dp),
                 color = Color(0xFF1E293B).copy(alpha = 0.5f)
             ) {
@@ -89,8 +110,25 @@ fun SettingsScreen(
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Icon(Icons.Default.Logout, contentDescription = null, tint = Color(0xFFF87171))
-                    Text("Logout", color = Color(0xFFF87171), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    if (logoutState is NetworkResult.Loading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = Color(0xFFF87171),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text("Logout", color = Color(0xFFF87171), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    }
                 }
+            }
+
+            if (logoutState is NetworkResult.Error) {
+                Text(
+                    text = (logoutState as NetworkResult.Error).message ?: "Logout failed",
+                    color = Color.Red,
+                    fontSize = 12.sp,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
             }
             
             Spacer(modifier = Modifier.height(40.dp))
@@ -143,8 +181,9 @@ private fun SettingsItem(icon: ImageVector, label: String, onClick: () -> Unit =
     }
 }
 
-@Preview
+
 @Composable
+@Preview
 fun SettingsPreview() {
     SettingsScreen(onClose = {}, onLogout = {})
 }

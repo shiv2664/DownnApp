@@ -25,7 +25,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.shivam.downn.data.models.ActivityResponse
+import com.shivam.downn.data.models.SocialResponse
 
 data class Participant(
     val id: Int,
@@ -41,18 +41,18 @@ data class ChatPreview(
 )
 
 @Composable
-fun ActivityDetail(
-    activity: ActivityResponse,
+fun SocialDetail(
+    social: SocialResponse,
     onClose: () -> Unit,
     onOpenChat: () -> Unit,
     onViewProfile: (userId: Long) -> Unit
 ) {
 
-    val title = activity.title
-    val userName = activity.userName ?: "Unknown"
-    val userAvatar = activity.userAvatar ?: ""
-    val distance = activity.distance ?: "Nearby"
-    val participantCount = activity.participantCount
+    val title = social.title
+    val userName = social.userName ?: "Unknown"
+    val userAvatar = social.userAvatar ?: ""
+    val distance = social.distance ?: "Nearby"
+    val participantCount = social.participantCount
     val categoryIcon = @Composable {
         Icon(
             imageVector = Icons.Outlined.Coffee,
@@ -63,7 +63,7 @@ fun ActivityDetail(
     }
     val categoryColor = Color(0xFFA855F7)
     val images = emptyList<String>() // You can add images from API if available
-    val description: String? = activity.description
+    val description: String? = social.description
 
     val headerImage =
         images.firstOrNull() ?: "https://images.unsplash.com/photo-1668884405041-aa8963908538"
@@ -154,7 +154,7 @@ fun ActivityDetail(
                         ) {
                             InfoChip(
                                 Icons.Default.Schedule,
-                                activity.scheduledTime ?: "TBD",
+                                social.scheduledTime ?: "TBD",
                                 Color(0xFFA855F7)
                             )
                             InfoChip(Icons.Default.Place, distance ?: "Nearby", Color(0xFF3B82F6))
@@ -242,7 +242,7 @@ fun ActivityDetail(
                     )
 
                     // About
-                    if (activity.description != "") {
+                    if (social.description != "") {
                         Column(modifier = Modifier.padding(20.dp)) {
                             Text(
                                 "About",
@@ -346,7 +346,7 @@ fun ActivityDetail(
                                     )
                                     Column {
                                         Text(
-                                            text = activity.locationName ?: "Unknown Location",
+                                            text = social.locationName ?: "Unknown Location",
                                             color = Color.White,
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 14.sp
@@ -581,7 +581,7 @@ fun ActivityDetail(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    "JOIN ACTIVITY",
+                                    "I'M DOWN",
                                     color = Color.White,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -673,9 +673,9 @@ fun AvatarsItem(avatar: String = "", name: String = "") {
 
 @Preview(showBackground = true, backgroundColor = 0xFF0F172A)
 @Composable
-fun ActivityDetailPreview() {
-    ActivityDetail(
-        activity = ActivityResponse(
+fun SocialDetailPreview() {
+    SocialDetail(
+        social = SocialResponse(
             title = "Coffee at Blue Tokai ☕",
             userName = "Rahul",
             userAvatar = "",
