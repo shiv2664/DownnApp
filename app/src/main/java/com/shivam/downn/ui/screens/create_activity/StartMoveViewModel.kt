@@ -2,6 +2,7 @@ package com.shivam.downn.ui.screens.create_activity
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.shivam.downn.data.local.PrefsManager
 import com.shivam.downn.data.models.SocialResponse
 import com.shivam.downn.data.models.CreateSocialRequest
 import com.shivam.downn.data.repository.SocialRepository
@@ -15,7 +16,8 @@ import com.shivam.downn.data.network.NetworkResult
 
 @HiltViewModel
 class StartMoveViewModel @Inject constructor(
-    private val socialRepository: SocialRepository
+    private val socialRepository: SocialRepository,
+    private val  prefsManager: PrefsManager
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<NetworkResult<SocialResponse?>?>(null)
@@ -39,7 +41,9 @@ class StartMoveViewModel @Inject constructor(
                 city = city,
                 locationName = locationName,
                 scheduledTime = scheduledTime,
-                maxParticipants = maxParticipants
+                maxParticipants = maxParticipants,
+                profileId=prefsManager.getUserId()
+
             )
             socialRepository.createSocial(request).collect {
                 _state.value = it

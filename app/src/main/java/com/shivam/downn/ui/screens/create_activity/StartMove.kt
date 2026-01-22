@@ -112,30 +112,31 @@ fun StartMoveContent(
             listOf(Color(0xFF3B82F6), Color(0xFF06B6D4))
         ),
         Category(
-            "travel",
+            "TRAVEL",
             "Travel",
             Icons.Default.Flight,
             listOf(Color(0xFF3B82F6), Color(0xFF06B6D4))
         ),
         Category(
-            "party",
+            "PARTY",
             "Party",
             Icons.Default.Celebration,
             listOf(Color(0xFFEC4899), Color(0xFFA855F7))
         ),
         Category(
-            "food",
+            "FOOD",
             "Food",
             Icons.Default.Restaurant,
             listOf(Color(0xFFF97316), Color(0xFFEF4444))
         ),
         Category(
-            "hobby",
+            "HOBBY",
             "Hobby",
             Icons.Default.Palette,
             listOf(Color(0xFF22C55E), Color(0xFF14B8A6))
         ),
     )
+//    OTHER, HOBBY, PARTY, EVENTS, TRAVEL, FOOD, SPORTS
 
     val isFormValid = title.isNotEmpty() && description.isNotEmpty() && selectedCategoryId.isNotEmpty() && time.isNotEmpty() && location.isNotEmpty()
 

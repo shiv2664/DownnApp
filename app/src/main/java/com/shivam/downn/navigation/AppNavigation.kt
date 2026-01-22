@@ -12,7 +12,7 @@ import com.shivam.downn.ui.screens.activity_detail.SocialDetailScreen
 import com.shivam.downn.ui.screens.chat.GroupChat
 import com.shivam.downn.ui.screens.create_activity.StartMove
 import com.shivam.downn.ui.screens.explore.Explore
-import com.shivam.downn.ui.screens.home.FeedScreen
+import com.shivam.downn.ui.screens.feed.FeedScreen
 import com.shivam.downn.ui.screens.auth.LoginScreen
 import com.shivam.downn.ui.screens.notification.Notifications
 import com.shivam.downn.ui.screens.profile.UserProfile

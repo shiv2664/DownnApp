@@ -1,4 +1,4 @@
-package com.shivam.downn.ui.screens.home
+package com.shivam.downn.ui.screens.feed
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -17,17 +17,24 @@ class FeedViewModel @Inject constructor(
     private val socialRepository: SocialRepository
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow<NetworkResult<List<SocialResponse>>>(NetworkResult.Loading())
+    private val _state =
+        MutableStateFlow<NetworkResult<List<SocialResponse>>>(NetworkResult.Loading())
     val state: StateFlow<NetworkResult<List<SocialResponse>>> = _state
 
     init {
         fetchSocials()
     }
 
-    fun fetchSocials(category: String? = "SPORTS") {
+    fun fetchSocials(
+        city: String = "Denver",
+        category: String? = null,
+        minPrice: Int? = null,
+        maxPrice: Int? = null,
+        date: String? = null
+    ) {
         viewModelScope.launch {
             _state.value = NetworkResult.Loading()
-            socialRepository.getSocialsByCity("Denver", category).collect {
+            socialRepository.getSocials(city, category, minPrice, maxPrice, date).collect {
                 _state.value = it
             }
         }

@@ -1,4 +1,4 @@
-package com.shivam.downn.ui.screens.home
+package com.shivam.downn.ui.screens.feed
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background

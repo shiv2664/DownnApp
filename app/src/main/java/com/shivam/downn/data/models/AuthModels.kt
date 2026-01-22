@@ -11,7 +11,8 @@ data class RegisterRequest(
     @SerializedName("email") val email: String,
     @SerializedName("password") val password: String,
     @SerializedName("name") val name: String,
-    @SerializedName("phoneNumber") val phoneNumber: String
+    @SerializedName("phoneNumber") val phoneNumber: String,
+    @SerializedName("type") val  type: SocialType= SocialType.PERSONAL
 )
 
 data class AuthResponse(

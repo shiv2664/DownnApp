@@ -20,6 +20,7 @@ class PrefsManager @Inject constructor(
         prefs.edit().apply {
             putString("auth_data", gson.toJson(response))
             putString("token", response.token)
+            putInt("userId", response.userId)
             apply()
         }
     }
@@ -31,6 +32,10 @@ class PrefsManager @Inject constructor(
 
     fun getToken(): String? {
         return prefs.getString("token", null)
+    }
+
+    fun getUserId(): Int {
+        return prefs.getInt("userId", 0)
     }
 
     fun clear() {

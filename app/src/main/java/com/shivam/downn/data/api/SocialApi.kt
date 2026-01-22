@@ -13,7 +13,7 @@ interface SocialApi {
     @GET("api/activities/city/{city}")
     suspend fun getSocialsByCity(
         @Path("city") city: String,
-        @Query("category") category: String? = null
+        @Query("category") category: String?=null
     ): Response<List<SocialResponse>>
 
     @GET("api/activities/recent")

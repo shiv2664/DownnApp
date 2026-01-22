@@ -14,7 +14,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -25,7 +24,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.shivam.downn.data.models.SocialResponse
 import com.shivam.downn.data.models.SocialType
-import com.shivam.downn.ui.screens.home.MoveCard
+import com.shivam.downn.ui.screens.feed.MoveCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

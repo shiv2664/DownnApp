@@ -1,4 +1,4 @@
-package com.shivam.downn.ui.screens.home
+package com.shivam.downn.ui.screens.feed
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -29,7 +29,7 @@ fun FeedScreen(
     Scaffold(
         topBar = { 
             FeedTopBar(onCategorySelected = { category ->
-                viewModel.fetchSocials(category)
+                viewModel.fetchSocials("Denver",if (category!="All") category else null)
             }) 
         },
         contentWindowInsets = WindowInsets(0, 0, 0, 0)

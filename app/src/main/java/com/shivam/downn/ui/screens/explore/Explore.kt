@@ -11,6 +11,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.animation.core.InfiniteRepeatableSpec
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -31,15 +36,24 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.drawscope.Stroke
+import com.shivam.downn.data.models.SocialType
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import android.app.Activity
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.core.view.WindowCompat
 import coil.compose.AsyncImage
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.SolidColor
 import kotlinx.coroutines.launch
 
 data class MapSocial(
@@ -54,7 +68,8 @@ data class MapSocial(
     val gradient: Brush,
     val timePosted: String,
     val xPercent: Float,
-    val yPercent: Float
+    val yPercent: Float,
+    val socialType: SocialType = SocialType.PERSONAL
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -85,9 +100,9 @@ fun Explore(
     val coroutineScope = rememberCoroutineScope()
 
     val socials = listOf(
-        MapSocial(1, "Coffee Tasting", "Alex M.", "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d", "0.2 mi", 4, Icons.Default.Coffee, Color(0xFFF59E0B), Brush.linearGradient(listOf(Color(0xFFFB923C), Color(0xFFF59E0B))), "30m ago", 0.3f, 0.4f),
-        MapSocial(2, "Live Jazz", "Sarah K.", "https://images.unsplash.com/photo-1566330429822-c413e4bc27a5", "0.5 mi", 8, Icons.Default.MusicNote, Color(0xFFA855F7), Brush.linearGradient(listOf(Color(0xFFC084FC), Color(0xFFEC4899))), "1h ago", 0.6f, 0.2f),
-        MapSocial(3, "Bridge Walk", "Mike R.", "https://images.unsplash.com/photo-1567516364473-233c4b6fcfbe", "1.2 mi", 6, Icons.Default.Flight, Color(0xFF3B82F6), Brush.linearGradient(listOf(Color(0xFF60A5FA), Color(0xFF06B6D4))), "2h ago", 0.8f, 0.7f),
+        MapSocial(1, "The Daily Grind", "The Daily Grind", "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=150", "0.2 mi", 45, Icons.Default.Coffee, Color(0xFFF97316), Brush.linearGradient(listOf(Color(0xFFFDBA74), Color(0xFFF97316))), "Just now", 0.3f, 0.4f, SocialType.BUSINESS),
+        MapSocial(2, "Live Jazz", "Sarah K.", "https://images.unsplash.com/photo-1566330429822-c413e4bc27a5", "0.5 mi", 8, Icons.Default.MusicNote, Color(0xFFA855F7), Brush.linearGradient(listOf(Color(0xFFC084FC), Color(0xFFEC4899))), "1h ago", 0.6f, 0.2f, SocialType.PERSONAL),
+        MapSocial(3, "Club Social", "Club Social", "https://images.unsplash.com/photo-1566737236500-c8ac1f852382?w=150", "1.2 mi", 120, Icons.Default.Celebration, Color(0xFFFDBA74), Brush.linearGradient(listOf(Color(0xFFFFedd5), Color(0xFFF97316))), "2h ago", 0.8f, 0.7f, SocialType.BUSINESS),
     )
 
     BottomSheetScaffold(
@@ -246,11 +261,19 @@ private fun FilterChip(label: String, icon: ImageVector, isActive: Boolean, onCl
         onClick = onClick,
         shape = CircleShape,
         color = Color.Transparent,
-        modifier = Modifier.shadow(4.dp, CircleShape)
+        modifier = Modifier.padding(vertical = 4.dp)
     ) {
         Row(
             modifier = Modifier
-                .background(if (isActive) Brush.horizontalGradient(listOf(Color(0xFF9333EA), Color(0xFFDB2777))) else Brush.linearGradient(listOf(Color(0xFF334155), Color(0xFF334155))))
+                .background(
+                    if (isActive) Brush.horizontalGradient(listOf(Color(0xFF9333EA), Color(0xFFDB2777))) 
+                    else Brush.linearGradient(listOf(Color(0xFF1E293B).copy(alpha = 0.7f), Color(0xFF1E293B).copy(alpha = 0.7f)))
+                )
+                .border(
+                    width = 1.dp,
+                    brush = if (isActive) SolidColor(Color.White.copy(alpha = 0.3f)) else SolidColor(Color(0xFF334155).copy(alpha = 0.5f)),
+                    shape = CircleShape
+                )
                 .padding(horizontal = 16.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -262,8 +285,47 @@ private fun FilterChip(label: String, icon: ImageVector, isActive: Boolean, onCl
 }
 
 @Composable
+fun VibePulse(color: Color) {
+    val infiniteTransition = rememberInfiniteTransition()
+
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 2.5f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Restart
+        )
+    )
+
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.5f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1200),
+            repeatMode = RepeatMode.Restart
+        )
+    )
+
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .graphicsLayer {
+                scaleX = pulseScale
+                scaleY = pulseScale
+                alpha = pulseAlpha
+            }
+            .background(color, CircleShape)
+    )
+}
+
+
+@Composable
 private fun BoxScope.MapPin(social: MapSocial, isSelected: Boolean, onClick: () -> Unit) {
-    val scale by animateFloatAsState(if (isSelected) 1.2f else 1f)
+    val scale by animateFloatAsState(
+        targetValue = if (isSelected) 1.3f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
+    )
+    val isBusiness = social.socialType == SocialType.BUSINESS
 
     Box(
         modifier = Modifier
@@ -273,27 +335,63 @@ private fun BoxScope.MapPin(social: MapSocial, isSelected: Boolean, onClick: () 
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
+        if (isBusiness || isSelected) {
+            VibePulse(if (isBusiness) Color(0xFFF97316) else Color(0xFFA855F7))
+        }
+
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Box(contentAlignment = Alignment.TopEnd) {
+                // Pin Content (The Avatar)
                 Surface(
-                    modifier = Modifier.size(48.dp),
+                    modifier = Modifier.size(52.dp),
                     shape = CircleShape,
-                    color = social.categoryColor,
-                    border = BorderStroke(3.dp, Color.White),
-                    shadowElevation = 8.dp
+                    color = Color.White,
+                    shadowElevation = if (isSelected) 12.dp else 6.dp
                 ) {
-                    Icon(social.categoryIcon, contentDescription = null, tint = Color.White, modifier = Modifier.padding(10.dp))
+                    Box(modifier = Modifier.padding(3.dp)) {
+                        AsyncImage(
+                            model = social.avatar,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
                 }
-                // Participant Badge
+                
+                // Overlay Badge (Icon/Type)
                 Box(
-                    modifier = Modifier.offset(x = 4.dp, y = (-4).dp).size(20.dp).background(Brush.horizontalGradient(listOf(Color(0xFF9333EA), Color(0xFFDB2777))), CircleShape).border(1.5.dp, Color.White, CircleShape),
+                    modifier = Modifier
+                        .offset(x = 4.dp, y = (-4).dp)
+                        .size(24.dp)
+                        .background(
+                            brush = if (isBusiness) Brush.horizontalGradient(listOf(Color(0xFFFDBA74), Color(0xFFF97316))) 
+                                    else Brush.horizontalGradient(listOf(Color(0xFF9333EA), Color(0xFFDB2777))),
+                            shape = CircleShape
+                        )
+                        .border(1.5.dp, Color.White, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(social.participantCount.toString(), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Icon(
+                        imageVector = if (isBusiness) Icons.Default.Verified else social.categoryIcon,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(12.dp)
+                    )
                 }
             }
-            // Pointer
-            Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = social.categoryColor, modifier = Modifier.size(24.dp).offset(y = (-8).dp))
+
+            // The "Tail" pointer
+            Canvas(modifier = Modifier.size(width = 16.dp, height = 12.dp).offset(y = (-4).dp)) {
+                val path = androidx.compose.ui.graphics.Path().apply {
+                    moveTo(0f, 0f)
+                    lineTo(size.width, 0f)
+                    lineTo(size.width / 2, size.height)
+                    close()
+                }
+                drawPath(path, color = Color.White)
+            }
         }
     }
 }

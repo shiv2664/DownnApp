@@ -37,7 +37,8 @@ data class CreateSocialRequest(
     @SerializedName("city") val city: String,
     @SerializedName("locationName") val locationName: String,
     @SerializedName("scheduledTime") val scheduledTime: String,
-    @SerializedName("maxParticipants") val maxParticipants: Int
+    @SerializedName("maxParticipants") val maxParticipants: Int,
+    @SerializedName("profileId") val profileId: Int
 )
 
 data class JoinResponse(

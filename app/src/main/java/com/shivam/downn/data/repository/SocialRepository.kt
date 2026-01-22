@@ -27,9 +27,15 @@ class SocialRepository @Inject constructor(
         }
     }
 
-    fun getSocialsByCity(city: String, category: String? = null): Flow<NetworkResult<List<SocialResponse>>> = flow {
+    fun getSocials(
+        city: String,
+        category: String?=null,
+        minPrice: Int? = null,
+        maxPrice: Int? = null,
+        date: String? = null
+    ): Flow<NetworkResult<List<SocialResponse>>> = flow {
         try {
-            val response = socialApi.getSocialsByCity(city, category)
+            val response = socialApi.getSocialsByCity(city,category)
             if (response.isSuccessful && response.body() != null) {
                 emit(NetworkResult.Success(response.body()!!))
             } else {
