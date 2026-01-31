@@ -13,9 +13,30 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import javax.inject.Singleton
 
+import com.shivam.downn.data.api.ProfileApi
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import com.google.gson.JsonDeserializer
+import com.google.gson.JsonSerializer
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
+
+    @Provides
+    @Singleton
+    fun provideGson(): Gson {
+        return GsonBuilder()
+            .registerTypeAdapter(LocalDateTime::class.java, JsonSerializer<LocalDateTime> { src, _, _ ->
+                com.google.gson.JsonPrimitive(src.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
+            })
+            .registerTypeAdapter(LocalDateTime::class.java, JsonDeserializer { json, _, _ ->
+                LocalDateTime.parse(json.asString, DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+            })
+            .create()
+    }
 
     @Provides
     @Singleton
@@ -29,14 +50,13 @@ object NetworkModule {
             .build()
     }
 
-//    10.10.4.202
     @Provides
     @Singleton
-    fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
+    fun provideRetrofit(okHttpClient: OkHttpClient, gson: Gson): Retrofit {
         return Retrofit.Builder()
-            .baseUrl("http://10.10.4.202:8081") // Use 10.0.2.2 for localhost from Android Emulator
+            .baseUrl("http://192.168.1.2:8081") // Use 10.0.2.2 for localhost from Android Emulator
             .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
     }
 
@@ -50,5 +70,11 @@ object NetworkModule {
     @Singleton
     fun provideSocialApi(retrofit: Retrofit): SocialApi {
         return retrofit.create(SocialApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideProfileApi(retrofit: Retrofit): ProfileApi {
+        return retrofit.create(ProfileApi::class.java)
     }
 }

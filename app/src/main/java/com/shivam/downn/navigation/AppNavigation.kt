@@ -19,12 +19,23 @@ import com.shivam.downn.ui.screens.profile.UserProfile
 import com.shivam.downn.ui.screens.profile.EditProfileScreen
 import com.shivam.downn.ui.screens.profile.PublicProfile
 import com.shivam.downn.ui.screens.profile.BusinessProfileScreen
+import com.shivam.downn.ui.screens.profile.CreateProfileScreen
+import com.shivam.downn.ui.screens.create_activity.StartBusinessMove
 import com.shivam.downn.ui.screens.chat.LiveBoardScreen
 import com.shivam.downn.ui.screens.settings.SettingsScreen
+import com.shivam.downn.ui.screens.profile.ProfileViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.shivam.downn.ui.screens.profile.PublicBusinessProfileScreen
+import com.shivam.downn.data.models.ProfileType
 
 @Composable
 fun AppNavigation(startDestination: String = "login") {
     val navController = rememberNavController()
+    val sharedProfileViewModel: ProfileViewModel = hiltViewModel()
+    
     Scaffold(bottomBar = { BottomBar(navController) }) { innerPadding ->
         NavHost(
             navController = navController,
@@ -59,7 +70,19 @@ fun AppNavigation(startDestination: String = "login") {
 
             composable(
                 route = itemsDataList[2].route) {
-                StartMove(innerPadding,{})
+                val activeProfile by sharedProfileViewModel.activeProfile.collectAsState()
+                
+                if (activeProfile?.type == ProfileType.BUSINESS) {
+                    StartBusinessMove(
+                        outerPadding = innerPadding,
+                        onClose = { navController.navigateUp() }
+                    )
+                } else {
+                    StartMove(
+                        outerPadding = innerPadding,
+                        onClose = { navController.navigateUp() }
+                    )
+                }
             }
 
             composable(
@@ -73,7 +96,10 @@ fun AppNavigation(startDestination: String = "login") {
                     outerPadding = innerPadding,
                     onClose = { navController.navigateUp() },
                     onSettingsClick = { navController.navigate("settings") },
-                    onEditClick = { navController.navigate("edit_profile") }
+                    onEditClick = { navController.navigate("edit_profile") },
+                    onCreateProfileClick = { navController.navigate("create_profile") },
+                    onBusinessMoveClick = { moveId -> navController.navigate("social_detail/$moveId") },
+                    viewModel = sharedProfileViewModel
                 )
             }
 
@@ -119,11 +145,12 @@ fun AppNavigation(startDestination: String = "login") {
             }
 
             composable(route = "business_profile/{businessId}") { backStackEntry ->
-                val businessId = backStackEntry.arguments?.getString("businessId")?.toIntOrNull() ?: 16
+                val businessId = backStackEntry.arguments?.getString("businessId")?.toLongOrNull() ?: 16L
                 BusinessProfileScreen(
                     businessId = businessId,
                     onClose = { navController.navigateUp() },
-                    onMoveClick = { moveId -> navController.navigate("social_detail/$moveId") }
+                    onMoveClick = { moveId -> navController.navigate("social_detail/$moveId") },
+                    viewModel = sharedProfileViewModel
                 )
             }
 
@@ -142,6 +169,15 @@ fun AppNavigation(startDestination: String = "login") {
                 )
             }
 
+            composable("public_business_profile/{businessId}") { backStackEntry ->
+                val businessId = backStackEntry.arguments?.getString("businessId")?.toLongOrNull() ?: 16L
+                PublicBusinessProfileScreen(
+                    businessId = businessId,
+                    onClose = { navController.navigateUp() },
+                    onMoveClick = { moveId -> navController.navigate("social_detail/$moveId") }
+                )
+            }
+
             composable("live_board/{socialId}") { backStackEntry ->
                 val socialId = backStackEntry.arguments?.getString("socialId")?.toIntOrNull() ?: 1
                 // Mock data for demo
@@ -151,6 +187,16 @@ fun AppNavigation(startDestination: String = "login") {
                     businessName = if (socialId == 16) "The Daily Grind" else "Club Social",
                     businessAvatar = "",
                     onClose = { navController.navigateUp() }
+                )
+            }
+
+            composable("create_profile") {
+                CreateProfileScreen(
+                    onClose = { navController.navigateUp() },
+                    onCreateSuccess = { name, category, bio, loc ->
+//                        profileViewModel.createBusinessProfile(name, category, bio, loc)
+                        navController.navigateUp()
+                    }
                 )
             }
         }

@@ -2,6 +2,7 @@ package com.shivam.downn.ui.screens.profile
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -25,21 +26,60 @@ import coil.compose.AsyncImage
 import com.shivam.downn.data.models.SocialResponse
 import com.shivam.downn.data.models.SocialType
 import com.shivam.downn.ui.screens.feed.MoveCard
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.shivam.downn.data.models.ProfileType
+import androidx.compose.runtime.*
+import androidx.compose.runtime.collectAsState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BusinessProfileScreen(
-    businessId: Int,
+    businessId: Long,
     onClose: () -> Unit,
-    onMoveClick: (Int) -> Unit
+    onMoveClick: (Int) -> Unit,
+    isOwnProfile: Boolean = true,
+    viewModel: ProfileViewModel = hiltViewModel()
 ) {
-    // Mock data for business
-    val businessName = if (businessId == 16) "The Daily Grind" else "Club Social"
-    val businessAvatar = if (businessId == 16) 
-        "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400" 
+    val activeProfile by viewModel.activeProfile.collectAsState()
+    val profiles by viewModel.profiles.collectAsState()
+    val canCreateBusinessProfile by viewModel.canCreateBusinessProfile.collectAsState()
+
+    BusinessProfileContent(
+        businessId = businessId,
+        onClose = onClose,
+        onMoveClick = onMoveClick,
+        isOwnProfile = isOwnProfile,
+        activeProfile = activeProfile,
+        profiles = profiles,
+        canCreateBusinessProfile = canCreateBusinessProfile,
+        onSwitchProfile = { viewModel.switchProfile(it) },
+        onCreateProfile = { /* Navigation to create_profile would be handled here */ }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BusinessProfileContent(
+    businessId: Long,
+    onClose: () -> Unit,
+    onMoveClick: (Int) -> Unit,
+    isOwnProfile: Boolean,
+    activeProfile: UserProfileData?,
+    profiles: List<UserProfileData>,
+    canCreateBusinessProfile: Boolean,
+    onSwitchProfile: (UserProfileData) -> Unit,
+    onCreateProfile: () -> Unit
+) {
+    var showProfileSwitcher by remember { mutableStateOf(false) }
+
+    // Use name from activeProfile if it's the current business
+    val currentBusiness = profiles.find { it.id == businessId }
+    val businessName = currentBusiness?.name ?: if (businessId == 16L) "The Daily Grind" else "Club Social"
+    val businessAvatar = currentBusiness?.avatar ?: if (businessId == 16L)
+        "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400"
     else "https://images.unsplash.com/photo-1566737236500-c8ac1f852382?w=400"
-    
-    val coverImage = if (businessId == 16)
+
+    val coverImage = currentBusiness?.coverImage ?: if (businessId == 16L)
         "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800"
     else "https://images.unsplash.com/photo-1514525253361-bee1a95e792e?w=800"
 
@@ -47,87 +87,138 @@ fun BusinessProfileScreen(
         containerColor = Color(0xFF0F172A),
         topBar = {
             TopAppBar(
-                title = { Text("") },
+                title = {
+                    if (isOwnProfile) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clickable { showProfileSwitcher = true }
+                                .padding(start = 8.dp)
+                        ) {
+                            Text(
+                                text = activeProfile?.name ?: businessName,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
+                            if (profiles.size > 1) {
+                                Icon(
+                                    imageVector = Icons.Default.KeyboardArrowDown,
+                                    contentDescription = "Switch Profile",
+                                    tint = Color.White,
+                                    modifier = Modifier
+                                        .padding(start = 4.dp)
+                                        .size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                },
                 navigationIcon = {
-                    IconButton(onClick = onClose) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                    if (!isOwnProfile) {
+                        IconButton(onClick = onClose) {
+                            Icon(
+                                Icons.Default.ArrowBack,
+                                contentDescription = "Back",
+                                tint = Color.White,
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         }
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = 16.dp)
-        ) {
-            item {
-                BusinessHeader(coverImage, businessAvatar, businessName)
-            }
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = 16.dp)
+            ) {
+                item {
+                    BusinessHeader(coverImage, businessAvatar, businessName)
+                }
 
-            item {
-                BusinessStats()
-            }
+                item {
+                    BusinessStats()
+                }
 
-            item {
-                BusinessActions()
-            }
+                item {
+                    BusinessActions()
+                }
 
-            item {
-                VibeSection()
-            }
+                item {
+                    VibeSection(currentBusiness?.vibes ?: emptyList())
+                }
 
-            item {
-                Text(
-                    text = "Active Moves",
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(16.dp)
+                item {
+                    Text(
+                        text = "Active Moves",
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
+
+                // Mock active moves
+                val activeMoves = listOf(
+                    SocialResponse(
+                        id = 101,
+                        title = if (businessId == 16L) "Live Jazz Night 🎷" else "Friday Night Fever 🕺",
+                        description = "Special event tonight!",
+                        category = "Events",
+                        city = "Delhi",
+                        locationName = businessName,
+                        scheduledTime = "2026-01-21T20:00:00",
+                        maxParticipants = 100,
+                        participantCount = 45,
+                        userName = businessName,
+                        userAvatar = businessAvatar,
+                        socialType = SocialType.BUSINESS,
+                        timeAgo = "Just now",
+                        distance = "0.5 km away"
+                    )
                 )
+
+                items(activeMoves) { move ->
+                    MoveCard(
+                        userName = move.userName ?: "",
+                        userAvatar = move.userAvatar ?: "",
+                        moveTitle = move.title,
+                        description = move.description ?: "",
+                        category = move.category,
+                        categoryEmoji = "🔥",
+                        timeAgo = move.timeAgo ?: "",
+                        distance = move.distance ?: "",
+                        participantCount = move.participantCount,
+                        maxParticipants = move.maxParticipants,
+                        socialType = move.socialType,
+                        onCardClick = { onMoveClick(move.id) },
+                        onJoinClick = {}
+                    )
+                }
             }
 
-            // Mock active moves
-            val activeMoves = listOf(
-                SocialResponse(
-                    id = 101,
-                    title = if (businessId == 16) "Live Jazz Night 🎷" else "Friday Night Fever 🕺",
-                    description = "Special event tonight!",
-                    category = "Events",
-                    city = "Delhi",
-                    locationName = businessName,
-                    scheduledTime = "2026-01-21T20:00:00",
-                    maxParticipants = 100,
-                    participantCount = 45,
-                    userName = businessName,
-                    userAvatar = businessAvatar,
-                    socialType = SocialType.BUSINESS,
-                    timeAgo = "Just now",
-                    distance = "0.5 km away"
-                )
-            )
-
-            items(activeMoves) { move ->
-                MoveCard(
-                    userName = move.userName ?: "",
-                    userAvatar = move.userAvatar ?: "",
-                    moveTitle = move.title,
-                    description = move.description ?: "",
-                    category = move.category,
-                    categoryEmoji = "🔥",
-                    timeAgo = move.timeAgo ?: "",
-                    distance = move.distance ?: "",
-                    participantCount = move.participantCount,
-                    maxParticipants = move.maxParticipants,
-                    socialType = move.socialType,
-                    onCardClick = { onMoveClick(move.id) },
-                    onJoinClick = {}
+            if (showProfileSwitcher && isOwnProfile) {
+                ProfileSwitcherBottomSheet(
+                    profiles = profiles,
+                    activeProfile = activeProfile,
+                    onDismiss = { showProfileSwitcher = false },
+                    canCreateProfile = canCreateBusinessProfile,
+                    onProfileSelected = {
+                        onSwitchProfile(it)
+                        showProfileSwitcher = false
+                    },
+                    onCreateProfile = {
+                        showProfileSwitcher = false
+                        onCreateProfile()
+                    }
                 )
             }
         }
     }
 }
+
 
 @Composable
 fun BusinessHeader(coverImage: String, avatar: String, name: String) {
@@ -138,7 +229,7 @@ fun BusinessHeader(coverImage: String, avatar: String, name: String) {
             modifier = Modifier.fillMaxWidth().height(200.dp),
             contentScale = ContentScale.Crop
         )
-        
+
         Box(
             modifier = Modifier
                 .align(Alignment.BottomStart)
@@ -154,7 +245,7 @@ fun BusinessHeader(coverImage: String, avatar: String, name: String) {
                         .border(4.dp, Color(0xFF0F172A), CircleShape),
                     contentScale = ContentScale.Crop
                 )
-                
+
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
                     Text(
                         text = name,
@@ -228,14 +319,20 @@ fun ActionIconButton(icon: ImageVector, label: String, color: Color) {
 }
 
 @Composable
-fun VibeSection() {
+fun VibeSection(vibes: List<String>) {
     Column(modifier = Modifier.padding(16.dp)) {
         Text("Our Vibe", color = Color(0xFF94A3B8), fontSize = 14.sp, fontWeight = FontWeight.Medium)
         Spacer(modifier = Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            VibeTag("Cozy", Color(0xFFEC4899))
-            VibeTag("Jazz", Color(0xFF8B5CF6))
-            VibeTag("Craft Coffee", Color(0xFFF59E0B))
+            if (vibes.isNotEmpty()) {
+                vibes.forEach { vibe ->
+                    VibeTag(vibe, Color(0xFFEC4899))
+                }
+            } else {
+                VibeTag("Cozy", Color(0xFFEC4899))
+                VibeTag("Jazz", Color(0xFF8B5CF6))
+                VibeTag("Craft Coffee", Color(0xFFF59E0B))
+            }
         }
     }
 }
@@ -257,8 +354,146 @@ fun VibeTag(text: String, color: Color) {
     }
 }
 
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ProfileSwitcherBottomSheet(
+    profiles: List<UserProfileData>,
+    activeProfile: UserProfileData?,
+    onDismiss: () -> Unit,
+    canCreateProfile: Boolean = false,
+    onProfileSelected: (UserProfileData) -> Unit,
+    onCreateProfile: () -> Unit = {}
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = Color(0xFF1E293B),
+        dragHandle = { BottomSheetDefaults.DragHandle(color = Color(0xFF334155)) }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp)
+                .padding(bottom = 40.dp)
+        ) {
+            Text(
+                "Switch Profile",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                modifier = Modifier.padding(bottom = 24.dp)
+            )
+
+            profiles.forEach { profile ->
+                val isSelected = profile.id == activeProfile?.id
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(if (isSelected) Color(0xFF0F172A) else Color.Transparent)
+                        .clickable { onProfileSelected(profile) }
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    AsyncImage(
+                        model = profile.avatar,
+                        contentDescription = profile.name,
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = profile.name,
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = if (profile.type == ProfileType.BUSINESS) "Business Profile" else "Personal Profile",
+                            color = Color(0xFF94A3B8),
+                            fontSize = 12.sp
+                        )
+                    }
+                    if (isSelected) {
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = "Selected",
+                            tint = Color(0xFFA855F7),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            if (canCreateProfile) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 16.dp),
+                    color = Color(0xFF334155)
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .clickable { onCreateProfile() }
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .background(Color(0xFF334155), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null, tint = Color.White)
+                    }
+                    Text(
+                        text = "Create Business Profile",
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
+    }
+}
+
 @Preview
 @Composable
-fun PreviewBusinessProfileScreen(){
-    BusinessProfileScreen(1,{},{})
+fun PreviewBusinessProfileScreen() {
+    val profiles = listOf(
+        UserProfileData(
+            id = 1,
+            name = "Shivam",
+            avatar = "https://images.unsplash.com/photo-1521119989659-a83eee488004?w=400",
+            type = ProfileType.PERSONAL,
+            coverImage = "",
+            vibes = emptyList()
+        ),
+        UserProfileData(
+            id = 16,
+            name = "The Daily Grind",
+            avatar = "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400",
+            type = ProfileType.BUSINESS,
+            coverImage = "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800",
+            vibes = listOf("Cozy", "Jazz", "Craft Coffee")
+        )
+    )
+    BusinessProfileContent(
+        businessId = 16L,
+        onClose = {},
+        onMoveClick = {},
+        isOwnProfile = true,
+        activeProfile = profiles.first { it.id == 16L },
+        profiles = profiles,
+        canCreateBusinessProfile = true,
+        onSwitchProfile = {},
+        onCreateProfile = {}
+    )
 }

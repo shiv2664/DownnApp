@@ -26,6 +26,8 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.shivam.downn.data.models.InterestTag
 import androidx.compose.foundation.layout.FlowRow
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.shivam.downn.data.models.ProfileType
 
 data class PastSocial(
     val id: Int,
@@ -45,15 +47,36 @@ fun UserProfile(
     outerPadding: PaddingValues,
     onClose: () -> Unit,
     onSettingsClick: () -> Unit = {},
-    onEditClick: () -> Unit = {}
+    onEditClick: () -> Unit = {},
+    onCreateProfileClick: () -> Unit = {},
+    onBusinessMoveClick: (Int) -> Unit = {},
+    viewModel: ProfileViewModel = hiltViewModel()
 ) {
-    ProfileContent(
-        isOwnProfile = true,
-        outerPadding = outerPadding,
-        onClose = onClose,
-        onSettingsClick = onSettingsClick,
-        onEditClick = onEditClick
-    )
+    val activeProfile by viewModel.activeProfile.collectAsState()
+    val profiles by viewModel.profiles.collectAsState()
+    val canCreateProfile by viewModel.canCreateBusinessProfile.collectAsState()
+
+    if (activeProfile?.type == ProfileType.BUSINESS) {
+        BusinessProfileScreen(
+            businessId = activeProfile?.id ?: 16L,
+            onClose = { viewModel.switchProfile(profiles.first { it.type == ProfileType.PERSONAL }) },
+            onMoveClick = onBusinessMoveClick,
+            viewModel = viewModel
+        )
+    } else {
+        ProfileContent(
+            isOwnProfile = true,
+            outerPadding = outerPadding,
+            onClose = onClose,
+            onSettingsClick = onSettingsClick,
+            onEditClick = onEditClick,
+            onCreateProfileClick = onCreateProfileClick,
+            activeProfile = activeProfile,
+            profiles = profiles,
+            canCreateProfile = canCreateProfile,
+            onProfileSwitch = { viewModel.switchProfile(it) }
+        )
+    }
 }
 
 @Composable
@@ -63,10 +86,16 @@ fun ProfileContent(
     onClose: () -> Unit,
     onFollowClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
-    onEditClick: () -> Unit = {}
+    onEditClick: () -> Unit = {},
+    onCreateProfileClick: () -> Unit = {},
+    activeProfile: UserProfileData? = null,
+    profiles: List<UserProfileData> = emptyList(),
+    canCreateProfile: Boolean = true,
+    onProfileSwitch: (UserProfileData) -> Unit = {}
 ) {
     var activeTab by remember { mutableStateOf(ProfileTab.Recent) }
     var showInterestsSheet by remember { mutableStateOf(false) }
+    var showProfileSwitcher by remember { mutableStateOf(false) }
 
     val allInterests = listOf(
         InterestTag(1, "☕ Coffee", listOf(Color(0xFFFBBF24), Color(0xFFF97316))),
@@ -88,7 +117,16 @@ fun ProfileContent(
 
     Scaffold(
         topBar = {
-            ProfileTopBar(isOwnProfile, onClose, onSettingsClick, onFollowClick)
+            ProfileTopBar(
+                isOwnProfile = isOwnProfile,
+                onClose = onClose,
+                onSettingsClick = onSettingsClick,
+                onFollowClick = onFollowClick,
+                activeProfile = activeProfile,
+                hasMultipleProfiles = profiles.size > 1,
+                canCreateProfile=canCreateProfile,
+                onTitleClick = { if (isOwnProfile) showProfileSwitcher = true }
+            )
         },
         floatingActionButton = {
             if (isOwnProfile) {
@@ -134,6 +172,23 @@ fun ProfileContent(
                 onInterestsChanged = { selectedInterests = it }
             )
         }
+
+        if (showProfileSwitcher && isOwnProfile) {
+            ProfileSwitcherBottomSheet(
+                profiles = profiles,
+                activeProfile = activeProfile,
+                onDismiss = { showProfileSwitcher = false },
+                canCreateProfile = canCreateProfile,
+                onProfileSelected = {
+                    onProfileSwitch(it)
+                    showProfileSwitcher = false
+                },
+                onCreateProfile = {
+                    showProfileSwitcher = false
+                    onCreateProfileClick()
+                }
+            )
+        }
     }
 }
 
@@ -143,16 +198,34 @@ private fun ProfileTopBar(
     isOwnProfile: Boolean,
     onClose: () -> Unit,
     onSettingsClick: () -> Unit,
-    onFollowClick: () -> Unit
+    onFollowClick: () -> Unit,
+    activeProfile: UserProfileData? = null,
+    hasMultipleProfiles: Boolean = false,
+    canCreateProfile: Boolean = true,
+    onTitleClick: () -> Unit = {}
 ) {
     TopAppBar(
         title = {
-            Text(
-                modifier = Modifier.padding(start = 8.dp),
-                text = if (isOwnProfile) "My Profile" else "Sarah Kim",
-                color = Color.White,
-                fontWeight = FontWeight.Bold
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .clickable(enabled = isOwnProfile && canCreateProfile) { onTitleClick() }
+                    .padding(start = 8.dp)
+            ) {
+                Text(
+                    text = activeProfile?.name ?: if (isOwnProfile) "My Profile" else "Sarah Kim",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+                if (isOwnProfile && canCreateProfile) {
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowDown,
+                        contentDescription = "Switch Profile",
+                        tint = Color.White,
+                        modifier = Modifier.padding(start = 4.dp).size(20.dp)
+                    )
+                }
+            }
         },
         navigationIcon = {
             if (!isOwnProfile) {
@@ -619,6 +692,115 @@ private fun InterestsBottomSheet(
                             fontWeight = FontWeight.SemiBold
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ProfileSwitcherBottomSheet(
+    profiles: List<UserProfileData>,
+    activeProfile: UserProfileData?,
+    onDismiss: () -> Unit,
+    canCreateProfile: Boolean = false,
+    onProfileSelected: (UserProfileData) -> Unit,
+    onCreateProfile: () -> Unit = {}
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = Color(0xFF1E293B),
+        dragHandle = { BottomSheetDefaults.DragHandle(color = Color(0xFF334155)) }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp)
+                .padding(bottom = 40.dp)
+        ) {
+            Text(
+                "Switch Profile",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                modifier = Modifier.padding(bottom = 24.dp)
+            )
+
+            profiles.forEach { profile ->
+                val isSelected = profile.id == activeProfile?.id
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(if (isSelected) Color(0xFF0F172A) else Color.Transparent)
+                        .clickable { onProfileSelected(profile) }
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    AsyncImage(
+                        model = profile.avatar,
+                        contentDescription = profile.name,
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = profile.name,
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = if (profile.type == ProfileType.BUSINESS) "Business Profile" else "Personal Profile",
+                            color = Color(0xFF94A3B8),
+                            fontSize = 12.sp
+                        )
+                    }
+                    if (isSelected) {
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = "Selected",
+                            tint = Color(0xFFA855F7),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            if (canCreateProfile) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 16.dp),
+                    color = Color(0xFF334155)
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .clickable { onCreateProfile() }
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .background(Color(0xFF334155), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null, tint = Color.White)
+                    }
+                    Text(
+                        text = "Create Business Profile",
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
             }
         }

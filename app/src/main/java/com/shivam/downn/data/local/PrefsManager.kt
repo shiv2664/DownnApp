@@ -38,6 +38,14 @@ class PrefsManager @Inject constructor(
         return prefs.getInt("userId", 0)
     }
 
+    fun saveActiveProfileId(id: Long) {
+        prefs.edit().putInt("active_profile_id", id.toInt()).apply()
+    }
+
+    fun getActiveProfileId(): Int {
+        return prefs.getInt("active_profile_id", -1)
+    }
+
     fun clear() {
         prefs.edit { clear() }
     }

@@ -34,6 +34,7 @@ class StartMoveViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             _state.value = NetworkResult.Loading()
+            val activeProfileId = prefsManager.getActiveProfileId()
             val request = CreateSocialRequest(
                 title = title,
                 description = description,
@@ -42,8 +43,7 @@ class StartMoveViewModel @Inject constructor(
                 locationName = locationName,
                 scheduledTime = scheduledTime,
                 maxParticipants = maxParticipants,
-                profileId=prefsManager.getUserId()
-
+                profileId = if (activeProfileId != -1) activeProfileId else prefsManager.getUserId()
             )
             socialRepository.createSocial(request).collect {
                 _state.value = it
