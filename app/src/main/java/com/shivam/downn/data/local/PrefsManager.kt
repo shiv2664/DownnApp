@@ -20,7 +20,7 @@ class PrefsManager @Inject constructor(
         prefs.edit().apply {
             putString("auth_data", gson.toJson(response))
             putString("token", response.token)
-            putInt("userId", response.userId)
+            putLong("userId", response.userId)
             apply()
         }
     }
@@ -34,16 +34,16 @@ class PrefsManager @Inject constructor(
         return prefs.getString("token", null)
     }
 
-    fun getUserId(): Int {
-        return prefs.getInt("userId", 0)
+    fun getUserId(): Long {
+        return prefs.getLong("userId", 0)
     }
 
     fun saveActiveProfileId(id: Long) {
-        prefs.edit().putInt("active_profile_id", id.toInt()).apply()
+        prefs.edit().putLong("active_profile_id", id).apply()
     }
 
-    fun getActiveProfileId(): Int {
-        return prefs.getInt("active_profile_id", -1)
+    fun getActiveProfileId(): Long {
+        return prefs.getLong("active_profile_id", -1L)
     }
 
     fun clear() {

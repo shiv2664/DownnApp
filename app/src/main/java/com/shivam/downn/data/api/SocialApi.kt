@@ -4,6 +4,9 @@ import com.shivam.downn.data.models.SocialResponse
 import com.shivam.downn.data.models.CreateSocialRequest
 import com.shivam.downn.data.models.JoinResponse
 import retrofit2.Response
+import okhttp3.MultipartBody
+import retrofit2.http.Multipart
+import retrofit2.http.Part
 import retrofit2.http.*
 
 interface SocialApi {
@@ -25,3 +28,4 @@ interface SocialApi {
     @POST("api/activities/{id}/join")
     suspend fun joinSocial(@Path("id") socialId: Int): Response<JoinResponse>
 }
+

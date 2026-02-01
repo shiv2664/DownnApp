@@ -1,23 +1,29 @@
 package com.shivam.downn.ui.screens.create_activity
 
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.shivam.downn.data.local.PrefsManager
-import com.shivam.downn.data.models.SocialResponse
 import com.shivam.downn.data.models.CreateSocialRequest
+import com.shivam.downn.data.models.SocialResponse
+import com.shivam.downn.data.network.NetworkResult
 import com.shivam.downn.data.repository.SocialRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest // New import
 import kotlinx.coroutines.launch
+import okhttp3.MultipartBody
 import javax.inject.Inject
-import com.shivam.downn.data.network.NetworkResult
-
+import com.shivam.downn.utils.createMultipartBodyPart
 
 @HiltViewModel
 class StartMoveViewModel @Inject constructor(
     private val socialRepository: SocialRepository,
-    private val  prefsManager: PrefsManager
+    private val prefsManager: PrefsManager,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<NetworkResult<SocialResponse?>?>(null)
@@ -30,10 +36,23 @@ class StartMoveViewModel @Inject constructor(
         city: String,
         locationName: String,
         scheduledTime: String,
-        maxParticipants: Int
+        maxParticipants: Int,
+        imageUri: Uri?=null
     ) {
         viewModelScope.launch {
             _state.value = NetworkResult.Loading()
+
+            val imageParts = mutableListOf<MultipartBody.Part>()
+            imageUri?.let {
+                val part = context.createMultipartBodyPart(it, "images")
+                if (part != null) {
+                    imageParts.add(part)
+                } else {
+                    _state.value = NetworkResult.Error("Error processing image")
+                    return@launch
+                }
+            }
+
             val activeProfileId = prefsManager.getActiveProfileId()
             val request = CreateSocialRequest(
                 title = title,
@@ -43,9 +62,9 @@ class StartMoveViewModel @Inject constructor(
                 locationName = locationName,
                 scheduledTime = scheduledTime,
                 maxParticipants = maxParticipants,
-                profileId = if (activeProfileId != -1) activeProfileId else prefsManager.getUserId()
+                profileId = if (activeProfileId != -1L) activeProfileId else prefsManager.getUserId()
             )
-            socialRepository.createSocial(request).collect {
+            socialRepository.createSocial(request).collectLatest {
                 _state.value = it
             }
         }
@@ -55,3 +74,4 @@ class StartMoveViewModel @Inject constructor(
         _state.value = null
     }
 }
+

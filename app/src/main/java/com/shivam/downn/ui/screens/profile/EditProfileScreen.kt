@@ -27,18 +27,41 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.shivam.downn.data.network.NetworkResult
+
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditProfileScreen(
     onClose: () -> Unit,
-    onSave: (name: String, bio: String, location: String) -> Unit
+    viewModel: ProfileViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
     var name by remember { mutableStateOf("Sarah Kim") }
     var bio by remember { mutableStateOf("Adventure seeker making friends one activity at a time ✨ Marathon runner & coffee enthusiast") }
     var location by remember { mutableStateOf("San Francisco, CA") }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+
+    val updateUserState by viewModel.userUpdateResponse.collectAsState()
+
+    LaunchedEffect(updateUserState) {
+        when (val result = updateUserState) {
+            is NetworkResult.Success -> {
+                Toast.makeText(context, "Profile updated successfully!", Toast.LENGTH_SHORT).show()
+            }
+            is NetworkResult.Error -> {
+                Toast.makeText(context, result.message ?: "Update failed", Toast.LENGTH_SHORT).show()
+            }
+            is NetworkResult.Loading -> {
+                Toast.makeText(context, "Updating profile...", Toast.LENGTH_SHORT).show()
+            }
+            else -> {}
+        }
+    }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -63,7 +86,9 @@ fun EditProfileScreen(
                     }
                 },
                 actions = {
-                    TextButton(onClick = { onSave(name, bio, location) }) {
+                    TextButton(onClick = { 
+                        viewModel.updateUser(name, bio, location, selectedImageUri)
+                    }) {
                         Text("Save", color = Color(0xFFA855F7), fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     }
                 },
@@ -163,5 +188,5 @@ private fun EditField(
 @Preview
 @Composable
 fun EditProfilePreview() {
-    EditProfileScreen(onClose = {}, onSave = { _, _, _ -> })
+    EditProfileScreen(onClose = {})
 }

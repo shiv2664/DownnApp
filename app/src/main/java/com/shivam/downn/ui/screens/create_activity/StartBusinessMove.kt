@@ -34,9 +34,9 @@ import java.util.Calendar
 @Composable
 fun StartBusinessMove(
     outerPadding: PaddingValues,
-    onClose: () -> Unit,
-    viewModel: StartMoveViewModel = hiltViewModel()
+    onClose: () -> Unit
 ) {
+    val viewModel: StartMoveViewModel = hiltViewModel()
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
 

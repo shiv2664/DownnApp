@@ -1,6 +1,7 @@
 package com.shivam.downn.data.models
 
 import com.google.gson.annotations.SerializedName
+import okhttp3.MultipartBody
 
 enum class SocialType {
     PERSONAL,
@@ -38,7 +39,9 @@ data class CreateSocialRequest(
     @SerializedName("locationName") val locationName: String,
     @SerializedName("scheduledTime") val scheduledTime: String,
     @SerializedName("maxParticipants") val maxParticipants: Int,
-    @SerializedName("profileId") val profileId: Int
+    @SerializedName("profileId") val profileId: Long,
+    @SerializedName("socialType") val socialType: SocialType = SocialType.BUSINESS,
+    @SerializedName("images") val images: MutableList<MultipartBody.Part>?=null
 )
 
 data class JoinResponse(

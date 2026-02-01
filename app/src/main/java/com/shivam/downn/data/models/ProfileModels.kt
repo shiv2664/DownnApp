@@ -16,8 +16,10 @@ data class ProfileResponse(
     val coverImage: String?,
     val vibes: String?,
     val bio: String?,
+    val location: String?,
     val type: ProfileType,
-    val createdAt: LocalDateTime
+    val createdAt: LocalDateTime,
+    val avatarThumbnail: String?=""
 )
 
 data class CreateProfileRequest(
@@ -34,3 +36,42 @@ data class InterestTag(
     val name: String,
     val colors: List<Color>
 )
+
+data class UpdateUserRequest(
+    val name: String,
+    val bio: String,
+    val location: String
+)
+
+data class UpdateProfileRequest(
+    val name: String,
+    val bio: String,
+    val location: String,
+    val vibes: List<String>
+)
+
+data class UserDetailsResponse(
+    val id: Long,
+    val name: String="",
+    val avatar: String?="",
+    val coverImage: String?,
+    val vibes: String?,
+    val bio: String?,
+    val location: String?="",
+    val type: ProfileType?,
+    val createdAt: LocalDateTime?,
+    val avatarThumbnail: String?=""
+)
+
+data class UserProfileData(
+    val id: Long,
+    val name: String="",
+    val avatar: String?="",
+    val coverImage: String? = "",
+    val vibes: List<String>? = emptyList(),
+    val bio: String? = "",
+    val location: String? = "",
+    val type: ProfileType,
+    val avatarThumbnail: String?=""
+)
+

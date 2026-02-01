@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import com.shivam.downn.data.local.PrefsManager
 import com.shivam.downn.ui.theme.DownnTheme
 import com.shivam.downn.navigation.AppNavigation
 import com.shivam.downn.data.repository.AuthRepository
@@ -16,12 +17,13 @@ class MainActivity : ComponentActivity() {
     
     @Inject
     lateinit var authRepository: AuthRepository
+    @Inject
+    lateinit var prefsManager: PrefsManager
     
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        
         val startDestination = if (authRepository.isUserLoggedIn()) "home" else "login"
         
         setContent {

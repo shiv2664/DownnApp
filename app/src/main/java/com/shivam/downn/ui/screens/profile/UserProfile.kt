@@ -1,5 +1,6 @@
 package com.shivam.downn.ui.screens.profile
 
+import android.widget.Toast
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -28,6 +29,8 @@ import com.shivam.downn.data.models.InterestTag
 import androidx.compose.foundation.layout.FlowRow
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.shivam.downn.data.models.ProfileType
+import com.shivam.downn.data.models.UserProfileData
+import com.shivam.downn.data.network.NetworkResult
 
 data class PastSocial(
     val id: Int,
@@ -50,17 +53,24 @@ fun UserProfile(
     onEditClick: () -> Unit = {},
     onCreateProfileClick: () -> Unit = {},
     onBusinessMoveClick: (Int) -> Unit = {},
-    viewModel: ProfileViewModel = hiltViewModel()
+    viewModel: ProfileViewModel = hiltViewModel(),
+    onEditBusinessProfileClick: (businessId: Long) -> Unit
 ) {
     val activeProfile by viewModel.activeProfile.collectAsState()
     val profiles by viewModel.profiles.collectAsState()
     val canCreateProfile by viewModel.canCreateBusinessProfile.collectAsState()
+
+    LaunchedEffect(activeProfile) {
+        viewModel.fetchCurrentUserDetails()
+    }
 
     if (activeProfile?.type == ProfileType.BUSINESS) {
         BusinessProfileScreen(
             businessId = activeProfile?.id ?: 16L,
             onClose = { viewModel.switchProfile(profiles.first { it.type == ProfileType.PERSONAL }) },
             onMoveClick = onBusinessMoveClick,
+            isOwnProfile = true,
+            onEditBusinessProfileClick = { id -> onEditBusinessProfileClick(id) },
             viewModel = viewModel
         )
     } else {
@@ -139,13 +149,13 @@ fun ProfileContent(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFF0F172A))
-                .padding(0.dp, padding.calculateTopPadding(), 0.dp, outerPadding.calculateBottomPadding() + padding.calculateBottomPadding())
+                .padding(0.dp, padding.calculateTopPadding(), 0.dp, outerPadding.calculateBottomPadding())
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 100.dp)
             ) {
-                item { HeroCard() }
+                item { HeroCard(activeProfile) }
                 item {
                     InterestsSection(selectedInterests, isOwnProfile) {
                         showInterestsSheet = true
@@ -278,7 +288,7 @@ private fun ProfileTopBar(
 }
 
 @Composable
-private fun HeroCard() {
+private fun HeroCard(profile: UserProfileData?) {
     Card(
         modifier = Modifier
             .padding(20.dp)
@@ -291,7 +301,7 @@ private fun HeroCard() {
         Column {
             Box(modifier = Modifier.height(160.dp)) {
                 AsyncImage(
-                    model = "https://images.unsplash.com/photo-1506905925346-21bda4d32df4",
+                    model = profile?.coverImage.takeIf { !it.isNullOrEmpty() } ?: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4",
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
@@ -328,7 +338,7 @@ private fun HeroCard() {
                         border = BorderStroke(4.dp, Brush.linearGradient(listOf(Color(0xFFC084FC), Color(0xFFF472B6), Color(0xFFFB923C))))
                     ) {
                         AsyncImage(
-                            model = "https://images.unsplash.com/photo-1566330429822-c413e4bc27a5",
+                            model = profile?.avatarThumbnail.takeIf { !it.isNullOrEmpty() } ?: "https://images.unsplash.com/photo-1566330429822-c413e4bc27a5",
                             contentDescription = "Profile",
                             modifier = Modifier.clip(RoundedCornerShape(20.dp)),
                             contentScale = ContentScale.Crop
@@ -352,13 +362,13 @@ private fun HeroCard() {
                 }
 
                 Column(modifier = Modifier.padding(top = 80.dp, bottom = 24.dp)) {
-                    Text("Sarah Kim", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text(profile?.name ?: "User Name", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 4.dp)) {
                         Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color(0xFFA855F7), modifier = Modifier.size(16.dp))
-                        Text("San Francisco, CA", fontSize = 14.sp, color = Color(0xFF94A3B8))
+                        Text(profile?.location ?: "Unknown Location", fontSize = 14.sp, color = Color(0xFF94A3B8))
                     }
                     Text(
-                        "Adventure seeker making friends one activity at a time ✨ Marathon runner & coffee enthusiast",
+                        profile?.bio ?: "No bio available.",
                         fontSize = 14.sp,
                         color = Color(0xFFCBD5E1),
                         lineHeight = 20.sp,

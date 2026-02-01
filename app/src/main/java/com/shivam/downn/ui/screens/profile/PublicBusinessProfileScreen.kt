@@ -13,6 +13,7 @@ fun PublicBusinessProfileScreen(
         businessId = businessId,
         onClose = onClose,
         onMoveClick = onMoveClick,
-        isOwnProfile = false
+        isOwnProfile = false,
+        onEditBusinessProfileClick = {}
     )
 }

@@ -27,9 +27,11 @@ import com.shivam.downn.data.models.SocialResponse
 import com.shivam.downn.data.models.SocialType
 import com.shivam.downn.ui.screens.feed.MoveCard
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.shivam.downn.data.network.NetworkResult
 import com.shivam.downn.data.models.ProfileType
 import androidx.compose.runtime.*
 import androidx.compose.runtime.collectAsState
+import com.shivam.downn.data.models.UserProfileData
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,23 +40,55 @@ fun BusinessProfileScreen(
     onClose: () -> Unit,
     onMoveClick: (Int) -> Unit,
     isOwnProfile: Boolean = true,
+    onEditBusinessProfileClick: (businessId: Long) -> Unit,
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val activeProfile by viewModel.activeProfile.collectAsState()
     val profiles by viewModel.profiles.collectAsState()
     val canCreateBusinessProfile by viewModel.canCreateBusinessProfile.collectAsState()
+    val viewedProfileResult by viewModel.viewedProfile.collectAsState()
 
-    BusinessProfileContent(
-        businessId = businessId,
-        onClose = onClose,
-        onMoveClick = onMoveClick,
-        isOwnProfile = isOwnProfile,
-        activeProfile = activeProfile,
-        profiles = profiles,
-        canCreateBusinessProfile = canCreateBusinessProfile,
-        onSwitchProfile = { viewModel.switchProfile(it) },
-        onCreateProfile = { /* Navigation to create_profile would be handled here */ }
-    )
+    LaunchedEffect(businessId, isOwnProfile) {
+        if (!isOwnProfile) {
+            viewModel.fetchProfileDetails(businessId)
+        }
+    }
+
+    val profileToDisplay = if (isOwnProfile) activeProfile else (viewedProfileResult as? NetworkResult.Success)?.data
+
+    if (!isOwnProfile && viewedProfileResult is NetworkResult.Loading) {
+        Scaffold(containerColor = Color(0xFF0F172A)) {
+            Box(modifier = Modifier.fillMaxSize().padding(it), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        }
+    } else if (!isOwnProfile && viewedProfileResult is NetworkResult.Error) {
+        Scaffold(containerColor = Color(0xFF0F172A)) {
+            Box(modifier = Modifier.fillMaxSize().padding(it), contentAlignment = Alignment.Center) {
+                Text((viewedProfileResult as NetworkResult.Error).message ?: "Error", color = Color.White)
+            }
+        }
+    } else if (profileToDisplay != null) {
+        BusinessProfileContent(
+            businessId = businessId,
+            onClose = onClose,
+            onMoveClick = onMoveClick,
+            isOwnProfile = isOwnProfile,
+            activeProfile = profileToDisplay,
+            profiles = profiles,
+            canCreateBusinessProfile = canCreateBusinessProfile,
+            onSwitchProfile = { viewModel.switchProfile(it) },
+            onCreateProfile = { /* Navigation to create_profile would be handled here */ },
+            onEditBusinessProfileClick = onEditBusinessProfileClick
+        )
+    } else if (isOwnProfile) {
+        // Loading state for own profile
+        Scaffold(containerColor = Color(0xFF0F172A)) {
+            Box(modifier = Modifier.fillMaxSize().padding(it), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -68,20 +102,15 @@ fun BusinessProfileContent(
     profiles: List<UserProfileData>,
     canCreateBusinessProfile: Boolean,
     onSwitchProfile: (UserProfileData) -> Unit,
-    onCreateProfile: () -> Unit
+    onCreateProfile: () -> Unit,
+    onEditBusinessProfileClick: (businessId: Long) -> Unit
 ) {
     var showProfileSwitcher by remember { mutableStateOf(false) }
 
-    // Use name from activeProfile if it's the current business
-    val currentBusiness = profiles.find { it.id == businessId }
-    val businessName = currentBusiness?.name ?: if (businessId == 16L) "The Daily Grind" else "Club Social"
-    val businessAvatar = currentBusiness?.avatar ?: if (businessId == 16L)
-        "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400"
-    else "https://images.unsplash.com/photo-1566737236500-c8ac1f852382?w=400"
-
-    val coverImage = currentBusiness?.coverImage ?: if (businessId == 16L)
-        "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800"
-    else "https://images.unsplash.com/photo-1514525253361-bee1a95e792e?w=800"
+    val businessName = activeProfile?.name ?: ""
+    val businessAvatar = activeProfile?.avatar ?: ""
+    val coverImage = activeProfile?.coverImage ?: ""
+    val vibes = activeProfile?.vibes ?: emptyList()
 
     Scaffold(
         containerColor = Color(0xFF0F172A),
@@ -96,7 +125,7 @@ fun BusinessProfileContent(
                                 .padding(start = 8.dp)
                         ) {
                             Text(
-                                text = activeProfile?.name ?: businessName,
+                                text = activeProfile?.name ?: "",
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold
                             )
@@ -111,6 +140,12 @@ fun BusinessProfileContent(
                                 )
                             }
                         }
+                    } else {
+                        Text(
+                            text = businessName,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 },
                 navigationIcon = {
@@ -121,6 +156,13 @@ fun BusinessProfileContent(
                                 contentDescription = "Back",
                                 tint = Color.White,
                             )
+                        }
+                    }
+                },
+                actions = {
+                    if (isOwnProfile) {
+                        IconButton(onClick = { onEditBusinessProfileClick(businessId) }) {
+                            Icon(Icons.Default.Edit, contentDescription = "Edit Business Profile", tint = Color.White)
                         }
                     }
                 },
@@ -147,7 +189,7 @@ fun BusinessProfileContent(
                 }
 
                 item {
-                    VibeSection(currentBusiness?.vibes ?: emptyList())
+                    VibeSection(vibes)
                 }
 
                 item {
@@ -494,6 +536,7 @@ fun PreviewBusinessProfileScreen() {
         profiles = profiles,
         canCreateBusinessProfile = true,
         onSwitchProfile = {},
-        onCreateProfile = {}
+        onCreateProfile = {},
+        onEditBusinessProfileClick = {}
     )
 }

@@ -20,8 +20,8 @@ import com.shivam.downn.data.models.SocialType
 
 @Composable
 fun FeedScreen(
-    onCardClick: (Int) -> Unit,
-    onJoinedClick: () -> Unit
+    onCardClick: (SocialType, Int) -> Unit,
+    onJoinedClick: (SocialType, Int) -> Unit
 ) {
     val viewModel = hiltViewModel<FeedViewModel>()
     val state by viewModel.state.collectAsState()
@@ -57,10 +57,13 @@ fun FeedScreen(
                     MoveList(
                         socials = currentState.data ?: emptyList(),
                         paddingValues = paddingValues,
-                        onCardClick = onCardClick,
-                        onJoinClick = { socialId ->
-                            viewModel.joinSocial(socialId)
-                            onJoinedClick()
+                        onCardClick = { socialType,socialId ->
+//                            viewModel.joinSocial(socialId)
+                            onCardClick(socialType,socialId)
+                        },
+                        onJoinClick = { socialType,socialId ->
+//                            viewModel.joinSocial(socialId)
+                            onJoinedClick(socialType,socialId)
                         }
                     )
                 }
@@ -123,8 +126,8 @@ fun FeedTopBar(onCategorySelected: (String) -> Unit) {
 fun MoveList(
     socials: List<SocialResponse>,
     paddingValues: PaddingValues,
-    onCardClick: (Int) -> Unit,
-    onJoinClick: (Int) -> Unit
+    onCardClick: (SocialType, Int) -> Unit,
+    onJoinClick: (SocialType,Int) -> Unit
 ) {
     val businessItems = listOf(
         SocialResponse(
@@ -168,7 +171,7 @@ fun MoveList(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         items(
-            items = displaySocials,
+            items = socials,
             key = { it.id }
         ) { social ->
             MoveCard(
@@ -184,8 +187,8 @@ fun MoveList(
                 maxParticipants = social.maxParticipants,
                 participantAvatars = social.participantAvatars,
                 socialType = social.socialType,
-                onCardClick = { onCardClick(social.id) },
-                onJoinClick = { onJoinClick(social.id) }
+                onCardClick = { onCardClick(social.socialType,social.id) },
+                onJoinClick = { onJoinClick(social.socialType,social.id) }
             )
         }
     }

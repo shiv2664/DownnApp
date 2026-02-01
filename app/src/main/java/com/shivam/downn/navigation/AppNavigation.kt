@@ -30,13 +30,15 @@ import androidx.compose.runtime.getValue
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.shivam.downn.ui.screens.profile.PublicBusinessProfileScreen
 import com.shivam.downn.data.models.ProfileType
+import com.shivam.downn.data.models.SocialType
+import com.shivam.downn.ui.screens.profile.EditBusinessProfileScreen
 
 @Composable
 fun AppNavigation(startDestination: String = "login") {
     val navController = rememberNavController()
     val sharedProfileViewModel: ProfileViewModel = hiltViewModel()
-    
-    Scaffold(bottomBar = { BottomBar(navController) }) { innerPadding ->
+
+    Scaffold(bottomBar = { BottomBar(navController) }) { outerPadding ->
         NavHost(
             navController = navController,
             startDestination = startDestination,
@@ -50,70 +52,86 @@ fun AppNavigation(startDestination: String = "login") {
             }
 
             composable(
-                route = itemsDataList[0].route) {
-                FeedScreen({ socialId ->
-                    // Logic to check if socialId belongs to a business (for demo purposes)
-                    if (socialId >= 16) {
+                route = itemsDataList[0].route
+            ) {
+                FeedScreen({ socialType, socialId ->
+                    if (socialType == SocialType.BUSINESS) {
                         navController.navigate("business_profile/$socialId")
                     } else {
                         navController.navigate("social_detail/$socialId")
                     }
                 }, {
-                    navController.navigate("social_detail/1")
+
+                        socialType, socialId ->
+                    if (socialType == SocialType.BUSINESS) {
+                        navController.navigate("business_profile/$socialId")
+                    } else {
+                        navController.navigate("social_detail/$socialId")
+                    }
                 })
             }
 
             composable(
-                route = itemsDataList[1].route) {
-                Explore(innerPadding) {}
+                route = itemsDataList[1].route
+            ) {
+                Explore(outerPadding) {}
             }
 
             composable(
-                route = itemsDataList[2].route) {
+                route = itemsDataList[2].route
+            ) {
                 val activeProfile by sharedProfileViewModel.activeProfile.collectAsState()
-                
+
                 if (activeProfile?.type == ProfileType.BUSINESS) {
                     StartBusinessMove(
-                        outerPadding = innerPadding,
+                        outerPadding = outerPadding,
                         onClose = { navController.navigateUp() }
                     )
                 } else {
                     StartMove(
-                        outerPadding = innerPadding,
+                        outerPadding = outerPadding,
                         onClose = { navController.navigateUp() }
                     )
                 }
             }
 
             composable(
-                route = itemsDataList[3].route) {
-                Notifications(innerPadding)
+                route = itemsDataList[3].route
+            ) {
+                Notifications(outerPadding)
             }
 
             composable(
-                route = itemsDataList[4].route) {
+                route = itemsDataList[4].route
+            ) {
                 UserProfile(
-                    outerPadding = innerPadding,
+                    outerPadding = outerPadding,
                     onClose = { navController.navigateUp() },
                     onSettingsClick = { navController.navigate("settings") },
                     onEditClick = { navController.navigate("edit_profile") },
                     onCreateProfileClick = { navController.navigate("create_profile") },
                     onBusinessMoveClick = { moveId -> navController.navigate("social_detail/$moveId") },
-                    viewModel = sharedProfileViewModel
+                    viewModel = sharedProfileViewModel,
+                    onEditBusinessProfileClick = { id -> navController.navigate("edit_business_profile/$id") }
+
                 )
             }
-
 
             composable("edit_profile") {
                 EditProfileScreen(
                     onClose = { navController.navigateUp() },
-                    onSave = { name, bio, location ->
-                        // In a real app, update ViewModel here
-                        navController.navigateUp()
-                    }
+                    viewModel = sharedProfileViewModel
                 )
             }
-
+            composable("edit_business_profile/{businessId}") { backStackEntry ->
+                val businessId =
+                    backStackEntry.arguments?.getString("businessId")?.toLongOrNull() ?: -1L
+                EditBusinessProfileScreen(
+                    businessId = businessId,
+                    onClose = { navController.navigateUp() },
+                    viewModel = sharedProfileViewModel
+                )
+            }
             composable("settings") {
                 SettingsScreen(
                     onClose = { navController.navigateUp() },
@@ -126,10 +144,13 @@ fun AppNavigation(startDestination: String = "login") {
                 )
             }
 
-            composable("public_profile/{userId}") {
+            composable("public_profile/{userId}") { backStackEntry ->
+                val userId = backStackEntry.arguments?.getString("userId")?.toLongOrNull() ?: -1L
                 PublicProfile(
+                    userId = userId,
                     onClose = { navController.navigateUp() },
-                    onFollowClick = { /* Handle follow */ }
+                    onFollowClick = { /* Handle follow */ },
+                    viewModel = sharedProfileViewModel
                 )
             }
 
@@ -145,18 +166,21 @@ fun AppNavigation(startDestination: String = "login") {
             }
 
             composable(route = "business_profile/{businessId}") { backStackEntry ->
-                val businessId = backStackEntry.arguments?.getString("businessId")?.toLongOrNull() ?: 16L
+                val businessId =
+                    backStackEntry.arguments?.getString("businessId")?.toLongOrNull() ?: 16L
                 BusinessProfileScreen(
                     businessId = businessId,
                     onClose = { navController.navigateUp() },
                     onMoveClick = { moveId -> navController.navigate("social_detail/$moveId") },
+                    onEditBusinessProfileClick = { id -> navController.navigate("edit_business_profile/$id") },
                     viewModel = sharedProfileViewModel
                 )
             }
 
             composable("group_chat/{socialId}") { backStackEntry ->
                 val socialId = backStackEntry.arguments?.getString("socialId")?.toIntOrNull() ?: 1
-                GroupChat(innerPadding,
+                GroupChat(
+                    outerPadding,
                     socialTitle = "Downtown Coffee Meetup",
                     categoryIcon = {
                         Text("☕️", fontSize = 20.sp)
@@ -170,7 +194,8 @@ fun AppNavigation(startDestination: String = "login") {
             }
 
             composable("public_business_profile/{businessId}") { backStackEntry ->
-                val businessId = backStackEntry.arguments?.getString("businessId")?.toLongOrNull() ?: 16L
+                val businessId =
+                    backStackEntry.arguments?.getString("businessId")?.toLongOrNull() ?: 16L
                 PublicBusinessProfileScreen(
                     businessId = businessId,
                     onClose = { navController.navigateUp() },

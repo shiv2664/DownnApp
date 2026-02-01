@@ -2,6 +2,7 @@ package com.shivam.downn.ui.screens.feed
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.shivam.downn.data.local.PrefsManager
 import com.shivam.downn.data.models.SocialResponse
 import com.shivam.downn.data.repository.SocialRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -14,7 +15,8 @@ import com.shivam.downn.data.network.NetworkResult
 
 @HiltViewModel
 class FeedViewModel @Inject constructor(
-    private val socialRepository: SocialRepository
+    private val socialRepository: SocialRepository,
+    private val prefsManager: PrefsManager
 ) : ViewModel() {
 
     private val _state =

@@ -57,15 +57,15 @@ data class Category(
 fun StartMove(
     outerPadding: PaddingValues,
     onClose: () -> Unit,
-    viewModel: StartMoveViewModel = hiltViewModel()
 ) {
+    val viewModel: StartMoveViewModel = hiltViewModel()
     val state by viewModel.state.collectAsState()
 
     StartMoveContent(
         state,
         outerPadding = outerPadding,
         onClose = onClose,
-        onCreateSocial = { title, description, category, location, time ->
+        onCreateSocial = { title, description, category, location, time, imageUri ->
             viewModel.createSocial(
                 title = title,
                 description = description,
@@ -73,7 +73,8 @@ fun StartMove(
                 city = "Denver",
                 locationName = location,
                 scheduledTime = time,
-                maxParticipants = 10
+                maxParticipants = 10,
+                imageUri = imageUri
             )
         },
         onResetState = { viewModel.resetState() }
@@ -86,7 +87,7 @@ fun StartMoveContent(
     state: NetworkResult<SocialResponse?>?,
     outerPadding: PaddingValues,
     onClose: () -> Unit,
-    onCreateSocial: (String, String, String, String, String) -> Unit,
+    onCreateSocial: (String, String, String, String, String, Uri?) -> Unit,
     onResetState: () -> Unit
 ) {
     var title by remember { mutableStateOf("") }
@@ -458,7 +459,7 @@ fun StartMoveContent(
 
                 Button(
                     onClick = {
-                        onCreateSocial(title, description, selectedCategoryId, location, time)
+                        onCreateSocial(title, description, selectedCategoryId, location, time, selectedImageUri)
                     },
                     enabled = isFormValid && state !is NetworkResult.Loading,
                     modifier = Modifier
@@ -565,7 +566,7 @@ fun StartMovePreview() {
             state = null,
             outerPadding = PaddingValues(0.dp),
             onClose = {},
-            onCreateSocial = { _, _, _, _, _ -> },
+            onCreateSocial = { _, _, _, _, _, _ -> },
             onResetState = {}
         )
     }
