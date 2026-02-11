@@ -70,7 +70,7 @@ data class UserProfileData(
     val coverImage: String? = "",
     val vibes: List<String>? = emptyList(),
     val bio: String? = "",
-    val location: String? = "",
+    val location: String? = "Denver",
     val type: ProfileType,
     val avatarThumbnail: String?=""
 )

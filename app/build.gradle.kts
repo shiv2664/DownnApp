@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -22,6 +25,13 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        val localProperties = Properties()
+        val localPropertiesFile = rootProject.file("local.properties")
+        if (localPropertiesFile.exists()) {
+            localProperties.load(FileInputStream(localPropertiesFile))
+        }
+        manifestPlaceholders["MAPS_API_KEY"] = localProperties.getProperty("MAPS_API_KEY") ?: "YOUR_KEY_HERE"
     }
 
     buildTypes {
@@ -85,6 +95,8 @@ dependencies {
 //    implementation("androidx.compose.material3:material3-android:1.4.0-alpha14")
 
     implementation("androidx.compose.material:material-icons-extended")
+    implementation(libs.maps.compose)
+    implementation(libs.play.services.maps)
 
 
 

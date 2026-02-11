@@ -72,4 +72,32 @@ class SocialRepository @Inject constructor(
             emit(NetworkResult.Error(e.localizedMessage ?: "Unknown error"))
         }
     }
+
+    fun leaveSocial(socialId: Int): Flow<NetworkResult<Unit>> = flow {
+        emit(NetworkResult.Loading())
+        try {
+            val response = socialApi.leaveSocial(socialId)
+            if (response.isSuccessful) {
+                emit(NetworkResult.Success(Unit))
+            } else {
+                emit(NetworkResult.Error("Leave failed: ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            emit(NetworkResult.Error(e.localizedMessage ?: "Unknown error"))
+        }
+    }
+
+    fun removeParticipant(socialId: Int, participantId: Long): Flow<NetworkResult<Unit>> = flow {
+        emit(NetworkResult.Loading())
+        try {
+            val response = socialApi.removeParticipant(socialId, participantId)
+            if (response.isSuccessful) {
+                emit(NetworkResult.Success(Unit))
+            } else {
+                emit(NetworkResult.Error("Removal failed: ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            emit(NetworkResult.Error(e.localizedMessage ?: "Unknown error"))
+        }
+    }
 }

@@ -55,6 +55,31 @@ import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.graphics.SolidColor
 import kotlinx.coroutines.launch
+import com.google.android.gms.maps.model.LatLng
+import com.shivam.downn.ui.components.FancyMap
+import com.google.maps.android.compose.MarkerComposable
+import com.google.maps.android.compose.rememberMarkerState
+import android.graphics.Bitmap
+import androidx.compose.ui.platform.LocalContext
+import coil.request.ImageRequest
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.shivam.downn.data.network.NetworkResult
+import com.shivam.downn.SocialCategory
+import com.shivam.downn.data.models.SocialResponse
+import com.shivam.downn.ui.screens.feed.MoveCard
+
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.ui.unit.LayoutDirection
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.maps.android.compose.rememberCameraPositionState
+import com.shivam.downn.ui.screens.feed.CategoryChip
+
 
 data class MapSocial(
     val id: Int,
@@ -67,16 +92,53 @@ data class MapSocial(
     val categoryColor: Color,
     val gradient: Brush,
     val timePosted: String,
-    val xPercent: Float,
-    val yPercent: Float,
+    val latLng: LatLng,
     val socialType: SocialType = SocialType.PERSONAL
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Explore(
-    innerPadding: PaddingValues,
-    onSocialClick: (MapSocial) -> Unit = {}
+fun ExploreRoute(
+    outerPadding: PaddingValues,
+    onSocialClick: (SocialResponse) -> Unit = {},
+    viewModel: ExploreViewModel = hiltViewModel()
+) {
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    
+    // Refresh explore when screen resumes (user switches back to this tab)
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                viewModel.fetchSocials()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+    
+    val state by viewModel.state.collectAsState()
+    
+    ExploreContent(
+        state = state,
+        outerPadding = outerPadding,
+        onSocialClick = onSocialClick,
+        onCategorySelected = { category ->
+            viewModel.fetchSocials(category = category)
+        },
+        onFetchAll = { viewModel.fetchSocials() }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ExploreContent(
+    state: NetworkResult<List<SocialResponse>>,
+    outerPadding: PaddingValues,
+    onSocialClick: (SocialResponse) -> Unit = {},
+    onCategorySelected: (String) -> Unit = {},
+    onFetchAll: () -> Unit = {}
 ) {
     val view = LocalView.current
     if (!view.isInEditMode) {
@@ -87,199 +149,286 @@ fun Explore(
         }
     }
 
-    var selectedFilter by remember { mutableStateOf("all") }
-    var selectedPinId by remember { mutableStateOf<Int?>(null) }
+    var selectedFilter by remember { mutableStateOf("All") }
+    
+    val socials = when (val currentState = state) {
+        is NetworkResult.Success -> currentState.data ?: emptyList()
+        else -> emptyList()
+    }
 
-
-
-    val scaffoldState = rememberBottomSheetScaffoldState(
-        bottomSheetState = rememberStandardBottomSheetState(
-            initialValue = SheetValue.PartiallyExpanded
-        )
-    )
+    // Pager and Camera State
+    val pagerState = rememberPagerState(pageCount = { socials.size })
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(LatLng(37.4219999, -122.0840575), 12f)
+    }
     val coroutineScope = rememberCoroutineScope()
 
-    val socials = listOf(
-        MapSocial(1, "The Daily Grind", "The Daily Grind", "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=150", "0.2 mi", 45, Icons.Default.Coffee, Color(0xFFF97316), Brush.linearGradient(listOf(Color(0xFFFDBA74), Color(0xFFF97316))), "Just now", 0.3f, 0.4f, SocialType.BUSINESS),
-        MapSocial(2, "Live Jazz", "Sarah K.", "https://images.unsplash.com/photo-1566330429822-c413e4bc27a5", "0.5 mi", 8, Icons.Default.MusicNote, Color(0xFFA855F7), Brush.linearGradient(listOf(Color(0xFFC084FC), Color(0xFFEC4899))), "1h ago", 0.6f, 0.2f, SocialType.PERSONAL),
-        MapSocial(3, "Club Social", "Club Social", "https://images.unsplash.com/photo-1566737236500-c8ac1f852382?w=150", "1.2 mi", 120, Icons.Default.Celebration, Color(0xFFFDBA74), Brush.linearGradient(listOf(Color(0xFFFFedd5), Color(0xFFF97316))), "2h ago", 0.8f, 0.7f, SocialType.BUSINESS),
-    )
-
-    BottomSheetScaffold(
-        scaffoldState = scaffoldState,
-        sheetPeekHeight = 200.dp,
-        sheetContainerColor = Color(0xFF1E293B),
-        sheetContentColor = Color.White,
-        sheetShape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
-        sheetShadowElevation = 16.dp,
-        sheetDragHandle = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 12.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(width = 40.dp, height = 4.dp)
-                        .background(Color(0xFF334155), CircleShape)
+    // Sync Pager with Map
+    LaunchedEffect(pagerState.currentPage, socials) {
+        if (socials.isNotEmpty() && pagerState.currentPage < socials.size) {
+            val social = socials[pagerState.currentPage]
+            val lat = social.latitude
+            val lng = social.longitude
+            if (lat != null && lng != null) {
+                cameraPositionState.animate(
+                    update = CameraUpdateFactory.newLatLngZoom(LatLng(lat, lng), 15f),
+                    durationMs = 1000
                 )
             }
-        },
-        sheetContent = {
-            Column(modifier = Modifier.fillMaxHeight(0.85f)) {
-                // Header
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            "${socials.size} Nearby Moves",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                        Text("Tap a pin to see details", fontSize = 14.sp, color = Color(0xFF94A3B8))
-                    }
-                    if (scaffoldState.bottomSheetState.currentValue == SheetValue.Expanded) {
-                        IconButton(onClick = {
-                            coroutineScope.launch { scaffoldState.bottomSheetState.partialExpand() }
-                            selectedPinId = null
-                        }) {
-                            Icon(Icons.Default.Close, contentDescription = "Collapse", tint = Color.Gray)
-                        }
-                    }
-                }
+        }
+    }
 
-                // Social List
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    items(socials) { social ->
-                        SocialListItem(social, isSelected = selectedPinId == social.id) {
-                            onSocialClick(social)
+    Scaffold(
+        containerColor = Color.Black
+    ) { padding ->
+        Box(modifier = Modifier.fillMaxSize().padding(top = 0.dp, bottom = outerPadding.calculateBottomPadding())) {
+            // Fancy Stylized Map Background
+            FancyMap(
+                modifier = Modifier.fillMaxSize(),
+                cameraPositionState = cameraPositionState
+            ) {
+                socials.forEachIndexed { index, social ->
+                    val lat = social.latitude
+                    val lng = social.longitude
+                    if (lat != null && lng != null) {
+                        MarkerComposable(
+                            state = rememberMarkerState(position = LatLng(lat, lng)),
+                            title = social.title,
+                            anchor = Offset(0.5f, 1.0f),
+                            onClick = {
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(index)
+                                }
+                                true
+                            }
+                        ) {
+                            val categoryEmoji = SocialCategory.entries.find { it.name.equals(social.category, ignoreCase = true) }?.emoji ?: "📌"
+                            MapPin(
+                                avatar = social.userAvatar ?: "",
+                                isBusiness = social.socialType == SocialType.BUSINESS,
+                                categoryEmoji = categoryEmoji,
+                                isSelected = pagerState.currentPage == index
+                            )
                         }
                     }
                 }
             }
-        },
-        containerColor = Color(0xFF0F172A)
-    ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            // Map Background
-            AsyncImage(
-                model = "https://images.unsplash.com/photo-1590393820812-8a2ed3ece96f",
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
+
+            // Gradient Overlays for better visibility
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.2f))
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color.Black.copy(alpha = 0.4f),
+                                Color.Transparent,
+                                Color.Transparent,
+                                Color.Black.copy(alpha = 0.5f)
+                            )
+                        )
+                    )
             )
 
-            // Filter Header
-            Column(modifier = Modifier.padding(top = 16.dp + innerPadding.calculateTopPadding())) {
+            // Header Controls (Filter Chips)
+            Column(
+                modifier = Modifier
+                    .statusBarsPadding()
+                    .padding(top = 16.dp)
+            ) {
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     item {
-                        FilterChip(
-                            "All",
-                            Icons.Default.AllInclusive,
-                            selectedFilter == "all"
-                        ) { selectedFilter = "all" }
+                        CategoryChip(
+                            label = "All",
+                            emoji = "🌟",
+                            isSelected = selectedFilter == "All",
+                            onClick = { 
+                                selectedFilter = "All"
+                                onFetchAll()
+                            }
+                        )
                     }
-                    item {
-                        FilterChip(
-                            "Travel",
-                            Icons.Default.Flight,
-                            selectedFilter == "travel"
-                        ) { selectedFilter = "travel" }
-                    }
-                    item {
-                        FilterChip(
-                            "Food",
-                            Icons.Default.Restaurant,
-                            selectedFilter == "food"
-                        ) { selectedFilter = "food" }
-                    }
-                    item {
-                        FilterChip(
-                            "Party",
-                            Icons.Default.Celebration,
-                            selectedFilter == "party"
-                        ) { selectedFilter = "party" }
+                    items(SocialCategory.entries.toTypedArray()) { category ->
+                        CategoryChip(
+                            label = category.displayName.replace("Activity", "Move"),
+                            emoji = category.emoji,
+                            isSelected = selectedFilter == category.displayName,
+                            onClick = { 
+                                selectedFilter = category.displayName
+                                onCategorySelected(category.name)
+                            }
+                        )
                     }
                 }
             }
 
-            // Map Pins
-            socials.forEach { social ->
-                MapPin(
-                    social = social,
-                    isSelected = selectedPinId == social.id,
-                    onClick = {
-                        selectedPinId = social.id
-                        coroutineScope.launch { scaffoldState.bottomSheetState.expand() }
+            // Bottom Horizontal Pager
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(bottom = 24.dp)
+            ) {
+                if (state is NetworkResult.Loading) {
+                    Box(modifier = Modifier.fillMaxWidth().height(180.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = Color.White)
                     }
-                )
+                } else if (socials.isEmpty() && state is NetworkResult.Success) {
+                    Box(modifier = Modifier.fillMaxWidth().height(180.dp), contentAlignment = Alignment.Center) {
+                        Text("No moves nearby", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                } else {
+                    HorizontalPager(
+                        state = pagerState,
+                        contentPadding = PaddingValues(horizontal = 32.dp),
+                        pageSpacing = 16.dp,
+                        modifier = Modifier.fillMaxWidth()
+                    ) { page ->
+                        val social = socials[page]
+                        val categoryEmoji = SocialCategory.entries.find { it.name.equals(social.category, ignoreCase = true) }?.emoji ?: "📌"
+                        
+                        ExploreCard(
+                            social = social,
+                            categoryEmoji = categoryEmoji,
+                            onClick = { onSocialClick(social) }
+                        )
+                    }
+                }
             }
 
             // Current Location FAB
             FloatingActionButton(
-                onClick = { },
+                onClick = { /* Handle current location center */ },
                 modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = 16.dp, bottom = 24.dp) // Scaffold handles content padding
-                    .size(48.dp),
+                    .align(Alignment.TopEnd)
+                    .statusBarsPadding()
+                    .padding(top = 80.dp, end = 16.dp)
+                    .size(44.dp),
                 shape = CircleShape,
-                containerColor = Color.White
+                containerColor = Color(0xFF1E293B).copy(alpha = 0.8f),
+                contentColor = Color.White
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(12.dp)
-                        .background(Color(0xFF3B82F6), CircleShape)
-                        .border(2.dp, Color.White, CircleShape)
-                )
+                Icon(Icons.Default.MyLocation, contentDescription = "My Location", modifier = Modifier.size(20.dp))
             }
         }
     }
 }
 
 @Composable
-private fun FilterChip(label: String, icon: ImageVector, isActive: Boolean, onClick: () -> Unit) {
+private fun ExploreCard(
+    social: SocialResponse,
+    categoryEmoji: String,
+    onClick: () -> Unit
+) {
     Surface(
         onClick = onClick,
-        shape = CircleShape,
-        color = Color.Transparent,
-        modifier = Modifier.padding(vertical = 4.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(180.dp),
+        shape = RoundedCornerShape(28.dp),
+        color = Color(0xFF1E293B).copy(alpha = 0.85f),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
     ) {
-        Row(
-            modifier = Modifier
-                .background(
-                    if (isActive) Brush.horizontalGradient(listOf(Color(0xFF9333EA), Color(0xFFDB2777))) 
-                    else Brush.linearGradient(listOf(Color(0xFF1E293B).copy(alpha = 0.7f), Color(0xFF1E293B).copy(alpha = 0.7f)))
-                )
-                .border(
-                    width = 1.dp,
-                    brush = if (isActive) SolidColor(Color.White.copy(alpha = 0.3f)) else SolidColor(Color(0xFF334155).copy(alpha = 0.5f)),
-                    shape = CircleShape
-                )
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp), tint = if (isActive) Color.White else Color(0xFF94A3B8))
-            Text(label, color = if (isActive) Color.White else Color(0xFF94A3B8), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Large Avatar with Glow
+                Box(contentAlignment = Alignment.Center) {
+                    if (social.socialType == SocialType.BUSINESS) {
+                        Box(
+                            modifier = Modifier
+                                .size(54.dp)
+                                .background(Color(0xFFF97316).copy(alpha = 0.2f), CircleShape)
+                        )
+                    }
+                    AsyncImage(
+                        model = social.userAvatar,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .border(1.5.dp, Color.White.copy(alpha = 0.2f), CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            social.title,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        if (social.socialType == SocialType.BUSINESS) {
+                            Icon(Icons.Default.Verified, contentDescription = null, tint = Color(0xFF3B82F6), modifier = Modifier.size(16.dp))
+                        }
+                    }
+                    Text(
+                        "${social.userName} · ${social.distance ?: "Nearby"}",
+                        fontSize = 14.sp,
+                        color = Color(0xFF94A3B8)
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(14.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(categoryEmoji, fontSize = 20.sp)
+                }
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Participant Stack
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Box {
+                        social.participantAvatars?.take(3)?.forEachIndexed { index, avatar ->
+                            AsyncImage(
+                                model = avatar,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .padding(start = (index * 16).dp)
+                                    .size(24.dp)
+                                    .clip(CircleShape)
+                                    .border(1.dp, Color(0xFF1E293B), CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                    }
+                    Text(
+                        "${social.participantCount} joined",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF94A3B8)
+                    )
+                }
+
+                // Action Button
+                Button(
+                    onClick = onClick, // Navigate to detail
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (social.socialType == SocialType.BUSINESS) Color(0xFFF97316) else Color(0xFFA855F7)
+                    ),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Text("I'M DOWN", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                }
+            }
         }
     }
 }
@@ -320,19 +469,20 @@ fun VibePulse(color: Color) {
 
 
 @Composable
-private fun BoxScope.MapPin(social: MapSocial, isSelected: Boolean, onClick: () -> Unit) {
+private fun MapPin(
+    avatar: String,
+    isBusiness: Boolean,
+    categoryEmoji: String,
+    isSelected: Boolean
+) {
     val scale by animateFloatAsState(
         targetValue = if (isSelected) 1.3f else 1f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
     )
-    val isBusiness = social.socialType == SocialType.BUSINESS
 
     Box(
         modifier = Modifier
-            .align(Alignment.TopStart)
-            .offset(x = (LocalConfiguration.current.screenWidthDp * social.xPercent).dp, y = (LocalConfiguration.current.screenHeightDp * social.yPercent).dp)
-            .scale(scale)
-            .clickable { onClick() },
+            .scale(scale),
         contentAlignment = Alignment.Center
     ) {
         if (isBusiness || isSelected) {
@@ -350,7 +500,10 @@ private fun BoxScope.MapPin(social: MapSocial, isSelected: Boolean, onClick: () 
                 ) {
                     Box(modifier = Modifier.padding(3.dp)) {
                         AsyncImage(
-                            model = social.avatar,
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(avatar)
+                                .allowHardware(false)
+                                .build(),
                             contentDescription = null,
                             modifier = Modifier
                                 .fillMaxSize()
@@ -373,12 +526,16 @@ private fun BoxScope.MapPin(social: MapSocial, isSelected: Boolean, onClick: () 
                         .border(1.5.dp, Color.White, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = if (isBusiness) Icons.Default.Verified else social.categoryIcon,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(12.dp)
-                    )
+                    if (isBusiness) {
+                        Icon(
+                            imageVector = Icons.Default.Verified,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(12.dp)
+                        )
+                    } else {
+                        Text(categoryEmoji, fontSize = 10.sp)
+                    }
                 }
             }
 
@@ -394,68 +551,4 @@ private fun BoxScope.MapPin(social: MapSocial, isSelected: Boolean, onClick: () 
             }
         }
     }
-}
-
-@Composable
-private fun SocialListItem(social: MapSocial, isSelected: Boolean, onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = Color(0xFF0F172A),
-        border = BorderStroke(2.dp, if (isSelected) Color(0xFFA855F7) else Color(0xFF334155)),
-        shadowElevation = 0.dp
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                AsyncImage(
-                    model = social.avatar,
-                    contentDescription = null,
-                    modifier = Modifier.size(48.dp).clip(CircleShape),
-                    contentScale = ContentScale.Crop
-                )
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.SpaceBetween) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(social.title, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1)
-                            Text("${social.userName} · ${social.timePosted}", fontSize = 13.sp, color = Color(0xFF94A3B8))
-                        }
-                        Box(
-                            modifier = Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(social.categoryColor),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(social.categoryIcon, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-                        }
-                    }
-                    Row(modifier = Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Icon(Icons.Default.Place, contentDescription = null, tint = Color(0xFF94A3B8), modifier = Modifier.size(14.dp))
-                            Text(social.distance, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color(0xFF94A3B8))
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Icon(Icons.Default.Groups, contentDescription = null, tint = Color(0xFF94A3B8), modifier = Modifier.size(14.dp))
-                            Text("${social.participantCount} joined", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color(0xFF94A3B8))
-                        }
-                    }
-                }
-            }
-            Button(
-                onClick = { },
-                modifier = Modifier.fillMaxWidth().padding(top = 16.dp).height(44.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                contentPadding = PaddingValues()
-            ) {
-                Box(modifier = Modifier.fillMaxSize().background(social.gradient), contentAlignment = Alignment.Center) {
-                    Text("I'm Down", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
-    }
-}
-
-@Preview
-@Composable
-fun ExplorePreview(){
-    Explore(PaddingValues(0.dp))
 }

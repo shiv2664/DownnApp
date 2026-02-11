@@ -35,7 +35,7 @@ import com.shivam.downn.data.models.UserProfileData
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BusinessProfileScreen(
+fun BusinessProfileRoute(
     businessId: Long,
     onClose: () -> Unit,
     onMoveClick: (Int) -> Unit,
@@ -43,16 +43,35 @@ fun BusinessProfileScreen(
     onEditBusinessProfileClick: (businessId: Long) -> Unit,
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
-    val activeProfile by viewModel.activeProfile.collectAsState()
-    val profiles by viewModel.profiles.collectAsState()
-    val canCreateBusinessProfile by viewModel.canCreateBusinessProfile.collectAsState()
-    val viewedProfileResult by viewModel.viewedProfile.collectAsState()
-
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    
+    // Refresh business profile when screen resumes
+    DisposableEffect(lifecycleOwner, businessId, isOwnProfile) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                if (!isOwnProfile) {
+                    viewModel.fetchProfileDetails(businessId)
+                } else {
+                    viewModel.fetchCurrentUserDetails()
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+    
     LaunchedEffect(businessId, isOwnProfile) {
         if (!isOwnProfile) {
             viewModel.fetchProfileDetails(businessId)
         }
     }
+    
+    val activeProfile by viewModel.activeProfile.collectAsState()
+    val profiles by viewModel.profiles.collectAsState()
+    val canCreateBusinessProfile by viewModel.canCreateBusinessProfile.collectAsState()
+    val viewedProfileResult by viewModel.viewedProfile.collectAsState()
 
     val profileToDisplay = if (isOwnProfile) activeProfile else (viewedProfileResult as? NetworkResult.Success)?.data
 

@@ -32,6 +32,7 @@ import androidx.compose.ui.tooling.preview.Preview
 fun SettingsScreen(
     onClose: () -> Unit,
     onLogout: () -> Unit,
+    onNavigateToDetail: (String) -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
@@ -76,22 +77,22 @@ fun SettingsScreen(
         ) {
             // Account Section
             SettingsSection(title = "Account") {
-                SettingsItem(icon = Icons.Default.Person, label = "Personal Information")
-                SettingsItem(icon = Icons.Default.Lock, label = "Security")
-                SettingsItem(icon = Icons.Default.PrivacyTip, label = "Privacy Settings")
+                SettingsItem(icon = Icons.Default.Person, label = "Personal Information", onClick = { onNavigateToDetail("Personal Information") })
+                // SettingsItem(icon = Icons.Default.Lock, label = "Security", onClick = { onNavigateToDetail("Security") }) // Hidden for MVP
+                // SettingsItem(icon = Icons.Default.PrivacyTip, label = "Privacy Settings", onClick = { onNavigateToDetail("Privacy Settings") }) // Hidden for MVP
             }
 
             // Preferences Section
             SettingsSection(title = "Preferences") {
-                SettingsItem(icon = Icons.Default.Notifications, label = "Notifications")
-                SettingsItem(icon = Icons.Default.Palette, label = "Appearance")
-                SettingsItem(icon = Icons.Default.Language, label = "Language")
+                SettingsItem(icon = Icons.Default.Notifications, label = "Notifications", onClick = { onNavigateToDetail("Notifications") })
+                // SettingsItem(icon = Icons.Default.Palette, label = "Appearance", onClick = { onNavigateToDetail("Appearance") }) // Hidden for MVP
+                // SettingsItem(icon = Icons.Default.Language, label = "Language", onClick = { onNavigateToDetail("Language") }) // Hidden for MVP
             }
 
             // Support Section
             SettingsSection(title = "Support") {
-                SettingsItem(icon = Icons.Default.Help, label = "Help Center")
-                SettingsItem(icon = Icons.Default.Info, label = "About Downn")
+                SettingsItem(icon = Icons.Default.Help, label = "Help Center", onClick = { onNavigateToDetail("Help Center") })
+                SettingsItem(icon = Icons.Default.Info, label = "About Downn", onClick = { onNavigateToDetail("About Downn") })
             }
 
             // Logout
@@ -185,5 +186,5 @@ private fun SettingsItem(icon: ImageVector, label: String, onClick: () -> Unit =
 @Composable
 @Preview
 fun SettingsPreview() {
-    SettingsScreen(onClose = {}, onLogout = {})
+    SettingsScreen(onClose = {}, onLogout = {}, onNavigateToDetail = {})
 }

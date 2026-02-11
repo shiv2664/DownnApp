@@ -37,7 +37,9 @@ class StartMoveViewModel @Inject constructor(
         locationName: String,
         scheduledTime: String,
         maxParticipants: Int,
-        imageUri: Uri?=null
+        latitude: Double? = null,
+        longitude: Double? = null,
+        imageUri: Uri? = null
     ) {
         viewModelScope.launch {
             _state.value = NetworkResult.Loading()
@@ -62,7 +64,9 @@ class StartMoveViewModel @Inject constructor(
                 locationName = locationName,
                 scheduledTime = scheduledTime,
                 maxParticipants = maxParticipants,
-                profileId = if (activeProfileId != -1L) activeProfileId else prefsManager.getUserId()
+                profileId = if (activeProfileId != -1L) activeProfileId else prefsManager.getUserId(),
+                latitude = latitude,
+                longitude = longitude
             )
             socialRepository.createSocial(request).collectLatest {
                 _state.value = it

@@ -13,9 +13,12 @@ import androidx.compose.material.icons.outlined.Coffee
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -25,8 +28,25 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.shivam.downn.ui.components.FancyMap
+import com.google.maps.android.compose.MarkerComposable
+import com.google.maps.android.compose.rememberMarkerState
+import com.google.maps.android.compose.rememberCameraPositionState
 import com.shivam.downn.data.models.SocialResponse
 import com.shivam.downn.data.models.SocialType
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import com.shivam.downn.data.network.NetworkResult
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.rememberModalBottomSheetState
 
 data class Participant(
     val id: Int,
@@ -41,13 +61,47 @@ data class ChatPreview(
     val time: String
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SocialDetail(
     social: SocialResponse,
+    currentUserId: Long,
+    leaveState: NetworkResult<Unit>? = null,
+    removeState: NetworkResult<Unit>? = null,
     onClose: () -> Unit,
     onOpenChat: () -> Unit,
-    onViewProfile: (userId: Long) -> Unit
+    onViewProfile: (userId: Long) -> Unit,
+    onSeeAllParticipants: () -> Unit,
+    onJoinSocial: (socialId: Int) -> Unit,
+    onLeaveSocial: (socialId: Int) -> Unit,
+    onRemoveParticipant: (socialId: Int, participantId: Long) -> Unit
 ) {
+    val isOwner = social.userId?.toLong() == currentUserId
+    val isParticipant = social.participants.any { it.id == currentUserId }
+
+    var showParticipantActionSheet by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState()
+    val scope = rememberCoroutineScope()
+
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Handle Leave Success
+    LaunchedEffect(leaveState) {
+        if (leaveState is NetworkResult.Success) {
+            onClose() // Close the detail screen if we leave
+        } else if (leaveState is NetworkResult.Error) {
+            snackbarHostState.showSnackbar(leaveState.message ?: "Failed to leave")
+        }
+    }
+
+    // Handle Remove Success
+    LaunchedEffect(removeState) {
+        if (removeState is NetworkResult.Success) {
+            snackbarHostState.showSnackbar("Participant removed")
+        } else if (removeState is NetworkResult.Error) {
+            snackbarHostState.showSnackbar(removeState.message ?: "Failed to remove participant")
+        }
+    }
 
     val title = social.title
     val userName = social.userName ?: "Unknown"
@@ -61,6 +115,23 @@ fun SocialDetail(
         Brush.horizontalGradient(listOf(Color(0xFFFDBA74), Color(0xFFF97316)))
     } else {
         Brush.horizontalGradient(listOf(Color(0xFF9333EA), Color(0xFFDB2777)))
+    }
+
+    val eventLatLng = remember(social.latitude, social.longitude) {
+        if (social.latitude != null && social.longitude != null) {
+            LatLng(social.latitude, social.longitude)
+        } else {
+            LatLng(39.7392, -104.9903) // Default to Denver if missing
+        }
+    }
+
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(eventLatLng, 15f)
+    }
+
+    // Sync camera if coordinates change after initial load
+    LaunchedEffect(eventLatLng) {
+        cameraPositionState.position = CameraPosition.fromLatLngZoom(eventLatLng, 15f)
     }
 
     val categoryIcon = @Composable {
@@ -93,7 +164,8 @@ fun SocialDetail(
 
     Scaffold(
         containerColor = Color(0xFF0F172A),
-        contentWindowInsets = WindowInsets(0, 0, 0, 0)
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ){ innerPadding ->
         Box(
             modifier = Modifier
@@ -113,8 +185,7 @@ fun SocialDetail(
                     verticalArrangement = Arrangement.Top,
                     horizontalAlignment = Alignment.CenterHorizontally
 
-                )
-                {
+                ) {
                     // Header Image
                     Box(
                         modifier = Modifier
@@ -309,7 +380,8 @@ fun SocialDetail(
                                 "See all",
                                 color = primaryColor,
                                 fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.clickable { onSeeAllParticipants() }
                             )
                         }
                         LazyRow(
@@ -342,66 +414,102 @@ fun SocialDetail(
                                 .fillMaxWidth()
                                 .height(if (isBusiness) 240.dp else 200.dp)
                                 .clip(RoundedCornerShape(24.dp))
-                                .background(
-                                    Brush.linearGradient(
-                                        listOf(
-                                            Color(0xFF1E3A8A).copy(alpha = 0.5f),
-                                            Color(0xFF064E3B).copy(alpha = 0.5f)
-                                        )
-                                    )
-                                ),
-                            contentAlignment = Alignment.Center
+                                .background(Color(0xFF1E293B))
+                                .border(1.dp, Color(0xFF334155), RoundedCornerShape(24.dp))
                         ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Surface(
-                                    shape = RoundedCornerShape(16.dp),
-                                    color = Color(0xFF1E293B),
-                                    border = BorderStroke(1.dp, Color(0xFF334155))
+                            FancyMap(
+                                modifier = Modifier.fillMaxSize(),
+                                cameraPositionState = cameraPositionState,
+                                gesturesEnabled = false
+                            ) {
+                                MarkerComposable(
+                                    state = rememberMarkerState(
+                                        key = "${eventLatLng.latitude}_${eventLatLng.longitude}",
+                                        position = eventLatLng
+                                    ),
+                                    anchor = Offset(0.5f, 1.0f)
                                 ) {
-                                    Row(
-                                        modifier = Modifier.padding(12.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    Icon(
+                                        Icons.Default.Place,
+                                        contentDescription = null,
+                                        tint = primaryColor,
+                                        modifier = Modifier.size(36.dp)
+                                    )
+                                }
+                            }
+                            
+                            // Location info overlay
+                            Surface(
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .padding(16.dp)
+                                    .fillMaxWidth(0.9f),
+                                shape = RoundedCornerShape(16.dp),
+                                color = Color(0xFF0F172A).copy(alpha = 0.9f),
+                                border = BorderStroke(1.dp, Color(0xFF334155))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .clip(CircleShape)
+                                            .background(primaryColor.copy(alpha = 0.2f)),
+                                        contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
                                             Icons.Default.Place,
                                             contentDescription = null,
-                                            tint = Color(0xFFF87171)
+                                            tint = primaryColor,
+                                            modifier = Modifier.size(20.dp)
                                         )
-                                        Column {
-                                            Text(
-                                                text = social.locationName ?: "Unknown Location",
-                                                color = Color.White,
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 14.sp
-                                            )
-                                            Text(distance, color = Color(0xFF94A3B8), fontSize = 12.sp)
-                                        }
+                                    }
+                                    Column {
+                                        Text(
+                                            text = social.locationName ?: "Unknown Location",
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp
+                                        )
+                                        Text(
+                                            social.city, 
+                                            color = Color(0xFF94A3B8), 
+                                            fontSize = 12.sp
+                                        )
                                     }
                                 }
+                            }
+                        }
 
-                                if (isBusiness) {
-                                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                        Button(
-                                            onClick = {},
-                                            modifier = Modifier.height(44.dp),
-                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF334155)),
-                                            shape = RoundedCornerShape(12.dp)
-                                        ) {
-                                            Icon(Icons.Default.Directions, contentDescription = null, modifier = Modifier.size(18.dp))
-                                            Spacer(Modifier.width(8.dp))
-                                            Text("Directions", fontSize = 12.sp)
-                                        }
-                                        Button(
-                                            onClick = {},
-                                            modifier = Modifier.size(44.dp),
-                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF334155)),
-                                            shape = RoundedCornerShape(12.dp),
-                                            contentPadding = PaddingValues(0.dp)
-                                        ) {
-                                            Icon(Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(18.dp))
-                                        }
-                                    }
+                        if (isBusiness) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Button(
+                                    onClick = {},
+                                    modifier = Modifier.weight(1f).height(48.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = BorderStroke(1.dp, Color(0xFF334155))
+                                ) {
+                                    Icon(Icons.Default.Directions, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Directions", fontSize = 14.sp)
+                                }
+                                Button(
+                                    onClick = {},
+                                    modifier = Modifier.size(48.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = BorderStroke(1.dp, Color(0xFF334155)),
+                                    contentPadding = PaddingValues(0.dp)
+                                ) {
+                                    Icon(Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(18.dp))
                                 }
                             }
                         }
@@ -414,7 +522,7 @@ fun SocialDetail(
                     )
 
                     // Chat Preview
-                    Column(modifier = Modifier.padding(10.dp)) {
+                   /* Column(modifier = Modifier.padding(10.dp)) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -488,7 +596,7 @@ fun SocialDetail(
                                 )
                             }
                         }
-                    }
+                    }*/
 
                 }
 
@@ -537,15 +645,21 @@ fun SocialDetail(
                         )
                     }
                     IconButton(
-                        onClick = { },
+                        onClick = { 
+                            if (isOwner) {
+                                showParticipantActionSheet = true
+                            } else {
+                                // Default share action
+                            }
+                        },
                         modifier = Modifier
                             .size(40.dp)
                             .clip(CircleShape)
                             .background(Color.White.copy(alpha = 0.2f))
                     ) {
                         Icon(
-                            Icons.Outlined.Share,
-                            contentDescription = "Share",
+                            if (isOwner) Icons.Default.Groups else Icons.Outlined.Share,
+                            contentDescription = if (isOwner) "Manage Participants" else "Share",
                             tint = Color.White,
                             modifier = Modifier.size(20.dp)
                         )
@@ -578,7 +692,7 @@ fun SocialDetail(
                         Button(
                             onClick = { onOpenChat() },
                             modifier = Modifier
-                                .weight(1f)
+                                .weight(if (isParticipant || isOwner) 1.5f else 1f)
                                 .height(56.dp),
                             shape = RoundedCornerShape(16.dp),
                              colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
@@ -600,23 +714,59 @@ fun SocialDetail(
                                  )
                              }
                         }
-                        Button(
-                            onClick = { },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(56.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                            contentPadding = PaddingValues()
-                        ) {
-                            Box(
+                        
+                        if (isParticipant && !isOwner) {
+                            Button(
+                                onClick = { onLeaveSocial(social.id) },
                                 modifier = Modifier
-                                    .fillMaxSize()
-                                     .background(accentBrush),
-                                contentAlignment = Alignment.Center
+                                    .weight(1f)
+                                    .height(56.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444).copy(alpha = 0.1f)),
+                                border = BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.5f))
                             ) {
                                 Text(
-                                    "I'M DOWN",
+                                    "LEAVE",
+                                    color = Color(0xFFEF4444),
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        } else if (!isOwner) {
+                            Button(
+                                onClick = { onJoinSocial(social.id) },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(56.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                                contentPadding = PaddingValues()
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(accentBrush),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        "I'M DOWN",
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        } else {
+                            // Owner view actions
+                            Button(
+                                onClick = { /* Edit action */ },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(56.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.1f)),
+                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))
+                            ) {
+                                Text(
+                                    "EDIT",
                                     color = Color.White,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -624,14 +774,71 @@ fun SocialDetail(
                         }
                     }
                 }
-
+                
+                // Participant Management Sheet
+                if (showParticipantActionSheet) {
+                    ModalBottomSheet(
+                        onDismissRequest = { showParticipantActionSheet = false },
+                        sheetState = sheetState,
+                        containerColor = Color(0xFF1E293B),
+                        scrimColor = Color.Black.copy(alpha = 0.5f)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp)
+                                .padding(bottom = 48.dp)
+                        ) {
+                            Text(
+                                "Manage Participants",
+                                color = Color.White,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(bottom = 24.dp)
+                            )
+                            
+                             social.participants.forEach { participant ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    AsyncImage(
+                                        model = participant.avatar,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(40.dp).clip(CircleShape)
+                                    )
+                                    Text(
+                                        participant.name,
+                                        color = Color.White,
+                                        modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    if (participant.id != currentUserId) {
+                                        TextButton(
+                                            onClick = { onRemoveParticipant(social.id, participant.id) },
+                                            colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFEF4444))
+                                        ) {
+                                            Text("Remove")
+                                        }
+                                    } else {
+                                        Text(
+                                            "Owner",
+                                            color = primaryColor,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                                Divider(color = Color(0xFF334155), thickness = 0.5.dp)
+                            }
+                        }
+                    }
+                }
             }
         }
-
-
     }
-
-
 }
 
 @Composable
@@ -720,8 +927,13 @@ fun SocialDetailPreview() {
             timeAgo = "2h ago",
             userId = 1
         ),
+        currentUserId = 2, // Not the owner
         onClose = {},
         onOpenChat = {},
-        onViewProfile = {}
+        onViewProfile = {},
+        onSeeAllParticipants = {},
+        onJoinSocial = {},
+        onLeaveSocial = {},
+        onRemoveParticipant = { _, _ -> }
     )
 }

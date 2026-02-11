@@ -49,6 +49,10 @@ class ProfileViewModel @Inject constructor(
 
 
     init {
+        // Initialize with cached auth data to avoid "User Name" placeholder
+        prefsManager.getAuthResponse()?.let {
+            _activeProfile.value = it.toUserProfileData()
+        }
         loadProfiles()
     }
 
@@ -61,8 +65,12 @@ class ProfileViewModel @Inject constructor(
 
                     // Restore active profile from SharedPreferences
                     val savedId = prefsManager.getActiveProfileId()
-                    _activeProfile.value =
-                        profileList.find { it.id == savedId } ?: profileList.firstOrNull()
+                    val profileToActivate = profileList.find { it.id == savedId } ?: profileList.firstOrNull()
+                    
+                    if (profileToActivate != null) {
+                        _activeProfile.value = profileToActivate
+                        fetchCurrentUserDetails()
+                    }
                 }
             }
         }

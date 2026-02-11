@@ -8,6 +8,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -19,17 +20,32 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.shivam.downn.data.network.NetworkResult
 
 @Composable
-fun PublicProfile(
+fun PublicProfileRoute(
     userId: Long,
     onClose: () -> Unit,
     onFollowClick: () -> Unit = {},
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
-    val viewedProfileResult by viewModel.viewedProfile.collectAsState()
-
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    
+    // Refresh public profile when screen resumes
+    DisposableEffect(lifecycleOwner, userId) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                viewModel.fetchUserDetails(userId)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+    
     LaunchedEffect(userId) {
         viewModel.fetchUserDetails(userId)
     }
+    
+    val viewedProfileResult by viewModel.viewedProfile.collectAsState()
 
     when (viewedProfileResult) {
         is NetworkResult.Loading, null -> {

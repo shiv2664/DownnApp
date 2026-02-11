@@ -8,8 +8,8 @@ fun PublicBusinessProfileScreen(
     onClose: () -> Unit,
     onMoveClick: (Int) -> Unit
 ) {
-    // Simply reuse BusinessProfileScreen with isOwnProfile = false
-    BusinessProfileScreen(
+    // Simply reuse BusinessProfileRoute with isOwnProfile = false
+    BusinessProfileRoute(
         businessId = businessId,
         onClose = onClose,
         onMoveClick = onMoveClick,

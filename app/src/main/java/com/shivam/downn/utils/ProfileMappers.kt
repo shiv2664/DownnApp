@@ -13,7 +13,7 @@ fun ProfileResponse.toUserProfileData(): UserProfileData {
         coverImage = this.coverImage ?: "",
         vibes = this.vibes?.split(",")?.filter { it.isNotBlank() } ?: emptyList(),
         bio = this.bio ?: "",
-        location = this.location ?: "",
+        location = this.location,
         type = this.type,
         avatarThumbnail=this.avatarThumbnail
     )
@@ -27,8 +27,17 @@ fun UserDetailsResponse.toUserProfileData(): UserProfileData {
         coverImage = this.coverImage ?: "",
         vibes = this.vibes?.split(",")?.filter { it.isNotBlank() } ?: emptyList(),
         bio = this.bio ?: "",
-        location = this.location ?: "",
+        location = this.location,
         type = this.type?:ProfileType.PERSONAL,
         avatarThumbnail=this.avatarThumbnail
+    )
+}
+
+fun com.shivam.downn.data.models.AuthResponse.toUserProfileData(): UserProfileData {
+    return UserProfileData(
+        id = this.userId,
+        name = this.name,
+        avatar = "https://images.unsplash.com/photo-1566330429822-c413e4bc27a5", // Default avatar
+        type = ProfileType.PERSONAL
     )
 }

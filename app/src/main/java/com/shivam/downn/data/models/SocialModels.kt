@@ -25,10 +25,13 @@ data class SocialResponse(
     @SerializedName("userIsVerified") val userIsVerified: Boolean = false,
     @SerializedName("timeAgo") val timeAgo: String? = null,
     @SerializedName("distance") val distance: String? = null,
-    @SerializedName("participantAvatars") val participantAvatars: List<String> = emptyList(),
+    @SerializedName("participantAvatars") val participantAvatars: List<String>? = emptyList(),
+    @SerializedName("participants") val participants: List<ParticipantResponse> = emptyList(),
     @SerializedName("isActive") val isActive: Boolean = true,
     @SerializedName("createdAt") val createdAt: String? = null,
-    @SerializedName("socialType") val socialType: SocialType = SocialType.BUSINESS
+    @SerializedName("socialType") val socialType: SocialType = SocialType.BUSINESS,
+    @SerializedName("latitude") val latitude: Double? = null,
+    @SerializedName("longitude") val longitude: Double? = null
 )
 
 data class CreateSocialRequest(
@@ -41,10 +44,19 @@ data class CreateSocialRequest(
     @SerializedName("maxParticipants") val maxParticipants: Int,
     @SerializedName("profileId") val profileId: Long,
     @SerializedName("socialType") val socialType: SocialType = SocialType.BUSINESS,
+    @SerializedName("latitude") val latitude: Double? = null,
+    @SerializedName("longitude") val longitude: Double? = null,
     @SerializedName("images") val images: MutableList<MultipartBody.Part>?=null
 )
 
 data class JoinResponse(
     @SerializedName("success") val success: Boolean,
     @SerializedName("message") val message: String?
+)
+
+data class ParticipantResponse(
+    @SerializedName("id") val id: Long,
+    @SerializedName("name") val name: String,
+    @SerializedName("avatar") val avatar: String?,
+    @SerializedName("role") val role: String? = "PARTICIPANT"
 )

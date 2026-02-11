@@ -19,24 +19,57 @@ import com.shivam.downn.data.models.SocialResponse
 import com.shivam.downn.data.models.SocialType
 
 @Composable
-fun FeedScreen(
+fun FeedRoute(
     onCardClick: (SocialType, Int) -> Unit,
     onJoinedClick: (SocialType, Int) -> Unit
 ) {
     val viewModel = hiltViewModel<FeedViewModel>()
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    
+    // Refresh feed when screen resumes (user switches back to this tab)
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                viewModel.fetchSocials()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+    
     val state by viewModel.state.collectAsState()
 
+    FeedContent(
+        state = state,
+        onCategorySelected = { category ->
+            viewModel.fetchSocials("Denver", if (category != "All") category else null)
+        },
+        onCardClick = onCardClick,
+        onJoinedClick = onJoinedClick,
+        onRetry = { viewModel.fetchSocials() }
+    )
+}
+
+@Composable
+fun FeedContent(
+    state: NetworkResult<List<SocialResponse>>,
+    onCategorySelected: (String) -> Unit,
+    onCardClick: (SocialType, Int) -> Unit,
+    onJoinedClick: (SocialType, Int) -> Unit,
+    onRetry: () -> Unit
+) {
     Scaffold(
         topBar = { 
-            FeedTopBar(onCategorySelected = { category ->
-                viewModel.fetchSocials("Denver",if (category!="All") category else null)
-            }) 
+            FeedTopBar(onCategorySelected = onCategorySelected) 
         },
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { paddingValues ->
         Box(
             modifier = Modifier
-                .fillMaxSize().background(Color(0xFF0F172A))
+                .fillMaxSize()
+                .background(Color(0xFF0F172A))
         ) {
             when (val currentState = state) {
                 is NetworkResult.Loading -> {
@@ -48,7 +81,7 @@ fun FeedScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(text = "Error: ${currentState.message}", color = Color.Red)
-                        Button(onClick = { viewModel.fetchSocials() }) {
+                        Button(onClick = onRetry) {
                             Text("Retry")
                         }
                     }
@@ -57,14 +90,8 @@ fun FeedScreen(
                     MoveList(
                         socials = currentState.data ?: emptyList(),
                         paddingValues = paddingValues,
-                        onCardClick = { socialType,socialId ->
-//                            viewModel.joinSocial(socialId)
-                            onCardClick(socialType,socialId)
-                        },
-                        onJoinClick = { socialType,socialId ->
-//                            viewModel.joinSocial(socialId)
-                            onJoinedClick(socialType,socialId)
-                        }
+                        onCardClick = onCardClick,
+                        onJoinClick = onJoinedClick
                     )
                 }
             }

@@ -46,7 +46,7 @@ data class PastSocial(
 enum class ProfileTab { Recent, Stats }
 
 @Composable
-fun UserProfile(
+fun UserProfileRoute(
     outerPadding: PaddingValues,
     onClose: () -> Unit,
     onSettingsClick: () -> Unit = {},
@@ -56,16 +56,31 @@ fun UserProfile(
     viewModel: ProfileViewModel = hiltViewModel(),
     onEditBusinessProfileClick: (businessId: Long) -> Unit
 ) {
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    
+    // Refresh user profile when screen resumes
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                viewModel.fetchCurrentUserDetails()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+    
+    LaunchedEffect(Unit) {
+        viewModel.fetchCurrentUserDetails()
+    }
+    
     val activeProfile by viewModel.activeProfile.collectAsState()
     val profiles by viewModel.profiles.collectAsState()
     val canCreateProfile by viewModel.canCreateBusinessProfile.collectAsState()
 
-    LaunchedEffect(activeProfile) {
-        viewModel.fetchCurrentUserDetails()
-    }
-
     if (activeProfile?.type == ProfileType.BUSINESS) {
-        BusinessProfileScreen(
+        BusinessProfileRoute(
             businessId = activeProfile?.id ?: 16L,
             onClose = { viewModel.switchProfile(profiles.first { it.type == ProfileType.PERSONAL }) },
             onMoveClick = onBusinessMoveClick,
@@ -161,16 +176,15 @@ fun ProfileContent(
                         showInterestsSheet = true
                     }
                 }
-                item { AchievementsSection() }
-                item { ProfileTabs(activeTab) { activeTab = it } }
+                // item { AchievementsSection() } // Hidden for MVP
+                // item { ProfileTabs(activeTab) { activeTab = it } } // Hidden for MVP
 
                 if (activeTab == ProfileTab.Recent) {
                     items(pastSocials) { social ->
                         SocialListItem(social)
                     }
-                } else {
-                    item { StatsSection() }
                 }
+                // else { item { StatsSection() } } // Hidden for MVP
             }
         }
 
@@ -375,12 +389,12 @@ private fun HeroCard(profile: UserProfileData?) {
                         modifier = Modifier.padding(top = 8.dp)
                     )
 
-                    // Quick Stats
-                    Row(modifier = Modifier.padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Quick Stats (Hidden for MVP)
+                    /*Row(modifier = Modifier.padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         StatItem("127", "Activities", Brush.linearGradient( listOf(Color(0xFFFBBF24), Color(0xFFF97316))), Modifier.weight(1f))
                         StatItem("2.4K", "Friends", Brush.linearGradient(listOf(Color(0xFF4ADE80), Color(0xFF059669))), Modifier.weight(1f))
                         StatItem("89%", "Join Rate", Brush.linearGradient(listOf(Color(0xFFC084FC), Color(0xFFEC4899))), Modifier.weight(1f))
-                    }
+                    }*/
                 }
             }
         }

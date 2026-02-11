@@ -16,20 +16,75 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import android.app.Activity
+import androidx.compose.runtime.DisposableEffect
 import androidx.core.view.WindowCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.shivam.downn.data.network.NetworkResult
 import com.shivam.downn.data.models.SocialResponse
 
 @Composable
-fun SocialDetailScreen(
+fun SocialDetailRoute(
     socialId: Int,
     onClose: () -> Unit,
     onOpenChat: () -> Unit,
     onViewProfile: (userId: Int) -> Unit,
+    onSeeAllParticipants: (socialId: Int) -> Unit,
     viewModel: SocialDetailViewModel = hiltViewModel()
 ) {
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    
+    // Refresh social details when screen resumes
+    DisposableEffect(lifecycleOwner, socialId) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                viewModel.loadSocialDetails(socialId)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+    
+    LaunchedEffect(socialId) {
+        viewModel.loadSocialDetails(socialId)
+    }
+    
     val state by viewModel.state.collectAsState()
+    val leaveState by viewModel.leaveState.collectAsState()
+    val removeState by viewModel.removeState.collectAsState()
+    
+    SocialDetailContent(
+        state = state,
+        currentUserId = viewModel.currentUserId,
+        leaveState = leaveState,
+        removeState = removeState,
+        socialId = socialId,
+        onClose = onClose,
+        onOpenChat = onOpenChat,
+        onViewProfile = onViewProfile,
+        onSeeAllParticipants = onSeeAllParticipants,
+        onJoinSocial = { id -> viewModel.joinSocial(id) },
+        onLeaveSocial = { id -> viewModel.leaveSocial(id) },
+        onRemoveParticipant = { sId, pId -> viewModel.removeParticipant(sId, pId) }
+    )
+}
+
+@Composable
+fun SocialDetailContent(
+    state: NetworkResult<SocialResponse>,
+    currentUserId: Long,
+    leaveState: NetworkResult<Unit>?,
+    removeState: NetworkResult<Unit>?,
+    socialId: Int,
+    onClose: () -> Unit,
+    onOpenChat: () -> Unit,
+    onViewProfile: (userId: Int) -> Unit,
+    onSeeAllParticipants: (socialId: Int) -> Unit,
+    onJoinSocial: (Int) -> Unit,
+    onLeaveSocial: (Int) -> Unit,
+    onRemoveParticipant: (Int, Long) -> Unit
+) {
     val view = LocalView.current
 
     if (!view.isInEditMode) {
@@ -38,10 +93,6 @@ fun SocialDetailScreen(
             window.statusBarColor = Color(0xFF0F172A).toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
         }
-    }
-
-    LaunchedEffect(socialId) {
-        viewModel.loadSocialDetails(socialId)
     }
 
     when (val currentState = state) {
@@ -57,11 +108,19 @@ fun SocialDetailScreen(
         }
         is NetworkResult.Success -> {
             val social = currentState.data ?: return
+
             SocialDetail(
                 social = social,
+                currentUserId = currentUserId,
+                leaveState = leaveState,
+                removeState = removeState,
                 onClose = onClose,
                 onOpenChat = onOpenChat,
-                onViewProfile = {id-> onViewProfile(id.toInt())}
+                onViewProfile = { id -> onViewProfile(id.toInt()) },
+                onSeeAllParticipants = { onSeeAllParticipants(socialId) },
+                onJoinSocial = { id -> onJoinSocial(id) },
+                onLeaveSocial = { id -> onLeaveSocial(id) },
+                onRemoveParticipant = { sId, pId -> onRemoveParticipant(sId, pId) }
             )
         }
     }

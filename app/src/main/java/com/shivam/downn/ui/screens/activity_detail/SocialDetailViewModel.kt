@@ -2,30 +2,86 @@ package com.shivam.downn.ui.screens.activity_detail
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.shivam.downn.data.models.SocialResponse
+import com.shivam.downn.data.network.NetworkResult
 import com.shivam.downn.data.repository.SocialRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import com.shivam.downn.data.network.NetworkResult
-
 
 @HiltViewModel
 class SocialDetailViewModel @Inject constructor(
-    private val socialRepository: SocialRepository
+    private val repository: SocialRepository,
+    private val prefsManager: com.shivam.downn.data.local.PrefsManager
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow<NetworkResult<SocialResponse>>(NetworkResult.Loading())
-    val state: StateFlow<NetworkResult<SocialResponse>> = _state
+    val currentUserId = prefsManager.getUserId()
+
+    private val _state = MutableStateFlow<NetworkResult<com.shivam.downn.data.models.SocialResponse>>(NetworkResult.Loading())
+    val state: StateFlow<NetworkResult<com.shivam.downn.data.models.SocialResponse>> = _state
 
     fun loadSocialDetails(socialId: Int) {
         viewModelScope.launch {
-            _state.value = NetworkResult.Loading()
-            socialRepository.getSocialById(socialId).collect {
-                _state.value = it
+            repository.getSocialById(socialId).collect { result ->
+                _state.value = result
             }
         }
+    }
+
+    private val _joinState = MutableStateFlow<NetworkResult<Unit>?>(null)
+    val joinState: StateFlow<NetworkResult<Unit>?> = _joinState
+
+    private val _leaveState = MutableStateFlow<NetworkResult<Unit>?>(null)
+    val leaveState: StateFlow<NetworkResult<Unit>?> = _leaveState
+
+    private val _removeState = MutableStateFlow<NetworkResult<Unit>?>(null)
+    val removeState: StateFlow<NetworkResult<Unit>?> = _removeState
+
+    fun joinSocial(socialId: Int) {
+        viewModelScope.launch {
+            repository.joinSocial(socialId).collect { result ->
+                when (result) {
+                    is NetworkResult.Success -> {
+                        _joinState.value = NetworkResult.Success(Unit)
+                        loadSocialDetails(socialId)
+                    }
+                    is NetworkResult.Error -> _joinState.value = NetworkResult.Error(result.message)
+                    is NetworkResult.Loading -> _joinState.value = NetworkResult.Loading()
+                }
+            }
+        }
+    }
+
+    fun leaveSocial(socialId: Int) {
+        viewModelScope.launch {
+            repository.leaveSocial(socialId).collect { result ->
+                if (result is NetworkResult.Success) {
+                    _leaveState.value = result
+                    loadSocialDetails(socialId)
+                } else {
+                    _leaveState.value = result
+                }
+            }
+        }
+    }
+
+    fun removeParticipant(socialId: Int, participantId: Long) {
+        viewModelScope.launch {
+            repository.removeParticipant(socialId, participantId).collect { result ->
+                if (result is NetworkResult.Success) {
+                    _removeState.value = result
+                    loadSocialDetails(socialId)
+                } else {
+                    _removeState.value = result
+                }
+            }
+        }
+    }
+    
+    fun resetStates() {
+        _joinState.value = null
+        _leaveState.value = null
+        _removeState.value = null
     }
 }

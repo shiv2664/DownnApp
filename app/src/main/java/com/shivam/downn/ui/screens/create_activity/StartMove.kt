@@ -42,8 +42,15 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.geometry.Offset
 import coil.compose.AsyncImage
 import androidx.compose.ui.layout.ContentScale
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.CameraPosition
+import com.shivam.downn.ui.components.FancyMap
+import com.google.maps.android.compose.MarkerComposable
+import com.google.maps.android.compose.rememberMarkerState
+import com.google.maps.android.compose.rememberCameraPositionState
 
 data class Category(
     val id: String,
@@ -65,7 +72,7 @@ fun StartMove(
         state,
         outerPadding = outerPadding,
         onClose = onClose,
-        onCreateSocial = { title, description, category, location, time, imageUri ->
+        onCreateSocial = { title, description, category, location, time, lat, lng, imageUri ->
             viewModel.createSocial(
                 title = title,
                 description = description,
@@ -74,6 +81,8 @@ fun StartMove(
                 locationName = location,
                 scheduledTime = time,
                 maxParticipants = 10,
+                latitude = lat,
+                longitude = lng,
                 imageUri = imageUri
             )
         },
@@ -87,7 +96,7 @@ fun StartMoveContent(
     state: NetworkResult<SocialResponse?>?,
     outerPadding: PaddingValues,
     onClose: () -> Unit,
-    onCreateSocial: (String, String, String, String, String, Uri?) -> Unit,
+    onCreateSocial: (String, String, String, String, String, Double?, Double?, Uri?) -> Unit,
     onResetState: () -> Unit
 ) {
     var title by remember { mutableStateOf("") }
@@ -96,6 +105,29 @@ fun StartMoveContent(
     var time by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    var latitude by remember { mutableStateOf<Double?>(null) }
+    var longitude by remember { mutableStateOf<Double?>(null) }
+    var showMapPicker by remember { mutableStateOf(false) }
+    
+    // Default to a reasonable location if none selected (e.g., Denver)
+    val mapCenter = remember(latitude, longitude) {
+        if (latitude != null && longitude != null) LatLng(latitude!!, longitude!!)
+        else LatLng(39.7392, -104.9903) 
+    }
+
+    val previewCameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(mapCenter, 13f)
+    }
+
+    // Sync preview camera when coordinates change
+    LaunchedEffect(latitude, longitude) {
+        if (latitude != null && longitude != null) {
+            previewCameraPositionState.position = CameraPosition.fromLatLngZoom(
+                LatLng(latitude!!, longitude!!),
+                13f
+            )
+        }
+    }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -149,7 +181,8 @@ fun StartMoveContent(
         }
     }
 
-    Scaffold(
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
         topBar = {
             TopAppBar(
                 title = {
@@ -444,6 +477,76 @@ fun StartMoveContent(
                     )
                 )
 
+                // Map Preview for Location
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    InputLabel("Pin your location")
+                    Text(
+                        "Change Location",
+                        color = Color(0xFFA855F7),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.clickable { showMapPicker = true }
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color(0xFF1E293B))
+                        .border(1.dp, Color(0xFF334155), RoundedCornerShape(20.dp))
+                        .clickable { showMapPicker = true }
+                ) {
+                    FancyMap(
+                        modifier = Modifier.fillMaxSize(),
+                        cameraPositionState = previewCameraPositionState,
+                        gesturesEnabled = false
+                    ) {
+                        if (latitude != null && longitude != null) {
+                            val markerState = rememberMarkerState(
+                                key = "${latitude}_${longitude}",
+                                position = LatLng(latitude!!, longitude!!)
+                            )
+                            MarkerComposable(
+                                state = markerState,
+                                anchor = Offset(0.5f, 1.0f)
+                            ) {
+                                Icon(
+                                    Icons.Default.Place,
+                                    contentDescription = null,
+                                    tint = Color(0xFFF87171),
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
+                        }
+                    }
+                    
+                    // Overlay to emphasize it's clickable
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.1f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Surface(
+                            color = Color.Black.copy(alpha = 0.6f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(
+                                if (latitude == null) "Tap to select location" else "Tap to change",
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                }
+
                 if (state is NetworkResult.Error) {
                     Spacer(modifier = Modifier.height(16.dp))
                     state.message?.let {
@@ -459,7 +562,7 @@ fun StartMoveContent(
 
                 Button(
                     onClick = {
-                        onCreateSocial(title, description, selectedCategoryId, location, time, selectedImageUri)
+                        onCreateSocial(title, description, selectedCategoryId, location, time, latitude, longitude, selectedImageUri)
                     },
                     enabled = isFormValid && state !is NetworkResult.Loading,
                     modifier = Modifier
@@ -507,11 +610,24 @@ fun StartMoveContent(
 
             }
         }
+
+        if (showMapPicker) {
+            LocationPicker(
+                initialLocation = if (latitude != null && longitude != null) LatLng(latitude!!, longitude!!) else mapCenter,
+                onLocationSelected = { lat, lng ->
+                    latitude = lat
+                    longitude = lng
+                    showMapPicker = false
+                },
+                onDismiss = { showMapPicker = false }
+            )
+        }
+    }
     }
 }
 
 @Composable
-private fun InputLabel(text: String) {
+fun InputLabel(text: String) {
     Text(
         text = text,
         color = Color(0xFFCBD5E1),
@@ -566,8 +682,104 @@ fun StartMovePreview() {
             state = null,
             outerPadding = PaddingValues(0.dp),
             onClose = {},
-            onCreateSocial = { _, _, _, _, _, _ -> },
+            onCreateSocial = { _, _, _, _, _, _, _, _ -> },
             onResetState = {}
         )
+    }
+}
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LocationPicker(
+    initialLocation: LatLng,
+    onLocationSelected: (Double, Double) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(initialLocation, 15f)
+    }
+    
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF0F172A))
+    ) {
+        FancyMap(
+            modifier = Modifier.fillMaxSize(),
+            cameraPositionState = cameraPositionState,
+            gesturesEnabled = true
+        )
+
+        // Center Pin Placeholder (Fixed in middle of map)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = 24.dp), // Adjust for pin tail offset if needed
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Default.Place,
+                contentDescription = null,
+                tint = Color(0xFFF87171),
+                modifier = Modifier.size(48.dp)
+            )
+        }
+
+        // Top Bar
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier.background(Color.Black.copy(alpha = 0.5f), CircleShape)
+            ) {
+                Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+            }
+            
+            Text(
+                "Select Location",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                modifier = Modifier
+                    .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+            
+            Spacer(modifier = Modifier.size(48.dp))
+        }
+
+        // Bottom Action
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(24.dp)
+        ) {
+            Button(
+                onClick = {
+                    val target = cameraPositionState.position.target
+                    onLocationSelected(target.latitude, target.longitude)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFA855F7)
+                )
+            ) {
+                Text(
+                    "Confirm Location",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
     }
 }

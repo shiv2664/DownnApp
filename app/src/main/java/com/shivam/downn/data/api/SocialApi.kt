@@ -25,7 +25,16 @@ interface SocialApi {
     @GET("api/activities/{id}")
     suspend fun getSocialById(@Path("id") socialId: Int): Response<SocialResponse>
 
-    @POST("api/activities/{id}/join")
+    @POST("api/activities/{id}/request-to-join")
     suspend fun joinSocial(@Path("id") socialId: Int): Response<JoinResponse>
+
+    @DELETE("api/activities/{id}/leave")
+    suspend fun leaveSocial(@Path("id") socialId: Int): Response<Unit>
+
+    @DELETE("api/activities/{id}/participants/{participantId}")
+    suspend fun removeParticipant(
+        @Path("id") socialId: Int,
+        @Path("participantId") participantId: Long
+    ): Response<Unit>
 }
 

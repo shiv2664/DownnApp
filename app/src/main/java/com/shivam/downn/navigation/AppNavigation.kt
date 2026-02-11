@@ -8,21 +8,15 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.shivam.downn.ui.screens.activity_detail.SocialDetailScreen
 import com.shivam.downn.ui.screens.chat.GroupChat
 import com.shivam.downn.ui.screens.create_activity.StartMove
-import com.shivam.downn.ui.screens.explore.Explore
-import com.shivam.downn.ui.screens.feed.FeedScreen
 import com.shivam.downn.ui.screens.auth.LoginScreen
-import com.shivam.downn.ui.screens.notification.Notifications
-import com.shivam.downn.ui.screens.profile.UserProfile
 import com.shivam.downn.ui.screens.profile.EditProfileScreen
-import com.shivam.downn.ui.screens.profile.PublicProfile
-import com.shivam.downn.ui.screens.profile.BusinessProfileScreen
 import com.shivam.downn.ui.screens.profile.CreateProfileScreen
 import com.shivam.downn.ui.screens.create_activity.StartBusinessMove
 import com.shivam.downn.ui.screens.chat.LiveBoardScreen
 import com.shivam.downn.ui.screens.settings.SettingsScreen
+import com.shivam.downn.ui.screens.settings.SettingsDetailScreen
 import com.shivam.downn.ui.screens.profile.ProfileViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.collectAsState
@@ -31,7 +25,15 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.shivam.downn.ui.screens.profile.PublicBusinessProfileScreen
 import com.shivam.downn.data.models.ProfileType
 import com.shivam.downn.data.models.SocialType
+import com.shivam.downn.ui.screens.activity_detail.ParticipantsRoute
+import com.shivam.downn.ui.screens.activity_detail.SocialDetailRoute
+import com.shivam.downn.ui.screens.explore.ExploreRoute
+import com.shivam.downn.ui.screens.feed.FeedRoute
+import com.shivam.downn.ui.screens.notification.NotificationsRoute
+import com.shivam.downn.ui.screens.profile.BusinessProfileRoute
 import com.shivam.downn.ui.screens.profile.EditBusinessProfileScreen
+import com.shivam.downn.ui.screens.profile.PublicProfileRoute
+import com.shivam.downn.ui.screens.profile.UserProfileRoute
 
 @Composable
 fun AppNavigation(startDestination: String = "login") {
@@ -54,9 +56,9 @@ fun AppNavigation(startDestination: String = "login") {
             composable(
                 route = itemsDataList[0].route
             ) {
-                FeedScreen({ socialType, socialId ->
+                FeedRoute({ socialType, socialId ->
                     if (socialType == SocialType.BUSINESS) {
-                        navController.navigate("business_profile/$socialId")
+                        navController.navigate("social_detail/$socialId")
                     } else {
                         navController.navigate("social_detail/$socialId")
                     }
@@ -64,7 +66,7 @@ fun AppNavigation(startDestination: String = "login") {
 
                         socialType, socialId ->
                     if (socialType == SocialType.BUSINESS) {
-                        navController.navigate("business_profile/$socialId")
+                        navController.navigate("social_detail/$socialId")
                     } else {
                         navController.navigate("social_detail/$socialId")
                     }
@@ -74,7 +76,9 @@ fun AppNavigation(startDestination: String = "login") {
             composable(
                 route = itemsDataList[1].route
             ) {
-                Explore(outerPadding) {}
+                ExploreRoute(outerPadding, onSocialClick = { social ->
+                    navController.navigate("social_detail/${social.id}")
+                })
             }
 
             composable(
@@ -98,13 +102,20 @@ fun AppNavigation(startDestination: String = "login") {
             composable(
                 route = itemsDataList[3].route
             ) {
-                Notifications(outerPadding)
+                NotificationsRoute(
+                    outerPadding = outerPadding,
+                    onNotificationClick = { notification ->
+                        notification.activityId?.let { id ->
+                            navController.navigate("social_detail/$id")
+                        }
+                    }
+                )
             }
 
             composable(
                 route = itemsDataList[4].route
             ) {
-                UserProfile(
+                UserProfileRoute(
                     outerPadding = outerPadding,
                     onClose = { navController.navigateUp() },
                     onSettingsClick = { navController.navigate("settings") },
@@ -140,13 +151,24 @@ fun AppNavigation(startDestination: String = "login") {
                         navController.navigate("login") {
                             popUpTo(0) { inclusive = true }
                         }
+                    },
+                    onNavigateToDetail = { title ->
+                        navController.navigate("settings_detail/$title")
                     }
+                )
+            }
+            
+            composable("settings_detail/{title}") { backStackEntry ->
+                val title = backStackEntry.arguments?.getString("title") ?: "Settings"
+                SettingsDetailScreen(
+                    title = title,
+                    onClose = { navController.navigateUp() }
                 )
             }
 
             composable("public_profile/{userId}") { backStackEntry ->
                 val userId = backStackEntry.arguments?.getString("userId")?.toLongOrNull() ?: -1L
-                PublicProfile(
+                PublicProfileRoute(
                     userId = userId,
                     onClose = { navController.navigateUp() },
                     onFollowClick = { /* Handle follow */ },
@@ -157,10 +179,20 @@ fun AppNavigation(startDestination: String = "login") {
 
             composable(route = "social_detail/{socialId}") { backStackEntry ->
                 val socialId = backStackEntry.arguments?.getString("socialId")?.toIntOrNull() ?: 1
-                SocialDetailScreen(
+                SocialDetailRoute(
                     socialId = socialId,
                     onClose = { navController.navigateUp() },
                     onOpenChat = { navController.navigate("group_chat/$socialId") },
+                    onViewProfile = { userId -> navController.navigate("public_profile/$userId") },
+                    onSeeAllParticipants = { id -> navController.navigate("participants/$id") }
+                )
+            }
+
+            composable(route = "participants/{socialId}") { backStackEntry ->
+                val socialId = backStackEntry.arguments?.getString("socialId")?.toIntOrNull() ?: 1
+                ParticipantsRoute(
+                    socialId = socialId,
+                    onClose = { navController.navigateUp() },
                     onViewProfile = { userId -> navController.navigate("public_profile/$userId") }
                 )
             }
@@ -168,7 +200,7 @@ fun AppNavigation(startDestination: String = "login") {
             composable(route = "business_profile/{businessId}") { backStackEntry ->
                 val businessId =
                     backStackEntry.arguments?.getString("businessId")?.toLongOrNull() ?: 16L
-                BusinessProfileScreen(
+                BusinessProfileRoute(
                     businessId = businessId,
                     onClose = { navController.navigateUp() },
                     onMoveClick = { moveId -> navController.navigate("social_detail/$moveId") },
