@@ -44,6 +44,18 @@ class SocialDetailViewModel @Inject constructor(
                 when (result) {
                     is NetworkResult.Success -> {
                         _joinState.value = NetworkResult.Success(Unit)
+                        // Local update for immediate visual feedback
+                        val currentState = _state.value
+                        if (currentState is NetworkResult.Success) {
+                            currentState.data?.let { social ->
+                                currentUserId?.let { userId ->
+                                    val requested = social.requestedUserIds ?: mutableSetOf()
+                                    requested.add(userId)
+                                    // Re-emit state to trigger UI update with the new set
+                                    _state.value = NetworkResult.Success(social.copy(requestedUserIds = requested))
+                                }
+                            }
+                        }
                         loadSocialDetails(socialId)
                     }
                     is NetworkResult.Error -> _joinState.value = NetworkResult.Error(result.message)

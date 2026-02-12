@@ -18,6 +18,7 @@ class FeedViewModel @Inject constructor(
     private val socialRepository: SocialRepository,
     private val prefsManager: PrefsManager
 ) : ViewModel() {
+    val currentUserId = prefsManager.getUserId()
 
     private val _state =
         MutableStateFlow<NetworkResult<List<SocialResponse>>>(NetworkResult.Loading())
@@ -46,6 +47,20 @@ class FeedViewModel @Inject constructor(
         viewModelScope.launch {
             socialRepository.joinSocial(socialId).collect { result ->
                 if (result is NetworkResult.Success) {
+                    // Local update for immediate visual feedback
+                    val currentState = _state.value
+                    if (currentState is NetworkResult.Success) {
+                        currentState.data?.find { it.id == socialId }?.let { social ->
+                            currentUserId?.let { userId ->
+                                val requested = social.requestedUserIds ?: mutableSetOf()
+                                requested.add(userId)
+                                // Re-emit state to trigger UI update
+                                _state.value = NetworkResult.Success(currentState.data!!.map { 
+                                    if (it.id == socialId) it.copy(requestedUserIds = requested) else it 
+                                })
+                            }
+                        }
+                    }
                     fetchSocials()
                 }
             }

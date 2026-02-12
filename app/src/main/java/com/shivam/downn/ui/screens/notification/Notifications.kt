@@ -141,20 +141,38 @@ fun NotificationsContent(
             }
         }
 
+        val title = when (response.type) {
+            NotificationType.JOIN_REQUEST -> "${parsedContent?.senderUserName ?: response.senderUser?.name ?: "Someone"} requested to join"
+            NotificationType.JOIN_ACTIVITY_REQUEST -> "${parsedContent?.senderUserName ?: "Someone"} wants to join ${parsedContent?.activityTitle ?: "Activity"}"
+            NotificationType.MESSAGE -> "New Message"
+            NotificationType.SYSTEM_ALERT -> {
+                when (parsedContent?.status) {
+                    "ACCEPTED" -> "Request Accepted!"
+                    "REJECTED" -> "Request Rejected"
+                    else -> "System Alert"
+                }
+            }
+        }
+
+        val description = when {
+            response.type == NotificationType.SYSTEM_ALERT && parsedContent?.message != null -> parsedContent.message
+            parsedContent?.activityTitle != null -> "Requested to join: ${parsedContent.activityTitle}"
+            else -> response.content ?: ""
+        }
+
+        val actionStatusValue = when {
+            response.activityStatus == ActivityStatus.ACCEPTED -> "APPROVED"
+            response.activityStatus == ActivityStatus.REJECTED -> "REJECTED"
+            response.type == NotificationType.SYSTEM_ALERT && parsedContent?.status == "ACCEPTED" -> "APPROVED"
+            response.type == NotificationType.SYSTEM_ALERT && parsedContent?.status == "REJECTED" -> "REJECTED"
+            else -> notificationActions[response.id]
+        }
+
         return NotificationItem(
             id = response.id,
             type = response.type,
-            title = when (response.type) {
-                NotificationType.JOIN_REQUEST -> "${parsedContent?.senderUserName ?: response.senderUser?.name ?: "Someone"} requested to join"
-                NotificationType.JOIN_ACTIVITY_REQUEST -> "${parsedContent?.senderUserName ?: "Someone"} wants to join ${parsedContent?.activityTitle ?: "Activity"}"
-                NotificationType.MESSAGE -> "New Message"
-                NotificationType.SYSTEM_ALERT -> "System Alert"
-            },
-            description = if (parsedContent != null) {
-                "Requested to join: ${parsedContent.activityTitle}"
-            } else {
-                response.content ?: ""
-            },
+            title = title,
+            description = description,
             time = response.createdAt.toTimeAgo(),
             avatar = response.senderUser?.avatar,
             icon = icon,
@@ -163,11 +181,7 @@ fun NotificationsContent(
             actionable = actionable,
             senderUserId = parsedContent?.senderUserId ?: response.senderUser?.id,
             activityId = parsedContent?.activityId,
-            actionStatus = when (response.activityStatus) {
-                ActivityStatus.ACCEPTED -> "APPROVED"
-                ActivityStatus.REJECTED -> "REJECTED"
-                else -> notificationActions[response.id]
-            },
+            actionStatus = actionStatusValue,
             isUnread = !response.read
         )
     }
@@ -558,6 +572,15 @@ fun NotificationsPreview() {
         NotificationResponse(
             id = 2,
             senderUser = null,
+            type = NotificationType.SYSTEM_ALERT,
+            content = "{\"message\": \"Your request to join 'Club Hub' has been accepted!\", \"activityId\": 2, \"activityTitle\": \"Club Hub\", \"status\": \"ACCEPTED\"}",
+            createdAt = LocalDateTime.now().minusHours(1),
+            read = false,
+            activityStatus = ActivityStatus.PENDING
+        ),
+        NotificationResponse(
+            id = 3,
+            senderUser = null,
             type = NotificationType.MESSAGE,
             content = "Hey, looking forward to the hike!",
             createdAt = LocalDateTime.now().minusHours(5),
@@ -568,7 +591,7 @@ fun NotificationsPreview() {
 
     NotificationsContent(
         state = NetworkResult.Success(mockNotifications),
-        notificationActions = mapOf(1L to "APPROVED"), // Show one as approved via session fallback
+        notificationActions = emptyMap(),
         outerPadding = PaddingValues(0.dp)
     )
 }

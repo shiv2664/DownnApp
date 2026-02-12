@@ -31,7 +31,9 @@ data class SocialResponse(
     @SerializedName("createdAt") val createdAt: String? = null,
     @SerializedName("socialType") val socialType: SocialType = SocialType.BUSINESS,
     @SerializedName("latitude") val latitude: Double? = null,
-    @SerializedName("longitude") val longitude: Double? = null
+    @SerializedName("longitude") val longitude: Double? = null,
+    @SerializedName("rejectedUserIds") val rejectedUserIds: MutableSet<Long>? = mutableSetOf(),
+    @SerializedName("requestedUserIds") val requestedUserIds: MutableSet<Long>? = mutableSetOf()
 )
 
 data class CreateSocialRequest(
@@ -49,10 +51,7 @@ data class CreateSocialRequest(
     @SerializedName("images") val images: MutableList<MultipartBody.Part>?=null
 )
 
-data class JoinResponse(
-    @SerializedName("success") val success: Boolean,
-    @SerializedName("message") val message: String?
-)
+
 
 data class ParticipantResponse(
     @SerializedName("id") val id: Long,

@@ -78,6 +78,8 @@ fun SocialDetail(
 ) {
     val isOwner = social.userId?.toLong() == currentUserId
     val isParticipant = social.participants.any { it.id == currentUserId }
+    val isRequested = social.requestedUserIds?.contains(currentUserId) == true
+    val isRejected = social.rejectedUserIds?.contains(currentUserId) == true
 
     var showParticipantActionSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
@@ -166,7 +168,7 @@ fun SocialDetail(
         containerColor = Color(0xFF0F172A),
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbarHostState) }
-    ){ innerPadding ->
+    ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -283,7 +285,10 @@ fun SocialDetail(
                                     contentScale = ContentScale.Crop
                                 )
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
                                         Text(
                                             userName,
                                             color = Color.White,
@@ -437,7 +442,7 @@ fun SocialDetail(
                                     )
                                 }
                             }
-                            
+
                             // Location info overlay
                             Surface(
                                 modifier = Modifier
@@ -475,8 +480,8 @@ fun SocialDetail(
                                             fontSize = 14.sp
                                         )
                                         Text(
-                                            social.city, 
-                                            color = Color(0xFF94A3B8), 
+                                            social.city,
+                                            color = Color(0xFF94A3B8),
                                             fontSize = 12.sp
                                         )
                                     }
@@ -493,23 +498,39 @@ fun SocialDetail(
                                 Button(
                                     onClick = {},
                                     modifier = Modifier.weight(1f).height(48.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(
+                                            0xFF1E293B
+                                        )
+                                    ),
                                     shape = RoundedCornerShape(12.dp),
                                     border = BorderStroke(1.dp, Color(0xFF334155))
                                 ) {
-                                    Icon(Icons.Default.Directions, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Icon(
+                                        Icons.Default.Directions,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
                                     Spacer(Modifier.width(8.dp))
                                     Text("Directions", fontSize = 14.sp)
                                 }
                                 Button(
                                     onClick = {},
                                     modifier = Modifier.size(48.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(
+                                            0xFF1E293B
+                                        )
+                                    ),
                                     shape = RoundedCornerShape(12.dp),
                                     border = BorderStroke(1.dp, Color(0xFF334155)),
                                     contentPadding = PaddingValues(0.dp)
                                 ) {
-                                    Icon(Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Icon(
+                                        Icons.Default.Phone,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
                                 }
                             }
                         }
@@ -522,7 +543,7 @@ fun SocialDetail(
                     )
 
                     // Chat Preview
-                   /* Column(modifier = Modifier.padding(10.dp)) {
+                    /* Column(modifier = Modifier.padding(10.dp)) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -645,7 +666,7 @@ fun SocialDetail(
                         )
                     }
                     IconButton(
-                        onClick = { 
+                        onClick = {
                             if (isOwner) {
                                 showParticipantActionSheet = true
                             } else {
@@ -675,163 +696,209 @@ fun SocialDetail(
                         .border(
                             0.5.dp,
                             Color(0xFF334155).copy(alpha = 0.5f),
-                            RoundedCornerShape(
-                                topStart = 0.dp,
-                                topEnd = 0.dp,
-                                bottomStart = 0.dp,
-                                bottomEnd = 0.dp
-                            )
+                            RoundedCornerShape(0.dp)
                         )
                         .navigationBarsPadding()
-                        .padding(
-                            vertical = 20.dp
-                        )
+                        .padding(vertical = 20.dp, horizontal = 20.dp)
                 )
                 {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Button(
-                            onClick = { onOpenChat() },
-                            modifier = Modifier
-                                .weight(if (isParticipant || isOwner) 1.5f else 1f)
-                                .height(56.dp),
-                            shape = RoundedCornerShape(16.dp),
-                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
-                             border = BorderStroke(2.dp, primaryColor)
-                         ) {
-                             Row(
-                                 verticalAlignment = Alignment.CenterVertically,
-                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
-                             ) {
-                                 Icon(
-                                     Icons.Default.ChatBubble,
-                                     contentDescription = null,
-                                     tint = primaryColor
-                                 )
-                                 Text(
-                                     "CHAT",
-                                     color = primaryColor,
-                                     fontWeight = FontWeight.Bold
-                                 )
-                             }
-                        }
-                        
-                        if (isParticipant && !isOwner) {
+                        // Chat Button - Only for participants/owners
+                        if (isParticipant || isOwner) {
                             Button(
-                                onClick = { onLeaveSocial(social.id) },
+                                onClick = { onOpenChat() },
                                 modifier = Modifier
                                     .weight(1f)
                                     .height(56.dp),
                                 shape = RoundedCornerShape(16.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444).copy(alpha = 0.1f)),
-                                border = BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.5f))
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(
+                                        0xFF1E293B
+                                    )
+                                ),
+                                border = BorderStroke(2.dp, primaryColor)
                             ) {
-                                Text(
-                                    "LEAVE",
-                                    color = Color(0xFFEF4444),
-                                    fontWeight = FontWeight.Bold
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.ChatBubble,
+                                        contentDescription = null,
+                                        tint = primaryColor
+                                    )
+                                    Text(
+                                        "CHAT",
+                                        color = primaryColor,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
-                        } else if (!isOwner) {
-                            Button(
-                                onClick = { onJoinSocial(social.id) },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(56.dp),
-                                shape = RoundedCornerShape(16.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                                contentPadding = PaddingValues()
-                            ) {
-                                Box(
+                        }
+
+                        // Right Action: Leave (Participant), Edit (Owner), Requested/Rejected Status, or I'M DOWN
+                        when {
+                            isParticipant && !isOwner -> {
+                                Button(
+                                    onClick = { onLeaveSocial(social.id) },
                                     modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(accentBrush),
-                                    contentAlignment = Alignment.Center
+                                        .weight(1f)
+                                        .height(56.dp),
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(
+                                            0xFFEF4444
+                                        ).copy(alpha = 0.1f)
+                                    ),
+                                    border = BorderStroke(
+                                        1.dp,
+                                        Color(0xFFEF4444).copy(alpha = 0.5f)
+                                    )
                                 ) {
                                     Text(
-                                        "I'M DOWN",
+                                        "LEAVE",
+                                        color = Color(0xFFEF4444),
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+
+                            isOwner -> {
+                                Button(
+                                    onClick = { /* Edit action */ },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(56.dp),
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color.White.copy(
+                                            alpha = 0.1f
+                                        )
+                                    ),
+                                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))
+                                ) {
+                                    Text(
+                                        "EDIT",
                                         color = Color.White,
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
                             }
-                        } else {
-                            // Owner view actions
-                            Button(
-                                onClick = { /* Edit action */ },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(56.dp),
-                                shape = RoundedCornerShape(16.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.1f)),
-                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))
-                            ) {
-                                Text(
-                                    "EDIT",
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold
+
+                            isRequested -> {
+                                StatusBadge(
+                                    text = "REQUESTED",
+                                    color = Color(0xFFF97316),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(56.dp)
                                 )
                             }
-                        }
-                    }
-                }
-                
-                // Participant Management Sheet
-                if (showParticipantActionSheet) {
-                    ModalBottomSheet(
-                        onDismissRequest = { showParticipantActionSheet = false },
-                        sheetState = sheetState,
-                        containerColor = Color(0xFF1E293B),
-                        scrimColor = Color.Black.copy(alpha = 0.5f)
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 24.dp)
-                                .padding(bottom = 48.dp)
-                        ) {
-                            Text(
-                                "Manage Participants",
-                                color = Color.White,
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(bottom = 24.dp)
-                            )
-                            
-                             social.participants.forEach { participant ->
-                                Row(
+
+                            isRejected -> {
+                                StatusBadge(
+                                    text = "REJECTED",
+                                    color = Color(0xFFEF4444),
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                                        .weight(1f)
+                                        .height(56.dp)
+                                )
+                            }
+
+                            else -> {
+                                // I'M DOWN button (Default for non-participants)
+                                Button(
+                                    onClick = { onJoinSocial(social.id) },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(56.dp),
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                                    contentPadding = PaddingValues()
                                 ) {
-                                    AsyncImage(
-                                        model = participant.avatar,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(40.dp).clip(CircleShape)
-                                    )
-                                    Text(
-                                        participant.name,
-                                        color = Color.White,
-                                        modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    if (participant.id != currentUserId) {
-                                        TextButton(
-                                            onClick = { onRemoveParticipant(social.id, participant.id) },
-                                            colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFEF4444))
-                                        ) {
-                                            Text("Remove")
-                                        }
-                                    } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(accentBrush),
+                                        contentAlignment = Alignment.Center
+                                    ) {
                                         Text(
-                                            "Owner",
-                                            color = primaryColor,
-                                            fontSize = 12.sp,
+                                            "I'M DOWN",
+                                            color = Color.White,
                                             fontWeight = FontWeight.Bold
                                         )
                                     }
                                 }
-                                Divider(color = Color(0xFF334155), thickness = 0.5.dp)
+                            }
+                        }
+                    }
+                }
+     // Participant Management Sheet
+                    if (showParticipantActionSheet) {
+                        ModalBottomSheet(
+                            onDismissRequest = { showParticipantActionSheet = false },
+                            sheetState = sheetState,
+                            containerColor = Color(0xFF1E293B),
+                            scrimColor = Color.Black.copy(alpha = 0.5f)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 24.dp)
+                                    .padding(bottom = 48.dp)
+                            ) {
+                                Text(
+                                    "Manage Participants",
+                                    color = Color.White,
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(bottom = 24.dp)
+                                )
+
+                                social.participants.forEach { participant ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        AsyncImage(
+                                            model = participant.avatar,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(40.dp).clip(CircleShape)
+                                        )
+                                        Text(
+                                            participant.name,
+                                            color = Color.White,
+                                            modifier = Modifier.weight(1f)
+                                                .padding(horizontal = 16.dp),
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                        if (participant.id != currentUserId) {
+                                            TextButton(
+                                                onClick = {
+                                                    onRemoveParticipant(
+                                                        social.id,
+                                                        participant.id
+                                                    )
+                                                },
+                                                colors = ButtonDefaults.textButtonColors(
+                                                    contentColor = Color(0xFFEF4444)
+                                                )
+                                            ) {
+                                                Text("Remove")
+                                            }
+                                        } else {
+                                            Text(
+                                                "Owner",
+                                                color = primaryColor,
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                    Divider(color = Color(0xFF334155), thickness = 0.5.dp)
+                                }
                             }
                         }
                     }
@@ -839,101 +906,128 @@ fun SocialDetail(
             }
         }
     }
-}
 
-@Composable
-private fun InfoChip(
-    icon: ImageVector = Icons.Default.Schedule,
-    text: String = "Today 3:00 PM",
-    color: Color = Color(0xFFA855F7)
-) {
-    Row(
-        modifier = Modifier
-            .clip(CircleShape)
-            .background(color.copy(alpha = 0.2f))
-            .border(1.dp, color.copy(alpha = 0.3f), CircleShape)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
+
+    @Composable
+    fun InfoChip(
+        icon: ImageVector = Icons.Default.Schedule,
+        text: String = "Today 3:00 PM",
+        color: Color = Color(0xFFA855F7)
     ) {
-        Icon(
-            icon,
-            contentDescription = null,
-            modifier = Modifier.size(16.dp),
-            tint = color.copy(alpha = 0.8f)
-        )
-        Text(
-            text,
-            color = color.copy(alpha = 0.8f),
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium
-        )
-    }
-}
-
-@Composable
-fun AvatarsItem(avatar: String = "", name: String = "", brush: Brush? = null) {
-    val defaultBrush = Brush.linearGradient(listOf(Color(0xFF9333EA), Color(0xFFDB2777)))
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(64.dp)
-    )
-    {
-        Box(
+        Row(
             modifier = Modifier
-                .size(64.dp)
                 .clip(CircleShape)
-                .background(brush ?: defaultBrush)
-                .padding(2.dp)
+                .background(color.copy(alpha = 0.2f))
+                .border(1.dp, color.copy(alpha = 0.3f), CircleShape)
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            AsyncImage(
-                model = avatar,
-                contentDescription = name,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(CircleShape)
-                    .border(2.dp, Color(0xFF0F172A), CircleShape),
-                contentScale = ContentScale.Crop
+            Icon(
+                icon,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = color.copy(alpha = 0.8f)
+            )
+            Text(
+                text,
+                color = color.copy(alpha = 0.8f),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
             )
         }
-        Text(
-            name.split(" ")[0],
-            color = Color(0xFFCBD5E1),
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(top = 8.dp)
+    }
+
+    @Composable
+    fun AvatarsItem(avatar: String = "", name: String = "", brush: Brush? = null) {
+        val defaultBrush = Brush.linearGradient(listOf(Color(0xFF9333EA), Color(0xFFDB2777)))
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.width(64.dp)
+        )
+        {
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .background(brush ?: defaultBrush)
+                    .padding(2.dp)
+            ) {
+                AsyncImage(
+                    model = avatar,
+                    contentDescription = name,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape)
+                        .border(2.dp, Color(0xFF0F172A), CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            }
+            Text(
+                name.split(" ")[0],
+                color = Color(0xFFCBD5E1),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
+    }
+
+
+    @Preview(showBackground = true, backgroundColor = 0xFF0F172A)
+    @Composable
+    fun SocialDetailPreview() {
+        SocialDetail(
+            social = SocialResponse(
+                title = "Coffee at Blue Tokai ☕",
+                userName = "Rahul",
+                userAvatar = "",
+                distance = "0.8 km away",
+                participantCount = 3,
+                description = "Anyone up for a quick coffee and chat this evening?",
+                id = 123,
+                category = "FOOD",
+                city = "Delhi",
+                locationName = "Blue Tokai",
+                scheduledTime = "Today 5:00 PM",
+                maxParticipants = 10,
+                timeAgo = "2h ago",
+                userId = 1
+            ),
+            currentUserId = 2, // Not the owner
+            onClose = {},
+            onOpenChat = {},
+            onViewProfile = {},
+            onSeeAllParticipants = {},
+            onJoinSocial = {},
+            onLeaveSocial = {},
+            onRemoveParticipant = { _, _ -> }
         )
     }
-}
 
+    @Composable
+    fun StatusBadge(
+        text: String,
+        color: Color,
+        modifier: Modifier = Modifier
+    ) {
+        Surface(
+            modifier = modifier,
+            shape = RoundedCornerShape(16.dp),
+            color = color.copy(alpha = 0.1f),
+            border = BorderStroke(1.dp, color.copy(alpha = 0.5f))
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = text,
+                    color = color,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+            }
+        }
+    }
 
-@Preview(showBackground = true, backgroundColor = 0xFF0F172A)
-@Composable
-fun SocialDetailPreview() {
-    SocialDetail(
-        social = SocialResponse(
-            title = "Coffee at Blue Tokai ☕",
-            userName = "Rahul",
-            userAvatar = "",
-            distance = "0.8 km away",
-            participantCount = 3,
-            description = "Anyone up for a quick coffee and chat this evening?",
-            id = 123,
-            category = "FOOD",
-            city = "Delhi",
-            locationName = "Blue Tokai",
-            scheduledTime = "Today 5:00 PM",
-            maxParticipants = 10,
-            timeAgo = "2h ago",
-            userId = 1
-        ),
-        currentUserId = 2, // Not the owner
-        onClose = {},
-        onOpenChat = {},
-        onViewProfile = {},
-        onSeeAllParticipants = {},
-        onJoinSocial = {},
-        onLeaveSocial = {},
-        onRemoveParticipant = { _, _ -> }
-    )
-}

@@ -12,6 +12,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.shivam.downn.data.network.NetworkResult
 
 import com.shivam.downn.SocialCategory
@@ -24,12 +27,11 @@ fun FeedRoute(
     onJoinedClick: (SocialType, Int) -> Unit
 ) {
     val viewModel = hiltViewModel<FeedViewModel>()
-    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-    
-    // Refresh feed when screen resumes (user switches back to this tab)
+    val lifecycleOwner = LocalLifecycleOwner.current
+
     DisposableEffect(lifecycleOwner) {
-        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
                 viewModel.fetchSocials()
             }
         }
@@ -43,6 +45,7 @@ fun FeedRoute(
 
     FeedContent(
         state = state,
+        currentUserId = viewModel.currentUserId,
         onCategorySelected = { category ->
             viewModel.fetchSocials("Denver", if (category != "All") category else null)
         },
@@ -55,6 +58,7 @@ fun FeedRoute(
 @Composable
 fun FeedContent(
     state: NetworkResult<List<SocialResponse>>,
+    currentUserId: Long?,
     onCategorySelected: (String) -> Unit,
     onCardClick: (SocialType, Int) -> Unit,
     onJoinedClick: (SocialType, Int) -> Unit,
@@ -89,6 +93,7 @@ fun FeedContent(
                 is NetworkResult.Success -> {
                     MoveList(
                         socials = currentState.data ?: emptyList(),
+                        currentUserId = currentUserId,
                         paddingValues = paddingValues,
                         onCardClick = onCardClick,
                         onJoinClick = onJoinedClick
@@ -129,7 +134,7 @@ fun FeedTopBar(onCategorySelected: (String) -> Unit) {
                     isSelected = selectedCategory == "All",
                     onClick = { 
                         selectedCategory = "All"
-                        onCategorySelected("SPORTS") // Defaulting to SPORTS as per requirement for now
+                        onCategorySelected("All")
                     }
                 )
             }
@@ -152,6 +157,7 @@ fun FeedTopBar(onCategorySelected: (String) -> Unit) {
 @Composable
 fun MoveList(
     socials: List<SocialResponse>,
+    currentUserId: Long?,
     paddingValues: PaddingValues,
     onCardClick: (SocialType, Int) -> Unit,
     onJoinClick: (SocialType,Int) -> Unit
@@ -214,6 +220,10 @@ fun MoveList(
                 maxParticipants = social.maxParticipants,
                 participantAvatars = social.participantAvatars,
                 socialType = social.socialType,
+                isRequested = social.requestedUserIds?.contains(currentUserId) == true,
+                isRejected = social.rejectedUserIds?.contains(currentUserId) == true,
+                isParticipant = social.participants.any { it.id == currentUserId },
+                isOwner = social.userId?.toLong() == currentUserId,
                 onCardClick = { onCardClick(social.socialType,social.id) },
                 onJoinClick = { onJoinClick(social.socialType,social.id) }
             )

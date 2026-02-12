@@ -28,8 +28,10 @@ enum class ActivityStatus {
 
 
 data class NotificationContent(
-    val senderUserId: Long,
-    val senderUserName: String,
+    val senderUserId: Long? = null,
+    val senderUserName: String? = null,
     val activityId: Long,
-    val activityTitle: String
+    val activityTitle: String,
+    val message: String? = null,
+    val status: String? = null
 )

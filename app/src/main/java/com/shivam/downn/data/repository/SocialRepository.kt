@@ -3,7 +3,7 @@ package com.shivam.downn.data.repository
 import com.shivam.downn.data.api.SocialApi
 import com.shivam.downn.data.models.SocialResponse
 import com.shivam.downn.data.models.CreateSocialRequest
-import com.shivam.downn.data.models.JoinResponse
+
 import com.shivam.downn.data.network.NetworkResult
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -60,11 +60,11 @@ class SocialRepository @Inject constructor(
         }
     }
 
-    fun joinSocial(socialId: Int): Flow<NetworkResult<JoinResponse>> = flow {
+    fun joinSocial(socialId: Int): Flow<NetworkResult<Unit>> = flow {
         try {
             val response = socialApi.joinSocial(socialId)
-            if (response.isSuccessful && response.body() != null) {
-                emit(NetworkResult.Success(response.body()!!))
+            if (response.isSuccessful) {
+                emit(NetworkResult.Success(Unit))
             } else {
                 emit(NetworkResult.Error("Join failed: ${response.message()}"))
             }

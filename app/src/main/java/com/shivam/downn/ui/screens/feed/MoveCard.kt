@@ -70,6 +70,10 @@ fun MoveCard(
     maxParticipants: Int?=0,
     participantAvatars: List<String>? =emptyList(),
     socialType: SocialType = SocialType.PERSONAL,
+    isRequested: Boolean = false,
+    isRejected: Boolean = false,
+    isParticipant: Boolean = false,
+    isOwner: Boolean = false,
     onCardClick: () -> Unit,
     onJoinClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -280,25 +284,62 @@ fun MoveCard(
                     )
                 }
 
-                Button(
-                    onClick = { onJoinClick()},
-                    modifier = Modifier.height(40.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isBusiness) Color(0xFFF97316) else MaterialTheme.colorScheme.primary
-                    ),
-                    shape = RoundedCornerShape(20.dp)
-                ) {
-                    Icon(
-                        imageVector = if (isBusiness) Icons.Default.Add else Icons.Default.Add,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "I'M DOWN",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold
-                    )
+                if (!isParticipant && !isOwner) {
+                    val buttonText = when {
+                        isRejected -> "REJECTED"
+                        isRequested -> "REQUESTED"
+                        else -> "I'M DOWN"
+                    }
+                    val isButtonEnabled = !isRequested && !isRejected
+
+                    Button(
+                        onClick = { if (isButtonEnabled) onJoinClick() },
+                        modifier = Modifier.height(40.dp),
+                        enabled = isButtonEnabled,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = when {
+                                isRejected -> Color(0xFFEF4444).copy(alpha = 0.1f)
+                                isRequested -> Color(0xFFF97316).copy(alpha = 0.2f)
+                                isBusiness -> Color(0xFFF97316)
+                                else -> MaterialTheme.colorScheme.primary
+                            },
+                            contentColor = when {
+                                isRejected -> Color(0xFFEF4444)
+                                isRequested -> Color(0xFFF97316)
+                                else -> Color.White
+                            },
+                            disabledContainerColor = when {
+                                isRejected -> Color(0xFFEF4444).copy(alpha = 0.1f)
+                                isRequested -> Color(0xFFF97316).copy(alpha = 0.2f)
+                                else -> Color(0xFF1E293B)
+                            },
+                            disabledContentColor = when {
+                                isRejected -> Color(0xFFEF4444)
+                                isRequested -> Color(0xFFF97316)
+                                else -> Color(0xFF94A3B8)
+                            }
+                        ),
+                        shape = RoundedCornerShape(20.dp),
+                        border = when {
+                            isRejected -> BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.5f))
+                            isRequested -> BorderStroke(1.dp, Color(0xFFF97316).copy(alpha = 0.5f))
+                            else -> null
+                        }
+                    ) {
+                        if (!isRequested && !isRejected) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                        }
+                        Text(
+                            text = buttonText,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }

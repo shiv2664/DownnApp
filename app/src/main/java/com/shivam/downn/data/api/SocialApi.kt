@@ -2,7 +2,7 @@ package com.shivam.downn.data.api
 
 import com.shivam.downn.data.models.SocialResponse
 import com.shivam.downn.data.models.CreateSocialRequest
-import com.shivam.downn.data.models.JoinResponse
+
 import retrofit2.Response
 import okhttp3.MultipartBody
 import retrofit2.http.Multipart
@@ -26,7 +26,7 @@ interface SocialApi {
     suspend fun getSocialById(@Path("id") socialId: Int): Response<SocialResponse>
 
     @POST("api/activities/{id}/request-to-join")
-    suspend fun joinSocial(@Path("id") socialId: Int): Response<JoinResponse>
+    suspend fun joinSocial(@Path("id") socialId: Int): Response<Unit>
 
     @DELETE("api/activities/{id}/leave")
     suspend fun leaveSocial(@Path("id") socialId: Int): Response<Unit>
