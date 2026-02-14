@@ -35,6 +35,9 @@ import com.google.maps.android.compose.MarkerComposable
 import com.google.maps.android.compose.rememberMarkerState
 import com.shivam.downn.data.network.NetworkResult
 import java.util.Calendar
+import java.util.Locale
+import java.text.SimpleDateFormat
+import com.shivam.downn.utils.TimeUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,7 +60,50 @@ fun StartBusinessMove(
     // Default business location (Mocked - in real app would come from profile)
     var latitude by remember { mutableStateOf<Double?>(37.4219999) }
     var longitude by remember { mutableStateOf<Double?>(-122.0840575) }
+    var detectedCity by remember { mutableStateOf("Denver") }
     val mapCenter = remember(latitude, longitude) { LatLng(latitude ?: 37.421, longitude ?: -122.084) }
+
+    val scope = rememberCoroutineScope()
+    
+    // Detect city on launch
+    LaunchedEffect(latitude, longitude) {
+        if (latitude != null && longitude != null) {
+            val city = com.shivam.downn.utils.LocationUtils.getCityFromCoordinates(context, latitude!!, longitude!!)
+            city?.let { detectedCity = it }
+        }
+    }
+    
+    // Time Selection State
+    var time by remember { mutableStateOf("") }
+    var showTimePicker by remember { mutableStateOf(false) }
+    val selectedTime = remember { mutableStateOf<Pair<Int, Int>?>(null) }
+
+    val currentCalendar = Calendar.getInstance()
+    val currentHour = currentCalendar.get(Calendar.HOUR_OF_DAY)
+    val currentMinute = currentCalendar.get(Calendar.MINUTE)
+    val timePickerState = rememberTimePickerState(initialHour = currentHour, initialMinute = currentMinute, is24Hour = false)
+
+    val formattedDateTime by remember(selectedTime.value) {
+        derivedStateOf {
+            if (selectedTime.value != null) {
+                val timePair = selectedTime.value!!
+                val todayCalendar = Calendar.getInstance().apply { 
+                    set(Calendar.HOUR_OF_DAY, timePair.first)
+                    set(Calendar.MINUTE, timePair.second)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+                val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+                sdf.format(todayCalendar.time)
+            } else {
+                ""
+            }
+        }
+    }
+
+    LaunchedEffect(formattedDateTime) {
+        time = formattedDateTime
+    }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -177,8 +223,14 @@ fun StartBusinessMove(
                     initialCameraPosition = mapCenter,
                     gesturesEnabled = false
                 ) {
+                    val markerState = rememberMarkerState(position = mapCenter)
+                    
+                    LaunchedEffect(mapCenter) {
+                        markerState.position = mapCenter
+                    }
+
                     MarkerComposable(
-                        state = rememberMarkerState(position = mapCenter),
+                        state = markerState,
                         anchor = Offset(0.5f, 1.0f)
                     ) {
                         Icon(
@@ -205,6 +257,62 @@ fun StartBusinessMove(
                 }
             }
 
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Time Input (Business)
+            Text(
+                "When?",
+                color = Color(0xFFCBD5E1),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFF1E293B).copy(alpha = 0.5f))
+                    .border(1.dp, Color(0xFF334155), RoundedCornerShape(12.dp))
+                    .clickable { showTimePicker = true }
+                    .padding(16.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Schedule,
+                        contentDescription = null,
+                        tint = Color(0xFF94A3B8)
+                    )
+                    Text(
+                        text = if (formattedDateTime.isNotEmpty()) TimeUtils.formatScheduledTime(formattedDateTime) else "Select Event Time",
+                        color = if (formattedDateTime.isNotEmpty()) Color.White else Color(0xFF64748B),
+                        fontSize = 16.sp,
+                        fontWeight = if (formattedDateTime.isNotEmpty()) FontWeight.Bold else FontWeight.Normal
+                    )
+                }
+            }
+            
+            if (showTimePicker) {
+                TimePickerDialog(
+                    onDismissRequest = { showTimePicker = false },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            selectedTime.value = Pair(timePickerState.hour, timePickerState.minute)
+                            showTimePicker = false
+                        }) { Text("OK") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showTimePicker = false }) { Text("Cancel") }
+                    },
+                    title = { Text("Pick Event Time") }
+                ) {
+                    TimeInput(state = timePickerState)
+                }
+            }
+
             BusinessInputField(
                 "Registration Link (Optional)",
                 registrationLink,
@@ -221,9 +329,9 @@ fun StartBusinessMove(
                         title = title,
                         description = finalDescription,
                         category = category,
-                        city = "Denver",
+                        city = detectedCity,
                         locationName = location,
-                        scheduledTime = "2026-01-31T20:00:00", // Mocked for simplicity
+                        scheduledTime = time.ifEmpty { "2026-01-31T20:00:00" }, // Use selected time or fallback
                         maxParticipants = capacity.toIntOrNull() ?: 0,
                         latitude = latitude,
                         longitude = longitude

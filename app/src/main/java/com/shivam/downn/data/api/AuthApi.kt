@@ -6,15 +6,20 @@ import com.shivam.downn.data.models.RegisterRequest
 import com.shivam.downn.data.models.LogoutResponse
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.POST
+import retrofit2.http.Url
 
 interface AuthApi {
-    @POST("api/auth/register")
-    suspend fun register(@Body request: RegisterRequest): Response<AuthResponse>
+    @POST
+    suspend fun register(@Url url: String, @Body request: RegisterRequest): Response<AuthResponse>
 
-    @POST("api/auth/login")
-    suspend fun login(@Body request: AuthRequest): Response<AuthResponse>
+    @POST
+    suspend fun login(@Url url: String, @Body request: AuthRequest): Response<AuthResponse>
 
-    @POST("api/auth/logout")
-    suspend fun logout(): Response<LogoutResponse>
+    @POST
+    suspend fun logout(@Url url: String): Response<LogoutResponse>
+
+    @DELETE
+    suspend fun deleteAccount(@Url url: String): Response<LogoutResponse>
 }

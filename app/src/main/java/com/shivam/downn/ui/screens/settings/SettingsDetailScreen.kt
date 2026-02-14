@@ -1,6 +1,12 @@
 package com.shivam.downn.ui.screens.settings
 
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -17,16 +23,24 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import coil.compose.AsyncImage
+import com.shivam.downn.data.network.NetworkResult
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsDetailScreen(
     title: String,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    viewModel: SettingsViewModel = hiltViewModel()
 ) {
+    val userDetails by viewModel.userDetails.collectAsState()
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -57,7 +71,27 @@ fun SettingsDetailScreen(
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             when (title) {
-                "Personal Information" -> PersonalInfoContent()
+                "Personal Information" -> {
+                    when (val details = userDetails) {
+                        is NetworkResult.Success -> {
+                            val user = details.data
+                            PersonalInfoContent(
+                                viewModel = viewModel,
+                                name = user?.name ?: "",
+                                bio = user?.bio ?: "",
+                                location = user?.location ?: "",
+                                avatar = user?.avatar ?: "",
+                                email = viewModel.getEmail()
+                            )
+                        }
+                        is NetworkResult.Loading -> {
+                            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(color = Color(0xFFA855F7))
+                            }
+                        }
+                        else -> PersonalInfoContent(viewModel = viewModel, email = viewModel.getEmail())
+                    }
+                }
                 "Security" -> SecurityContent()
                 "Privacy Settings" -> PrivacyContent()
                 "Notifications" -> NotificationsContent()
@@ -72,22 +106,106 @@ fun SettingsDetailScreen(
 }
 
 @Composable
-private fun PersonalInfoContent() {
+private fun PersonalInfoContent(
+    viewModel: SettingsViewModel,
+    name: String = "",
+    bio: String = "",
+    location: String = "",
+    avatar: String = "",
+    email: String = ""
+) {
+    val context = LocalContext.current
+    var editableName by remember(name) { mutableStateOf(name) }
+    var editableBio by remember(bio) { mutableStateOf(bio) }
+    var editableLocation by remember(location) { mutableStateOf(location) }
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    val updateState by viewModel.updateState.collectAsState()
+
+    LaunchedEffect(updateState) {
+        when (val result = updateState) {
+            is NetworkResult.Success -> {
+                Toast.makeText(context, "Profile updated successfully!", Toast.LENGTH_SHORT).show()
+            }
+            is NetworkResult.Error -> {
+                Toast.makeText(context, result.message ?: "Update failed", Toast.LENGTH_SHORT).show()
+            }
+            else -> {}
+        }
+    }
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        selectedImageUri = uri
+    }
+
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        DetailTextField(label = "Full Name", value = "Shivam Sehrawat")
-        DetailTextField(label = "Email Address", value = "shivam@example.com")
-        DetailTextField(label = "Phone Number", value = "+1 (555) 000-0000")
-        DetailTextField(label = "Birthdate", value = "January 1, 1995")
+        // Avatar section
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(contentAlignment = Alignment.BottomEnd) {
+                Surface(
+                    modifier = Modifier.size(120.dp),
+                    shape = CircleShape,
+                    color = Color.Transparent,
+                    border = BorderStroke(2.dp, Brush.linearGradient(listOf(Color(0xFF9333EA), Color(0xFFDB2777))))
+                ) {
+                    AsyncImage(
+                        model = selectedImageUri ?: com.shivam.downn.utils.ImageUtils.getFullImageUrl(avatar),
+                        contentDescription = "Profile Photo",
+                        modifier = Modifier.clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF9333EA))
+                        .border(2.dp, Color(0xFF0F172A), CircleShape)
+                        .clickable { photoPickerLauncher.launch("image/*") },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.CameraAlt, contentDescription = "Edit Photo", tint = Color.White, modifier = Modifier.size(18.dp))
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Email (read-only)
+        DetailTextField(label = "Email", value = email, onValueChange = {}, enabled = false)
+
+        // Editable fields
+        DetailTextField(label = "Full Name", value = editableName, onValueChange = { editableName = it })
+        DetailTextField(label = "Bio", value = editableBio, onValueChange = { editableBio = it })
+        DetailTextField(label = "Location", value = editableLocation, onValueChange = { editableLocation = it })
         
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            "Public profile information helps people get to know you before they join your activities.",
+            color = Color(0xFF94A3B8),
+            fontSize = 12.sp,
+            lineHeight = 18.sp
+        )
+        
+        Spacer(modifier = Modifier.height(8.dp))
         
         Button(
-            onClick = { /* Save changes */ },
+            onClick = { viewModel.updateUser(editableName, editableBio, editableLocation, selectedImageUri) },
             modifier = Modifier.fillMaxWidth().height(56.dp),
             shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFA855F7))
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFA855F7)),
+            enabled = updateState !is NetworkResult.Loading
         ) {
-            Text("Save Changes", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            if (updateState is NetworkResult.Loading) {
+                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+            } else {
+                Text("Save Changes", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            }
         }
     }
 }
@@ -236,23 +354,27 @@ private fun AboutContent() {
 }
 
 @Composable
-private fun DetailTextField(label: String, value: String) {
+private fun DetailTextField(label: String, value: String, onValueChange: (String) -> Unit = {}, enabled: Boolean = true) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(label, color = Color(0xFF94A3B8), fontSize = 12.sp, fontWeight = FontWeight.Bold)
         OutlinedTextField(
             value = value,
-            onValueChange = {},
+            onValueChange = onValueChange,
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = Color.White,
                 unfocusedTextColor = Color.White,
+                disabledTextColor = Color(0xFF94A3B8),
                 focusedBorderColor = Color(0xFFA855F7),
                 unfocusedBorderColor = Color(0xFF334155),
+                disabledBorderColor = Color(0xFF334155).copy(alpha = 0.5f),
                 unfocusedContainerColor = Color(0xFF1E293B).copy(alpha = 0.5f),
-                focusedContainerColor = Color(0xFF1E293B).copy(alpha = 0.5f)
+                focusedContainerColor = Color(0xFF1E293B).copy(alpha = 0.5f),
+                disabledContainerColor = Color(0xFF1E293B).copy(alpha = 0.3f)
             ),
-            singleLine = true
+            singleLine = true,
+            enabled = enabled
         )
     }
 }

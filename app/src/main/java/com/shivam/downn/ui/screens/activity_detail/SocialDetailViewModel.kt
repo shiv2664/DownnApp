@@ -95,5 +95,17 @@ class SocialDetailViewModel @Inject constructor(
         _joinState.value = null
         _leaveState.value = null
         _removeState.value = null
+        _deleteState.value = null
+    }
+
+    private val _deleteState = MutableStateFlow<NetworkResult<Unit>?>(null)
+    val deleteState: StateFlow<NetworkResult<Unit>?> = _deleteState
+
+    fun deleteActivity(socialId: Int) {
+        viewModelScope.launch {
+            repository.deleteActivity(socialId).collect { result ->
+                _deleteState.value = result
+            }
+        }
     }
 }

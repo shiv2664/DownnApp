@@ -13,7 +13,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class NotificationViewModel @Inject constructor(
-    private val repository: NotificationRepository
+    private val repository: NotificationRepository,
+    private val navigationEventBus: com.shivam.downn.navigation.NavigationEventBus
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<NetworkResult<List<NotificationResponse>>>(NetworkResult.Loading())
@@ -30,6 +31,25 @@ class NotificationViewModel @Inject constructor(
 
     init {
         fetchNotifications()
+        
+        viewModelScope.launch {
+            navigationEventBus.events.collect { route ->
+                if (route == "alerts") {
+                    fetchNotifications()
+                }
+            }
+        }
+    }
+
+    val unreadCount: StateFlow<Int> = MutableStateFlow(0).also { flow ->
+        viewModelScope.launch {
+            _state.collect { result ->
+                flow.value = when (result) {
+                    is NetworkResult.Success -> result.data?.size ?: 0
+                    else -> 0
+                }
+            }
+        }
     }
 
     fun approveNotification(notificationId: Long) {

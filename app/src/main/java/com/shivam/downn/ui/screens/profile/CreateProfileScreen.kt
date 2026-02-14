@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,6 +29,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.CameraPosition
+import com.shivam.downn.ui.components.FancyMap
+import com.google.maps.android.compose.MarkerComposable
+import com.google.maps.android.compose.rememberMarkerState
+import com.google.maps.android.compose.rememberCameraPositionState
+import com.shivam.downn.ui.screens.create_activity.LocationPicker
+import androidx.compose.ui.geometry.Offset
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +52,27 @@ fun CreateProfileScreen(
     var location by remember { mutableStateOf("") }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var selectedCoverUri by remember { mutableStateOf<Uri?>(null) }
+    var latitude by remember { mutableStateOf<Double?>(null) }
+    var longitude by remember { mutableStateOf<Double?>(null) }
+    var showMapPicker by remember { mutableStateOf(false) }
+
+    val mapCenter = remember(latitude, longitude) {
+        if (latitude != null && longitude != null) LatLng(latitude!!, longitude!!)
+        else LatLng(39.7392, -104.9903) 
+    }
+
+    val previewCameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(mapCenter, 13f)
+    }
+
+    LaunchedEffect(latitude, longitude) {
+        if (latitude != null && longitude != null) {
+            previewCameraPositionState.position = CameraPosition.fromLatLngZoom(
+                LatLng(latitude!!, longitude!!),
+                13f
+            )
+        }
+    }
     
     val allVibes = listOf("Cozy", "Jazz", "Energy", "Chill", "Loud", "Outdoor", "Elegant", "Underground")
     var selectedVibes by remember { mutableStateOf(setOf<String>()) }
@@ -59,8 +89,9 @@ fun CreateProfileScreen(
         selectedCoverUri = uri
     }
 
-    Scaffold(
-        topBar = {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            topBar = {
             TopAppBar(
                 title = { Text("Create Business", color = Color.White, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
@@ -167,6 +198,83 @@ fun CreateProfileScreen(
                 CreateField(label = "Category", value = category, placeholder = "e.g. Cafe, Nightclub", onValueChange = { category = it })
                 CreateField(label = "Bio", value = bio, placeholder = "Tell the world about your vibe...", onValueChange = { bio = it }, singleLine = false)
                 CreateField(label = "Location", value = location, placeholder = "e.g. San Francisco, CA", onValueChange = { location = it })
+
+                // Map Preview for Location (Added)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Pin your location",
+                        color = Color(0xFFCBD5E1),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    Text(
+                        "Change Location",
+                        color = Color(0xFFA855F7),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.clickable { showMapPicker = true }
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color(0xFF1E293B))
+                        .border(1.dp, Color(0xFF334155), RoundedCornerShape(20.dp))
+                        .clickable { showMapPicker = true }
+                ) {
+                    FancyMap(
+                        modifier = Modifier.fillMaxSize(),
+                        cameraPositionState = previewCameraPositionState,
+                        gesturesEnabled = false
+                    ) {
+                        if (latitude != null && longitude != null) {
+                            val markerState = rememberMarkerState(
+                                key = "${latitude}_${longitude}",
+                                position = LatLng(latitude!!, longitude!!)
+                            )
+                            MarkerComposable(
+                                state = markerState,
+                                anchor = Offset(0.5f, 1.0f)
+                            ) {
+                                Icon(
+                                    Icons.Default.Place,
+                                    contentDescription = null,
+                                    tint = Color(0xFFF87171),
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
+                        }
+                    }
+                    
+                    // Overlay to emphasize it's clickable
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.1f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Surface(
+                            color = Color.Black.copy(alpha = 0.6f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(
+                                if (latitude == null) "Tap to select location" else "Tap to change",
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(20.dp))
                 
                 // Vibe Selection
                 Text(
@@ -206,9 +314,11 @@ fun CreateProfileScreen(
                         if (businessName.isNotBlank() && category.isNotBlank()) {
                             onCreateSuccess(businessName, category, bio, location)
                             profileViewModel.createBusinessProfile(
-                                businessName, category, bio, location, 
+                                businessName, category, bio, location,
                                 selectedCoverUri?.toString() ?: "", 
-                                selectedVibes.toList()
+                                selectedVibes.toList(),
+                                latitude,
+                                longitude
                             )
                         }
                     },
@@ -245,6 +355,19 @@ fun CreateProfileScreen(
                 )
             }
         }
+    }
+
+    if (showMapPicker) {
+        LocationPicker(
+            initialLocation = if (latitude != null && longitude != null) LatLng(latitude!!, longitude!!) else mapCenter,
+            onLocationSelected = { lat, lng ->
+                latitude = lat
+                longitude = lng
+                showMapPicker = false
+            },
+            onDismiss = { showMapPicker = false }
+        )
+    }
     }
 }
 

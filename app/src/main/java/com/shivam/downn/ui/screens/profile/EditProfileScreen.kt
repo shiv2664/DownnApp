@@ -41,10 +41,20 @@ fun EditProfileScreen(
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
-    var name by remember { mutableStateOf("Sarah Kim") }
-    var bio by remember { mutableStateOf("Adventure seeker making friends one activity at a time ✨ Marathon runner & coffee enthusiast") }
-    var location by remember { mutableStateOf("San Francisco, CA") }
+    val activeProfile by viewModel.activeProfile.collectAsState()
+
+    var name by remember { mutableStateOf(activeProfile?.name ?: "") }
+    var bio by remember { mutableStateOf(activeProfile?.bio ?: "") }
+    var location by remember { mutableStateOf(activeProfile?.location ?: "") }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+
+    LaunchedEffect(activeProfile) {
+        activeProfile?.let {
+            name = it.name
+            bio = it.bio ?: ""
+            location = it.location ?: ""
+        }
+    }
 
     val updateUserState by viewModel.userUpdateResponse.collectAsState()
 
@@ -114,7 +124,7 @@ fun EditProfileScreen(
                     border = BorderStroke(2.dp, Brush.linearGradient(listOf(Color(0xFF9333EA), Color(0xFFDB2777))))
                 ) {
                     AsyncImage(
-                        model = selectedImageUri ?: "https://images.unsplash.com/photo-1566330429822-c413e4bc27a5",
+                        model = selectedImageUri ?: activeProfile?.avatar ?: "https://images.unsplash.com/photo-1566330429822-c413e4bc27a5",
                         contentDescription = "Profile Photo",
                         modifier = Modifier.clip(CircleShape),
                         contentScale = ContentScale.Crop

@@ -57,7 +57,11 @@ import androidx.navigation.compose.rememberNavController
 
 
 @Composable
-fun BottomBar(navController: NavHostController) {
+fun BottomBar(
+    navController: NavHostController,
+    unreadNotificationCount: Int = 0,
+    onItemClick: (String) -> Unit
+) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
@@ -73,13 +77,15 @@ fun BottomBar(navController: NavHostController) {
         enter = slideInVertically { it } + fadeIn(),
         exit = slideOutVertically { it } + fadeOut()
     ) {
-        BottomBarContent(navController)
+        BottomBarContent(navController, unreadNotificationCount, onItemClick)
     }
 }
 
 @Composable
 fun BottomBarContent(
-    navController: NavHostController
+    navController: NavHostController,
+    unreadNotificationCount: Int = 0,
+    onItemClick: (String) -> Unit
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -121,10 +127,7 @@ fun BottomBarContent(
                     launchSingleTop = true
                     restoreState = true
                 }
-
-               /* navController.navigate(itemsDataList[0].route) {
-                    launchSingleTop = true
-                }*/
+                onItemClick(itemsDataList[0].route)
             }
 
             BottomNavItem(
@@ -139,9 +142,7 @@ fun BottomBarContent(
                     launchSingleTop = true
                     restoreState = true
                 }
-                /*navController.navigate(itemsDataList[1].route) {
-                    launchSingleTop = true
-                }*/
+                onItemClick(itemsDataList[1].route)
             }
 
 
@@ -157,6 +158,7 @@ fun BottomBarContent(
                     launchSingleTop = true
                     restoreState = true
                 }
+                onItemClick(itemsDataList[2].route)
             }
 
 
@@ -164,6 +166,7 @@ fun BottomBarContent(
                 label = "Alerts",
                 icon = if (currentDestination?.hierarchy?.any { it.route == itemsDataList[3].route } == true) Icons.Filled.Notifications else Icons.Outlined.Notifications,
                 isActive = currentDestination?.hierarchy?.any { it.route == itemsDataList[3].route } == true,
+                unreadCount = unreadNotificationCount
             ) {
                 navController.navigate(itemsDataList[3].route) {
                     popUpTo(navController.graph.findStartDestination().id) {
@@ -172,6 +175,7 @@ fun BottomBarContent(
                     launchSingleTop = true
                     restoreState = true
                 }
+                onItemClick(itemsDataList[3].route)
             }
 
             BottomNavItem(
@@ -186,6 +190,7 @@ fun BottomBarContent(
                     launchSingleTop = true
                     restoreState = true
                 }
+                onItemClick(itemsDataList[4].route)
             }
         }
     }
@@ -257,5 +262,5 @@ fun BottomNavItem(
 @Preview
 @Composable
 fun BottomBarPreview() {
-    BottomBarContent(navController = rememberNavController())
+    BottomBarContent(navController = rememberNavController(), onItemClick = {})
 }

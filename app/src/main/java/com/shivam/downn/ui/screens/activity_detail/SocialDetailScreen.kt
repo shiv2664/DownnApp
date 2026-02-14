@@ -27,7 +27,7 @@ fun SocialDetailRoute(
     socialId: Int,
     onClose: () -> Unit,
     onOpenChat: () -> Unit,
-    onViewProfile: (userId: Int) -> Unit,
+    onViewProfile: (userId: Long, isBusiness: Boolean) -> Unit,
     onSeeAllParticipants: (socialId: Int) -> Unit,
     viewModel: SocialDetailViewModel = hiltViewModel()
 ) {
@@ -53,12 +53,14 @@ fun SocialDetailRoute(
     val state by viewModel.state.collectAsState()
     val leaveState by viewModel.leaveState.collectAsState()
     val removeState by viewModel.removeState.collectAsState()
+    val deleteState by viewModel.deleteState.collectAsState()
     
     SocialDetailContent(
         state = state,
         currentUserId = viewModel.currentUserId,
         leaveState = leaveState,
         removeState = removeState,
+        deleteState = deleteState,
         socialId = socialId,
         onClose = onClose,
         onOpenChat = onOpenChat,
@@ -66,7 +68,8 @@ fun SocialDetailRoute(
         onSeeAllParticipants = onSeeAllParticipants,
         onJoinSocial = { id -> viewModel.joinSocial(id) },
         onLeaveSocial = { id -> viewModel.leaveSocial(id) },
-        onRemoveParticipant = { sId, pId -> viewModel.removeParticipant(sId, pId) }
+        onRemoveParticipant = { sId, pId -> viewModel.removeParticipant(sId, pId) },
+        onDeleteActivity = { id -> viewModel.deleteActivity(id) }
     )
 }
 
@@ -76,14 +79,16 @@ fun SocialDetailContent(
     currentUserId: Long,
     leaveState: NetworkResult<Unit>?,
     removeState: NetworkResult<Unit>?,
+    deleteState: NetworkResult<Unit>? = null,
     socialId: Int,
     onClose: () -> Unit,
     onOpenChat: () -> Unit,
-    onViewProfile: (userId: Int) -> Unit,
+    onViewProfile: (userId: Long, isBusiness: Boolean) -> Unit,
     onSeeAllParticipants: (socialId: Int) -> Unit,
     onJoinSocial: (Int) -> Unit,
     onLeaveSocial: (Int) -> Unit,
-    onRemoveParticipant: (Int, Long) -> Unit
+    onRemoveParticipant: (Int, Long) -> Unit,
+    onDeleteActivity: (Int) -> Unit = {}
 ) {
     val view = LocalView.current
 
@@ -114,13 +119,15 @@ fun SocialDetailContent(
                 currentUserId = currentUserId,
                 leaveState = leaveState,
                 removeState = removeState,
+                deleteState = deleteState,
                 onClose = onClose,
                 onOpenChat = onOpenChat,
-                onViewProfile = { id -> onViewProfile(id.toInt()) },
+                onViewProfile = onViewProfile,
                 onSeeAllParticipants = { onSeeAllParticipants(socialId) },
                 onJoinSocial = { id -> onJoinSocial(id) },
                 onLeaveSocial = { id -> onLeaveSocial(id) },
-                onRemoveParticipant = { sId, pId -> onRemoveParticipant(sId, pId) }
+                onRemoveParticipant = { sId, pId -> onRemoveParticipant(sId, pId) },
+                onDeleteActivity = { id -> onDeleteActivity(id) }
             )
         }
     }

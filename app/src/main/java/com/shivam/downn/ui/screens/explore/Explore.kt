@@ -1,6 +1,9 @@
 package com.shivam.downn.ui.screens.explore
 
+import com.shivam.downn.utils.ImageUtils
+
 import androidx.compose.animation.*
+import com.shivam.downn.R
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.*
@@ -46,7 +49,8 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import android.app.Activity
-import androidx.compose.animation.core.FastOutSlowInEasing
+import android.content.Context
+import androidx.compose.animation.core.LinearEasing
 import androidx.core.view.WindowCompat
 import coil.compose.AsyncImage
 import androidx.compose.animation.core.spring
@@ -54,12 +58,14 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.asImageBitmap
 import kotlinx.coroutines.launch
 import com.google.android.gms.maps.model.LatLng
 import com.shivam.downn.ui.components.FancyMap
 import com.google.maps.android.compose.MarkerComposable
 import com.google.maps.android.compose.rememberMarkerState
 import android.graphics.Bitmap
+import android.graphics.drawable.BitmapDrawable
 import androidx.compose.ui.platform.LocalContext
 import coil.request.ImageRequest
 import androidx.compose.ui.text.style.TextOverflow
@@ -74,12 +80,29 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.res.painterResource
+import coil.compose.rememberAsyncImagePainter
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import coil.ImageLoader
+import coil.request.ErrorResult
+import coil.request.SuccessResult
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.shivam.downn.ui.screens.feed.CategoryChip
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 
+
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 
 data class MapSocial(
     val id: Int,
@@ -96,6 +119,17 @@ data class MapSocial(
     val socialType: SocialType = SocialType.PERSONAL
 )
 
+val pinColors = listOf(
+    Color(0xFF3B82F6), // Blue
+    Color(0xFF06B6D4), // Cyan
+    Color(0xFFEC4899), // Pink
+    Color(0xFFA855F7), // Purple
+    Color(0xFFF97316), // Orange
+    Color(0xFFEF4444), // Red
+    Color(0xFF22C55E), // Green
+    Color(0xFF14B8A6)  // Teal
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExploreRoute(
@@ -103,23 +137,37 @@ fun ExploreRoute(
     onSocialClick: (SocialResponse) -> Unit = {},
     viewModel: ExploreViewModel = hiltViewModel()
 ) {
-    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-    
-    // Refresh explore when screen resumes (user switches back to this tab)
-    DisposableEffect(lifecycleOwner) {
-        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
-                viewModel.fetchSocials()
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    // Set up location permission launcher
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val isGranted = permissions.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false) ||
+                permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false)
+        if (isGranted) {
+            viewModel.updateCity(context)
         }
     }
-    
+
+    // Check permissions on mount
+    LaunchedEffect(Unit) {
+        val hasFine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val hasCoarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        
+        if (hasFine || hasCoarse) {
+            viewModel.updateCity(context)
+        } else {
+            locationPermissionLauncher.launch(
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+            )
+        }
+    }
+
+    // Refresh explore when screen resumes (user switches back to this tab)
     val state by viewModel.state.collectAsState()
-    
+
     ExploreContent(
         state = state,
         outerPadding = outerPadding,
@@ -127,7 +175,11 @@ fun ExploreRoute(
         onCategorySelected = { category ->
             viewModel.fetchSocials(category = category)
         },
-        onFetchAll = { viewModel.fetchSocials() }
+        onFetchAll = { viewModel.refresh() },
+        onLoadMore = { viewModel.loadMore() },
+        onRefreshLocation = { 
+            viewModel.updateCity(context)
+        }
     )
 }
 
@@ -138,7 +190,9 @@ fun ExploreContent(
     outerPadding: PaddingValues,
     onSocialClick: (SocialResponse) -> Unit = {},
     onCategorySelected: (String) -> Unit = {},
-    onFetchAll: () -> Unit = {}
+    onFetchAll: () -> Unit = {},
+    onLoadMore: () -> Unit = {},
+    onRefreshLocation: () -> Unit = {}
 ) {
     val view = LocalView.current
     if (!view.isInEditMode) {
@@ -150,7 +204,7 @@ fun ExploreContent(
     }
 
     var selectedFilter by remember { mutableStateOf("All") }
-    
+
     val socials = when (val currentState = state) {
         is NetworkResult.Success -> currentState.data ?: emptyList()
         else -> emptyList()
@@ -191,10 +245,28 @@ fun ExploreContent(
                     val lat = social.latitude
                     val lng = social.longitude
                     if (lat != null && lng != null) {
+                        val categoryEmoji = SocialCategory.entries.find { it.name.equals(social.category, ignoreCase = true) }?.emoji ?: "📌"
+                        
+                        var bitmap by remember { mutableStateOf<Bitmap?>(null) }
+                        val context = LocalContext.current
+                        
+                        LaunchedEffect(social.userAvatar) {
+                            urlToBitmap(
+                                scope = this,
+                                imageURL = ImageUtils.getFullImageUrl(social.userAvatar ?: ""),
+                                context = context,
+                                onSuccess = { bitmap = it },
+                                onError = { /* On error, bitmap remains null (placeholder) */ }
+                            )
+                        }
+                        
+                        val pinColor = pinColors[(social.id.hashCode() % pinColors.size + pinColors.size) % pinColors.size]
+
                         MarkerComposable(
                             state = rememberMarkerState(position = LatLng(lat, lng)),
                             title = social.title,
                             anchor = Offset(0.5f, 1.0f),
+                            keys = arrayOf(social.id, bitmap?.hashCode() ?: 0), // Force redraw when bitmap loads
                             onClick = {
                                 coroutineScope.launch {
                                     pagerState.animateScrollToPage(index)
@@ -202,12 +274,12 @@ fun ExploreContent(
                                 true
                             }
                         ) {
-                            val categoryEmoji = SocialCategory.entries.find { it.name.equals(social.category, ignoreCase = true) }?.emoji ?: "📌"
                             MapPin(
-                                avatar = social.userAvatar ?: "",
+                                bitmap = bitmap,
                                 isBusiness = social.socialType == SocialType.BUSINESS,
                                 categoryEmoji = categoryEmoji,
-                                isSelected = pagerState.currentPage == index
+                                isSelected = pagerState.currentPage == index,
+                                baseColor = pinColor
                             )
                         }
                     }
@@ -245,7 +317,7 @@ fun ExploreContent(
                             label = "All",
                             emoji = "🌟",
                             isSelected = selectedFilter == "All",
-                            onClick = { 
+                            onClick = {
                                 selectedFilter = "All"
                                 onFetchAll()
                             }
@@ -256,7 +328,7 @@ fun ExploreContent(
                             label = category.displayName.replace("Activity", "Move"),
                             emoji = category.emoji,
                             isSelected = selectedFilter == category.displayName,
-                            onClick = { 
+                            onClick = {
                                 selectedFilter = category.displayName
                                 onCategorySelected(category.name)
                             }
@@ -273,12 +345,30 @@ fun ExploreContent(
                     .padding(bottom = 24.dp)
             ) {
                 if (state is NetworkResult.Loading) {
-                    Box(modifier = Modifier.fillMaxWidth().height(180.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = Color.White)
+                    Box(modifier = Modifier.fillMaxWidth().height(180.dp).padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
+                        com.shivam.downn.ui.components.ShimmerCardItem()
                     }
-                } else if (socials.isEmpty() && state is NetworkResult.Success) {
+                } else if (state is NetworkResult.Error) {
                     Box(modifier = Modifier.fillMaxWidth().height(180.dp), contentAlignment = Alignment.Center) {
-                        Text("No moves nearby", color = Color.White, fontWeight = FontWeight.Bold)
+                        com.shivam.downn.ui.components.EmptyState(
+                            icon = androidx.compose.material.icons.Icons.Default.ErrorOutline,
+                            title = "Error",
+                            description = state.message ?: "Something went wrong",
+                            actionLabel = "Retry",
+                            onActionClick = onFetchAll,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                } else if (socials.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxWidth().height(180.dp), contentAlignment = Alignment.Center) {
+                        com.shivam.downn.ui.components.EmptyState(
+                            icon = androidx.compose.material.icons.Icons.Default.EventBusy,
+                            title = "No Moves Nearby",
+                            description = "Try changing filters or search a different area.",
+                            actionLabel = "Refresh",
+                            onActionClick = onFetchAll,
+                            modifier = Modifier.padding(16.dp)
+                        )
                     }
                 } else {
                     HorizontalPager(
@@ -287,21 +377,32 @@ fun ExploreContent(
                         pageSpacing = 16.dp,
                         modifier = Modifier.fillMaxWidth()
                     ) { page ->
-                        val social = socials[page]
-                        val categoryEmoji = SocialCategory.entries.find { it.name.equals(social.category, ignoreCase = true) }?.emoji ?: "📌"
-                        
-                        ExploreCard(
-                            social = social,
-                            categoryEmoji = categoryEmoji,
-                            onClick = { onSocialClick(social) }
-                        )
+                        // Add safety check
+                        if (page < socials.size) {
+                            val social = socials[page]
+
+                            // Trigger load more when reaching the last item
+                            if (page == socials.size - 1) {
+                                LaunchedEffect(Unit) {
+                                    onLoadMore()
+                                }
+                            }
+
+                            val categoryEmoji = SocialCategory.entries.find { it.name.equals(social.category, ignoreCase = true) }?.emoji ?: "📌"
+
+                            ExploreCard(
+                                social = social,
+                                categoryEmoji = categoryEmoji,
+                                onClick = { onSocialClick(social) }
+                            )
+                        }
                     }
                 }
             }
 
             // Current Location FAB
             FloatingActionButton(
-                onClick = { /* Handle current location center */ },
+                onClick = onRefreshLocation,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .statusBarsPadding()
@@ -344,7 +445,7 @@ private fun ExploreCard(
                         )
                     }
                     AsyncImage(
-                        model = social.userAvatar,
+                        model = ImageUtils.getFullImageUrl(social.userAvatar),
                         contentDescription = null,
                         modifier = Modifier
                             .size(48.dp)
@@ -397,7 +498,7 @@ private fun ExploreCard(
                     Box {
                         social.participantAvatars?.take(3)?.forEachIndexed { index, avatar ->
                             AsyncImage(
-                                model = avatar,
+                                model = ImageUtils.getFullImageUrl(avatar),
                                 contentDescription = null,
                                 modifier = Modifier
                                     .padding(start = (index * 16).dp)
@@ -416,139 +517,163 @@ private fun ExploreCard(
                     )
                 }
 
-                // Action Button
-                Button(
-                    onClick = onClick, // Navigate to detail
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (social.socialType == SocialType.BUSINESS) Color(0xFFF97316) else Color(0xFFA855F7)
-                    ),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
-                    modifier = Modifier.height(36.dp)
-                ) {
-                    Text("I'M DOWN", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
-                }
             }
         }
     }
 }
 
-@Composable
-fun VibePulse(color: Color) {
-    val infiniteTransition = rememberInfiniteTransition()
 
-    val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 2.5f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Restart
-        )
-    )
-
-    val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.5f,
-        targetValue = 0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1200),
-            repeatMode = RepeatMode.Restart
-        )
-    )
-
-    Box(
-        modifier = Modifier
-            .size(48.dp)
-            .graphicsLayer {
-                scaleX = pulseScale
-                scaleY = pulseScale
-                alpha = pulseAlpha
-            }
-            .background(color, CircleShape)
-    )
-}
 
 
 @Composable
 private fun MapPin(
-    avatar: String,
+    bitmap: Bitmap?,
     isBusiness: Boolean,
     categoryEmoji: String,
-    isSelected: Boolean
+    isSelected: Boolean,
+    baseColor: Color
 ) {
     val scale by animateFloatAsState(
-        targetValue = if (isSelected) 1.3f else 1f,
+        targetValue = if (isSelected) 1.2f else 1f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
     )
 
     Box(
         modifier = Modifier
-            .scale(scale),
-        contentAlignment = Alignment.Center
+            .size(60.dp, 70.dp), // Fixed size buffer to prevent clipping
+        contentAlignment = Alignment.BottomCenter
     ) {
-        if (isBusiness || isSelected) {
-            VibePulse(if (isBusiness) Color(0xFFF97316) else Color(0xFFA855F7))
-        }
-
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(contentAlignment = Alignment.TopEnd) {
-                // Pin Content (The Avatar)
-                Surface(
-                    modifier = Modifier.size(52.dp),
-                    shape = CircleShape,
-                    color = Color.White,
-                    shadowElevation = if (isSelected) 12.dp else 6.dp
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.scale(scale).padding(bottom = 5.dp) // Lift up slightly to leave room for shadow spreading down
+        ) {
+            // Pin Head
+            Surface(
+                modifier = Modifier.size(42.dp),
+                shape = CircleShape,
+                color = Color.White,
+                shadowElevation = if (isSelected) 8.dp else 4.dp
+            ) {
+                // Avatar Content
+                Box(
+                    modifier = Modifier.padding(2.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(modifier = Modifier.padding(3.dp)) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(LocalContext.current)
-                                .data(avatar)
-                                .allowHardware(false)
-                                .build(),
+                    if (bitmap != null) {
+                        Image(
+                            bitmap = bitmap.asImageBitmap(),
                             contentDescription = null,
                             modifier = Modifier
                                 .fillMaxSize()
                                 .clip(CircleShape),
                             contentScale = ContentScale.Crop
                         )
-                    }
-                }
-                
-                // Overlay Badge (Icon/Type)
-                Box(
-                    modifier = Modifier
-                        .offset(x = 4.dp, y = (-4).dp)
-                        .size(24.dp)
-                        .background(
-                            brush = if (isBusiness) Brush.horizontalGradient(listOf(Color(0xFFFDBA74), Color(0xFFF97316))) 
-                                    else Brush.horizontalGradient(listOf(Color(0xFF9333EA), Color(0xFFDB2777))),
-                            shape = CircleShape
-                        )
-                        .border(1.5.dp, Color.White, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (isBusiness) {
-                        Icon(
-                            imageVector = Icons.Default.Verified,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(12.dp)
-                        )
                     } else {
-                        Text(categoryEmoji, fontSize = 10.sp)
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color(0xFFF1F5F9), CircleShape)
+                        ) {
+                            Text(
+                                text = categoryEmoji,
+                                fontSize = 20.sp
+                            )
+                        }
                     }
                 }
             }
 
             // The "Tail" pointer
-            Canvas(modifier = Modifier.size(width = 16.dp, height = 12.dp).offset(y = (-4).dp)) {
-                val path = androidx.compose.ui.graphics.Path().apply {
+            Canvas(modifier = Modifier.size(width = 12.dp, height = 8.dp).offset(y = (-2).dp)) {
+                val path = Path().apply {
                     moveTo(0f, 0f)
                     lineTo(size.width, 0f)
                     lineTo(size.width / 2, size.height)
                     close()
                 }
                 drawPath(path, color = Color.White)
+
+                val inset = 2.dp.toPx()
+                val innerPath = Path().apply {
+                    moveTo(inset, 0f)
+                    lineTo(size.width - inset, 0f)
+                    lineTo(size.width / 2, size.height - inset)
+                    close()
+                }
+                // Use same gradient for tail interior
+//                drawPath(innerPath, color = if (isBusiness) Color(0xFFF97316) else baseColor)
             }
         }
+    }
+}
+
+
+@Preview(showBackground = true, backgroundColor = 0xFF000000)
+@Composable
+fun PreviewMapPin() {
+    Row(
+        modifier = Modifier
+            .padding(20.dp)
+            .width(300.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Normal Pin (Blue)
+        MapPin(
+            bitmap = null,
+            isBusiness = false,
+            categoryEmoji = "🏀",
+            isSelected = false,
+            baseColor = Color(0xFF3B82F6) // Blue
+        )
+        
+        // Business Pin (Orange)
+        MapPin(
+            bitmap = null,
+            isBusiness = true,
+            categoryEmoji = "",
+            isSelected = false,
+            baseColor = Color(0xFFF97316)
+        )
+        
+        // Selected Pin (Pink)
+        MapPin(
+            bitmap = null,
+            isBusiness = false,
+            categoryEmoji = "🎵",
+            isSelected = true,
+            baseColor = Color(0xFFEC4899)
+        )
+    }
+}
+
+fun urlToBitmap(
+    scope: CoroutineScope,
+    imageURL: String,
+    context: Context,
+    onSuccess: (bitmap: Bitmap) -> Unit,
+    onError: (error: Throwable) -> Unit
+) {
+    var bitmap: Bitmap? = null
+    val loadBitmap = scope.launch(Dispatchers.IO) {
+        val loader = ImageLoader(context)
+        val request = ImageRequest.Builder(context)
+            .data(imageURL)
+            .allowHardware(false)
+            .build()
+        val result = loader.execute(request)
+        if (result is SuccessResult) {
+            bitmap = (result.drawable as BitmapDrawable).bitmap
+        } else if (result is ErrorResult) {
+            cancel(result.throwable.localizedMessage ?: "ErrorResult", result.throwable)
+        }
+    }
+    loadBitmap.invokeOnCompletion { throwable ->
+        bitmap?.let {
+            onSuccess(it)
+        } ?: throwable?.let {
+            onError(it)
+        } ?: onError(Throwable("Undefined Error"))
     }
 }

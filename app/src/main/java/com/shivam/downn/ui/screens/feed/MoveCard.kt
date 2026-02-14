@@ -114,7 +114,7 @@ fun MoveCard(
                     // User Avatar
                     if (userAvatar != null) {
                         AsyncImage(
-                            model = userAvatar,
+                            model = com.shivam.downn.utils.ImageUtils.getFullImageUrl(userAvatar),
                             contentDescription = "User avatar",
                             modifier = Modifier
                                 .size(40.dp)
@@ -244,7 +244,7 @@ fun MoveCard(
                 ) {
                     participantAvatars?.take(3)?.forEach { avatar ->
                         AsyncImage(
-                            model = avatar,
+                            model = com.shivam.downn.utils.ImageUtils.getFullImageUrl(avatar),
                             contentDescription = "Participant",
                             modifier = Modifier
                                 .size(32.dp)
@@ -284,63 +284,6 @@ fun MoveCard(
                     )
                 }
 
-                if (!isParticipant && !isOwner) {
-                    val buttonText = when {
-                        isRejected -> "REJECTED"
-                        isRequested -> "REQUESTED"
-                        else -> "I'M DOWN"
-                    }
-                    val isButtonEnabled = !isRequested && !isRejected
-
-                    Button(
-                        onClick = { if (isButtonEnabled) onJoinClick() },
-                        modifier = Modifier.height(40.dp),
-                        enabled = isButtonEnabled,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = when {
-                                isRejected -> Color(0xFFEF4444).copy(alpha = 0.1f)
-                                isRequested -> Color(0xFFF97316).copy(alpha = 0.2f)
-                                isBusiness -> Color(0xFFF97316)
-                                else -> MaterialTheme.colorScheme.primary
-                            },
-                            contentColor = when {
-                                isRejected -> Color(0xFFEF4444)
-                                isRequested -> Color(0xFFF97316)
-                                else -> Color.White
-                            },
-                            disabledContainerColor = when {
-                                isRejected -> Color(0xFFEF4444).copy(alpha = 0.1f)
-                                isRequested -> Color(0xFFF97316).copy(alpha = 0.2f)
-                                else -> Color(0xFF1E293B)
-                            },
-                            disabledContentColor = when {
-                                isRejected -> Color(0xFFEF4444)
-                                isRequested -> Color(0xFFF97316)
-                                else -> Color(0xFF94A3B8)
-                            }
-                        ),
-                        shape = RoundedCornerShape(20.dp),
-                        border = when {
-                            isRejected -> BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.5f))
-                            isRequested -> BorderStroke(1.dp, Color(0xFFF97316).copy(alpha = 0.5f))
-                            else -> null
-                        }
-                    ) {
-                        if (!isRequested && !isRejected) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                        }
-                        Text(
-                            text = buttonText,
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
             }
         }
     }
@@ -359,7 +302,7 @@ fun UserAvatar(
 ) {
     if (avatarUrl != null) {
         AsyncImage(
-            model = avatarUrl,
+            model = com.shivam.downn.utils.ImageUtils.getFullImageUrl(avatarUrl),
             contentDescription = "$userName's avatar",
             modifier = modifier
                 .size(size.dp)

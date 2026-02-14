@@ -283,9 +283,9 @@ fun BusinessProfileContent(
 
 @Composable
 fun BusinessHeader(coverImage: String, avatar: String, name: String) {
-    Box(modifier = Modifier.fillMaxWidth().height(280.dp)) {
+        Box(modifier = Modifier.fillMaxWidth().height(280.dp)) {
         AsyncImage(
-            model = coverImage,
+            model = com.shivam.downn.utils.ImageUtils.getFullImageUrl(coverImage),
             contentDescription = null,
             modifier = Modifier.fillMaxWidth().height(200.dp),
             contentScale = ContentScale.Crop
@@ -298,7 +298,7 @@ fun BusinessHeader(coverImage: String, avatar: String, name: String) {
         ) {
             Column {
                 AsyncImage(
-                    model = avatar,
+                    model = com.shivam.downn.utils.ImageUtils.getFullImageUrl(avatar),
                     contentDescription = null,
                     modifier = Modifier
                         .size(100.dp)
@@ -458,7 +458,7 @@ private fun ProfileSwitcherBottomSheet(
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     AsyncImage(
-                        model = profile.avatar,
+                        model = com.shivam.downn.utils.ImageUtils.getFullImageUrl(profile.avatar),
                         contentDescription = profile.name,
                         modifier = Modifier
                             .size(48.dp)

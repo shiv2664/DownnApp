@@ -6,7 +6,8 @@ import okhttp3.Response
 import javax.inject.Inject
 
 class AuthInterceptor @Inject constructor(
-    private val prefsManager: PrefsManager
+    private val prefsManager: PrefsManager,
+    private val sessionManager: com.shivam.downn.data.local.SessionManager
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request().newBuilder()
@@ -16,6 +17,15 @@ class AuthInterceptor @Inject constructor(
             request.addHeader("Authorization", "Bearer $token")
         }
         
-        return chain.proceed(request.build())
+        val response = chain.proceed(request.build())
+        
+        if (response.code == 401) {
+            // Token expired or invalid
+            kotlinx.coroutines.runBlocking {
+                sessionManager.logout("Session expired, please login again.")
+            }
+        }
+        
+        return response
     }
 }

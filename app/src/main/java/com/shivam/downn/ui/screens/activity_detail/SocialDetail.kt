@@ -48,11 +48,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.rememberModalBottomSheetState
 
-data class Participant(
-    val id: Int,
-    val name: String,
-    val avatar: String
-)
 
 data class ChatPreview(
     val id: Int,
@@ -68,22 +63,28 @@ fun SocialDetail(
     currentUserId: Long,
     leaveState: NetworkResult<Unit>? = null,
     removeState: NetworkResult<Unit>? = null,
+    deleteState: NetworkResult<Unit>? = null,
     onClose: () -> Unit,
     onOpenChat: () -> Unit,
-    onViewProfile: (userId: Long) -> Unit,
+    onViewProfile: (userId: Long, isBusiness: Boolean) -> Unit,
     onSeeAllParticipants: () -> Unit,
     onJoinSocial: (socialId: Int) -> Unit,
     onLeaveSocial: (socialId: Int) -> Unit,
-    onRemoveParticipant: (socialId: Int, participantId: Long) -> Unit
+    onRemoveParticipant: (socialId: Int, participantId: Long) -> Unit,
+    onDeleteActivity: (socialId: Int) -> Unit = {}
 ) {
     val isOwner = social.userId?.toLong() == currentUserId
     val isParticipant = social.participants.any { it.id == currentUserId }
     val isRequested = social.requestedUserIds?.contains(currentUserId) == true
     val isRejected = social.rejectedUserIds?.contains(currentUserId) == true
+    val isBusiness = social.socialType == SocialType.BUSINESS
 
     var showParticipantActionSheet by remember { mutableStateOf(false) }
+    var showMenu by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -105,18 +106,29 @@ fun SocialDetail(
         }
     }
 
+    // Handle Delete Success
+    LaunchedEffect(deleteState) {
+        if (deleteState is NetworkResult.Success) {
+            onClose()
+        } else if (deleteState is NetworkResult.Error) {
+            snackbarHostState.showSnackbar(deleteState.message ?: "Failed to delete activity")
+        }
+    }
+
     val title = social.title
-    val userName = social.userName ?: "Unknown"
-    val userAvatar = social.userAvatar ?: ""
+    val userName = if (social.socialType == SocialType.BUSINESS && social.profile != null)
+        social.profile.name else (social.userName ?: "Unknown")
+    val userAvatar = if (social.socialType == SocialType.BUSINESS && social.profile != null)
+        (social.profile.avatar ?: "") else (social.userAvatar ?: "")
     val distance = social.distance ?: "Nearby"
     val participantCount = social.participantCount
-    val isBusiness = social.socialType == SocialType.BUSINESS
+
     val primaryColor = if (isBusiness) Color(0xFFF97316) else Color(0xFFA855F7)
     val secondaryColor = if (isBusiness) Color(0xFFFDBA74) else Color(0xFF3B82F6)
     val accentBrush = if (isBusiness) {
-        Brush.horizontalGradient(listOf(Color(0xFFFDBA74), Color(0xFFF97316)))
+        Brush.horizontalGradient(listOf(Color(0xFFF97316), Color(0xFFEA580C)))
     } else {
-        Brush.horizontalGradient(listOf(Color(0xFF9333EA), Color(0xFFDB2777)))
+        Brush.horizontalGradient(listOf(Color(0xFF8B5CF6), Color(0xFFEC4899)))
     }
 
     val eventLatLng = remember(social.latitude, social.longitude) {
@@ -144,21 +156,13 @@ fun SocialDetail(
             modifier = Modifier.size(20.dp)
         )
     }
-    val categoryColor = primaryColor
+    val categoryColor = if (isBusiness) Color(0xFFF97316) else Color(0xFFA855F7)
     val images = emptyList<String>() // You can add images from API if available
     val description: String? = social.description
 
     val headerImage =
         images.firstOrNull() ?: "https://images.unsplash.com/photo-1668884405041-aa8963908538"
-    val participants = listOf(
-        Participant(1, "Sarah K.", "https://images.unsplash.com/photo-1638996030249-abc99a735463"),
-        Participant(2, "Mike R.", "https://images.unsplash.com/photo-1567516364473-233c4b6fcfbe"),
-        Participant(
-            3,
-            "Emma L.",
-            "https://images.unsplash.com/flagged/photo-1596479042555-9265a7fa7983"
-        ),
-    )
+    val participants = social.participants
     val chats = listOf(
         ChatPreview(1, "Sarah K.", "Can't wait for this! 🎉", "2m ago"),
         ChatPreview(2, "Mike R.", "Should I bring anything?", "5m ago"),
@@ -196,8 +200,8 @@ fun SocialDetail(
                     )
                     {
                         AsyncImage(
-                            model = headerImage,
-                            contentDescription = title,
+                            model = com.shivam.downn.utils.ImageUtils.getFullImageUrl(headerImage),
+                            contentDescription = social.title,
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )
@@ -226,7 +230,7 @@ fun SocialDetail(
                     // Title section
                     Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp)) {
                         Text(
-                            title,
+                            social.title,
                             color = Color.White,
                             fontSize = 32.sp,
                             fontWeight = FontWeight.Bold
@@ -237,48 +241,40 @@ fun SocialDetail(
                         ) {
                             InfoChip(
                                 Icons.Default.Schedule,
-                                social.scheduledTime ?: "TBD",
+                                com.shivam.downn.utils.DateUtils.formatEventTime(social.scheduledTime),
                                 primaryColor
                             )
-                            InfoChip(Icons.Default.Place, distance ?: "Nearby", secondaryColor)
+                            InfoChip(Icons.Default.Place, social.distance ?: "Nearby", secondaryColor)
                             if (isBusiness) {
-                                InfoChip(Icons.Default.Star, "4.9", Color(0xFFF59E0B))
+                                InfoChip(Icons.Default.Verified, "4.9", Color(0xFF22C55E))
                             }
                         }
-                    }
 
-                    // Host Profile
-                    Card(
-                        modifier = Modifier.padding(horizontal = 20.dp),
-                        shape = RoundedCornerShape(24.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = Color(0xFF1E293B).copy(
-                                alpha = 0.5f
-                            )
-                        ),
-                        border = BorderStroke(1.dp, Color(0xFF334155).copy(alpha = 0.5f))
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                "HOSTED BY",
-                                color = Color(0xFF94A3B8),
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp
-                            )
+                        // Host info
+                        val userName = if (social.socialType == SocialType.BUSINESS && social.profile != null)
+                            social.profile.name else (social.userName ?: "Unknown")
+                        val userAvatar = if (social.socialType == SocialType.BUSINESS && social.profile != null)
+                            (social.profile.avatar ?: "") else (social.userAvatar ?: "")
+
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 24.dp),
+                            color = Color(0xFF1E293B).copy(alpha = 0.5f),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
                             Row(
-                                modifier = Modifier.padding(top = 12.dp),
+                                modifier = Modifier.padding(16.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 AsyncImage(
-                                    model = userAvatar,
-                                    contentDescription = userName,
+                                    model = com.shivam.downn.utils.ImageUtils.getFullImageUrl(userAvatar),
+                                    contentDescription = "Host",
                                     modifier = Modifier
                                         .size(48.dp)
                                         .clip(CircleShape)
-                                        .border(
-                                            2.dp,
+                                        .background(
                                             primaryColor.copy(alpha = 0.5f),
                                             CircleShape
                                         ),
@@ -311,7 +307,13 @@ fun SocialDetail(
                                     )
                                 }
                                 Button(
-                                    onClick = { onViewProfile(1) },
+                                    onClick = {
+                                        if (isBusiness && social.profile != null) {
+                                            onViewProfile(social.profile.id, true)
+                                        } else {
+                                            social.userId?.let { onViewProfile(it.toLong(), false) }
+                                        }
+                                    },
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = Color(
                                             0xFF334155
@@ -386,7 +388,7 @@ fun SocialDetail(
                                 color = primaryColor,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Medium,
-                                modifier = Modifier.clickable { onSeeAllParticipants() }
+                                modifier = Modifier.clickable { showParticipantActionSheet = true }
                             )
                         }
                         LazyRow(
@@ -394,7 +396,7 @@ fun SocialDetail(
                             horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             items(participants) { participant ->
-                                AvatarsItem(participant.avatar, participant.name, accentBrush)
+                                AvatarsItem(participant.avatar ?: "", participant.name, accentBrush)
                             }
                         }
                     }
@@ -665,25 +667,114 @@ fun SocialDetail(
                             tint = Color.White
                         )
                     }
-                    IconButton(
-                        onClick = {
-                            if (isOwner) {
-                                showParticipantActionSheet = true
-                            } else {
-                                // Default share action
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        IconButton(
+                            onClick = {
+                                if (isOwner) {
+                                    showParticipantActionSheet = true
+                                } else {
+                                    com.shivam.downn.utils.ShareUtils.shareActivity(
+                                        context,
+                                        social.id,
+                                        social.title
+                                    )
+                                }
+                            },
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.2f))
+                        ) {
+                            Icon(
+                                if (isOwner) Icons.Default.Groups else Icons.Outlined.Share,
+                                contentDescription = if (isOwner) "Manage Participants" else "Share",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        // More Menu for Report
+                        Box {
+                            IconButton(
+                                onClick = { showMenu = true },
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White.copy(alpha = 0.2f))
+                            ) {
+                                Icon(
+                                    Icons.Default.MoreVert,
+                                    contentDescription = "More",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
                             }
-                        },
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.2f))
-                    ) {
-                        Icon(
-                            if (isOwner) Icons.Default.Groups else Icons.Outlined.Share,
-                            contentDescription = if (isOwner) "Manage Participants" else "Share",
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
+
+                            DropdownMenu(
+                                expanded = showMenu,
+                                onDismissRequest = { showMenu = false },
+                                modifier = Modifier.background(Color(0xFF1E293B))
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Share", color = Color.White) },
+                                    onClick = {
+                                        showMenu = false
+                                        com.shivam.downn.utils.ShareUtils.shareActivity(
+                                            context,
+                                            social.id,
+                                            social.title
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Outlined.Share,
+                                            contentDescription = null,
+                                            tint = Color(0xFF94A3B8)
+                                        )
+                                    }
+                                )
+                                HorizontalDivider(color = Color(0xFF334155))
+                                DropdownMenuItem(
+                                    text = { Text("Report", color = Color.White) },
+                                    onClick = {
+                                        showMenu = false
+                                        scope.launch {
+                                            snackbarHostState.showSnackbar("Reported. Thank you for keeping Downn safe.")
+                                        }
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.Flag,
+                                            contentDescription = null,
+                                            tint = Color(0xFFEF4444)
+                                        )
+                                    }
+                                )
+                                if (isOwner) {
+                                    HorizontalDivider(color = Color(0xFF334155))
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                "Delete Activity",
+                                                color = Color(0xFFEF4444)
+                                            )
+                                        },
+                                        onClick = {
+                                            showMenu = false
+                                            showDeleteConfirm = true
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                Icons.Default.Delete,
+                                                contentDescription = null,
+                                                tint = Color(0xFFEF4444)
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -833,79 +924,126 @@ fun SocialDetail(
                         }
                     }
                 }
-     // Participant Management Sheet
-                    if (showParticipantActionSheet) {
-                        ModalBottomSheet(
-                            onDismissRequest = { showParticipantActionSheet = false },
-                            sheetState = sheetState,
-                            containerColor = Color(0xFF1E293B),
-                            scrimColor = Color.Black.copy(alpha = 0.5f)
+                // Participant Management Sheet
+                if (showParticipantActionSheet) {
+                    ModalBottomSheet(
+                        onDismissRequest = { showParticipantActionSheet = false },
+                        sheetState = sheetState,
+                        containerColor = Color(0xFF1E293B),
+                        scrimColor = Color.Black.copy(alpha = 0.5f)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp)
+                                .padding(bottom = 48.dp)
                         ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 24.dp)
-                                    .padding(bottom = 48.dp)
-                            ) {
-                                Text(
-                                    "Manage Participants",
-                                    color = Color.White,
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(bottom = 24.dp)
-                                )
+                            Text(
+                                if (isOwner) "Manage Participants" else "Participants",
+                                color = Color.White,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(bottom = 24.dp)
+                            )
 
-                                social.participants.forEach { participant ->
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 12.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        AsyncImage(
-                                            model = participant.avatar,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(40.dp).clip(CircleShape)
-                                        )
-                                        Text(
-                                            participant.name,
-                                            color = Color.White,
-                                            modifier = Modifier.weight(1f)
-                                                .padding(horizontal = 16.dp),
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                        if (participant.id != currentUserId) {
-                                            TextButton(
-                                                onClick = {
-                                                    onRemoveParticipant(
-                                                        social.id,
-                                                        participant.id
-                                                    )
-                                                },
-                                                colors = ButtonDefaults.textButtonColors(
-                                                    contentColor = Color(0xFFEF4444)
+                            social.participants.forEach { participant ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    AsyncImage(
+                                        model = com.shivam.downn.utils.ImageUtils.getFullImageUrl(participant.avatar),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(40.dp).clip(CircleShape),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                    Text(
+                                        participant.name,
+                                        color = Color.White,
+                                        modifier = Modifier.weight(1f)
+                                            .padding(horizontal = 16.dp),
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    if (isOwner && participant.id != currentUserId) {
+                                        TextButton(
+                                            onClick = {
+                                                onRemoveParticipant(
+                                                    social.id,
+                                                    participant.id
                                                 )
-                                            ) {
-                                                Text("Remove")
-                                            }
-                                        } else {
-                                            Text(
-                                                "Owner",
-                                                color = primaryColor,
-                                                fontSize = 12.sp,
-                                                fontWeight = FontWeight.Bold
+                                            },
+                                            colors = ButtonDefaults.textButtonColors(
+                                                contentColor = Color(0xFFEF4444)
                                             )
+                                        ) {
+                                            Text("Remove")
                                         }
+                                    } else if (participant.id == currentUserId) {
+                                        Text(
+                                            if (isOwner) "Owner" else "You",
+                                            color = primaryColor,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    } else if (social.userId?.toLong() == participant.id) {
+                                        Text(
+                                            "Host",
+                                            color = primaryColor,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
                                     }
-                                    Divider(color = Color(0xFF334155), thickness = 0.5.dp)
                                 }
+                                Divider(color = Color(0xFF334155), thickness = 0.5.dp)
                             }
                         }
                     }
                 }
             }
         }
+
+
+        // Delete Confirmation Dialog
+        if (showDeleteConfirm) {
+            AlertDialog(
+                onDismissRequest = { showDeleteConfirm = false },
+                title = {
+                    Text(
+                        "Delete Activity",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                text = {
+                    Text(
+                        "Are you sure you want to delete this activity? This action cannot be undone.",
+                        color = Color(0xFF94A3B8)
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showDeleteConfirm = false
+                            onDeleteActivity(social.id)
+                        },
+                        colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFEF4444))
+                    ) {
+                        Text("Delete", fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteConfirm = false }) {
+                        Text("Cancel", color = Color(0xFF94A3B8))
+                    }
+                },
+                containerColor = Color(0xFF1E293B),
+                shape = RoundedCornerShape(24.dp)
+            )
+        }
     }
+}
 
 
     @Composable
@@ -954,7 +1092,7 @@ fun SocialDetail(
                     .padding(2.dp)
             ) {
                 AsyncImage(
-                    model = avatar,
+                    model = com.shivam.downn.utils.ImageUtils.getFullImageUrl(avatar),
                     contentDescription = name,
                     modifier = Modifier
                         .fillMaxSize()
@@ -997,7 +1135,7 @@ fun SocialDetail(
             currentUserId = 2, // Not the owner
             onClose = {},
             onOpenChat = {},
-            onViewProfile = {},
+            onViewProfile = { _, _ -> },
             onSeeAllParticipants = {},
             onJoinSocial = {},
             onLeaveSocial = {},

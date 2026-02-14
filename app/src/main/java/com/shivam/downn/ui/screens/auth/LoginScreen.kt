@@ -28,6 +28,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -76,6 +80,7 @@ fun LoginContent(
     var password by remember { mutableStateOf("") }
     var name by remember { mutableStateOf("") }
     var phoneNumber by remember { mutableStateOf("") }
+    var validationError by remember { mutableStateOf<String?>(null) }
 
     Box(
         modifier = Modifier
@@ -150,13 +155,15 @@ fun LoginContent(
 
             AnimatedContent(targetState = isRegisterMode, label = "form") { isRegister ->
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    if (isRegister) {
+                    if (isRegisterMode) {
                         OutlinedTextField(
                             value = name,
-                            onValueChange = { name = it },
+                            onValueChange = { if (it.length <= 50) name = it },
                             label = { Text("Full Name") },
                             modifier = Modifier.fillMaxWidth(),
                             leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                             shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedTextColor = Color.White,
@@ -167,11 +174,12 @@ fun LoginContent(
                         )
                         OutlinedTextField(
                             value = phoneNumber,
-                            onValueChange = { phoneNumber = it },
+                            onValueChange = { if (it.length <= 15 && it.all { char -> char.isDigit() }) phoneNumber = it },
                             label = { Text("Phone Number") },
                             modifier = Modifier.fillMaxWidth(),
                             leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                             shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedTextColor = Color.White,
@@ -184,11 +192,12 @@ fun LoginContent(
 
                     OutlinedTextField(
                         value = email,
-                        onValueChange = { email = it },
+                        onValueChange = { if (it.length <= 100) email = it },
                         label = { Text("Email Address") },
                         modifier = Modifier.fillMaxWidth(),
                         leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = Color.White,
@@ -198,14 +207,27 @@ fun LoginContent(
                         )
                     )
 
+                    var passwordVisible by remember { mutableStateOf(false) }
                     OutlinedTextField(
                         value = password,
-                        onValueChange = { password = it },
+                        onValueChange = { if (it.length <= 50) password = it },
                         label = { Text("Password") },
                         modifier = Modifier.fillMaxWidth(),
                         leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-                        visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        trailingIcon = {
+                            val image = if (passwordVisible)
+                                Icons.Default.Visibility
+                            else Icons.Default.VisibilityOff
+
+                            val description = if (passwordVisible) "Hide password" else "Show password"
+
+                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                Icon(imageVector = image, contentDescription = description)
+                            }
+                        },
+                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = Color.White,
@@ -221,6 +243,15 @@ fun LoginContent(
 
 
 
+            if (validationError != null) {
+                Text(
+                    text = validationError!!,
+                    color = Color.Red,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+            }
+
             if (authState is NetworkResult.Error) {
                 authState.message?.let {
                     Text(
@@ -234,6 +265,33 @@ fun LoginContent(
 
             Button(
                 onClick = {
+                    validationError = null
+                    
+                    // Validation Logic
+                    val isEmailValid = android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
+                    
+                    if (isRegisterMode) {
+                        if (name.isBlank() || phoneNumber.isBlank() || email.isBlank() || password.isBlank()) {
+                            validationError = "All fields are required"
+                            return@Button
+                        }
+                    } else {
+                         if (email.isBlank() || password.isBlank()) {
+                            validationError = "Email and password are required"
+                            return@Button
+                        }
+                    }
+                    
+                    if (!isEmailValid) {
+                        validationError = "Invalid email address"
+                        return@Button
+                    }
+                    
+                    if (password.length < 6) {
+                        validationError = "Password must be at least 6 characters"
+                        return@Button
+                    }
+
                     if (isRegisterMode) {
                         onRegisterClick(name, phoneNumber, email, password)
                     } else {

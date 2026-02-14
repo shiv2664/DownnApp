@@ -33,7 +33,9 @@ data class SocialResponse(
     @SerializedName("latitude") val latitude: Double? = null,
     @SerializedName("longitude") val longitude: Double? = null,
     @SerializedName("rejectedUserIds") val rejectedUserIds: MutableSet<Long>? = mutableSetOf(),
-    @SerializedName("requestedUserIds") val requestedUserIds: MutableSet<Long>? = mutableSetOf()
+    @SerializedName("requestedUserIds") val requestedUserIds: MutableSet<Long>? = mutableSetOf(),
+    @SerializedName("images") val images: List<String> = emptyList(),
+    @SerializedName("profile") val profile: ProfileResponse? = null
 )
 
 data class CreateSocialRequest(

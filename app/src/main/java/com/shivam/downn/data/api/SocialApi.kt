@@ -2,39 +2,57 @@ package com.shivam.downn.data.api
 
 import com.shivam.downn.data.models.SocialResponse
 import com.shivam.downn.data.models.CreateSocialRequest
+import com.shivam.downn.data.models.PagedResponse
 
 import retrofit2.Response
 import okhttp3.MultipartBody
-import retrofit2.http.Multipart
-import retrofit2.http.Part
 import retrofit2.http.*
 
 interface SocialApi {
-    @POST("api/activities")
-    suspend fun createSocial(@Body request: CreateSocialRequest): Response<SocialResponse>
+    @Multipart
+    @POST
+    suspend fun createSocial(
+        @Url url: String,
+        @Part("activity") request: okhttp3.RequestBody,
+        @Part images: List<MultipartBody.Part>? = null
+    ): Response<SocialResponse>
 
-    @GET("api/activities/city/{city}")
+    @GET
     suspend fun getSocialsByCity(
-        @Path("city") city: String,
-        @Query("category") category: String?=null
-    ): Response<List<SocialResponse>>
+        @Url url: String,
+        @Query("category") category: String? = null,
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 10
+    ): Response<PagedResponse<SocialResponse>>
 
-    @GET("api/activities/recent")
-    suspend fun getRecentSocials(): Response<List<SocialResponse>>
+    @GET
+    suspend fun getUserSocials(
+        @Url url: String,
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 10
+    ): Response<PagedResponse<SocialResponse>>
 
-    @GET("api/activities/{id}")
-    suspend fun getSocialById(@Path("id") socialId: Int): Response<SocialResponse>
+    @GET
+    suspend fun getRecentSocials(@Url url: String): Response<List<SocialResponse>>
 
-    @POST("api/activities/{id}/request-to-join")
-    suspend fun joinSocial(@Path("id") socialId: Int): Response<Unit>
+    @GET
+    suspend fun getSocialById(@Url url: String): Response<SocialResponse>
 
-    @DELETE("api/activities/{id}/leave")
-    suspend fun leaveSocial(@Path("id") socialId: Int): Response<Unit>
+    @POST
+    suspend fun joinSocial(@Url url: String): Response<Unit>
 
-    @DELETE("api/activities/{id}/participants/{participantId}")
-    suspend fun removeParticipant(
-        @Path("id") socialId: Int,
-        @Path("participantId") participantId: Long
-    ): Response<Unit>
+    @DELETE
+    suspend fun leaveSocial(@Url url: String): Response<Unit>
+
+    @DELETE
+    suspend fun removeParticipant(@Url url: String): Response<Unit>
+
+    @DELETE
+    suspend fun deleteActivity(@Url url: String): Response<Unit>
+
+    @PUT
+    suspend fun updateActivity(
+        @Url url: String,
+        @Body request: CreateSocialRequest
+    ): Response<SocialResponse>
 }
-

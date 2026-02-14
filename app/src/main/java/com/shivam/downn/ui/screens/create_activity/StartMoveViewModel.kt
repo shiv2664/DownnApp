@@ -18,10 +18,14 @@ import kotlinx.coroutines.launch
 import okhttp3.MultipartBody
 import javax.inject.Inject
 import com.shivam.downn.utils.createMultipartBodyPart
+import com.shivam.downn.data.repository.ProfileRepository
+import kotlinx.coroutines.flow.first
+import com.shivam.downn.data.models.ProfileResponse
 
 @HiltViewModel
 class StartMoveViewModel @Inject constructor(
     private val socialRepository: SocialRepository,
+    private val profileRepository: ProfileRepository,
     private val prefsManager: PrefsManager,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
@@ -44,6 +48,56 @@ class StartMoveViewModel @Inject constructor(
         viewModelScope.launch {
             _state.value = NetworkResult.Loading()
 
+            var activeProfileId = prefsManager.getActiveProfileId()
+
+            if (activeProfileId == -1L) {
+                try {
+                     socialRepository.getSocialsPaged("Denver", null, 0, 1) // Dummy call to wake up if needed? No.
+                     // Fetch profiles
+                     profileRepository.getProfiles().collect { result ->
+                         if (result is NetworkResult.Loading) return@collect
+                         
+                         if (result is NetworkResult.Success) {
+                             val profiles = result.data
+                             if (!profiles.isNullOrEmpty()) {
+                                 activeProfileId = profiles.first().id
+                                 prefsManager.saveActiveProfileId(activeProfileId)
+                                 proceedWithCreation(title, description, category, city, locationName, scheduledTime, maxParticipants, latitude, longitude, imageUri, activeProfileId)
+                             } else {
+                                 _state.value = NetworkResult.Error("No profile found. Please create a profile first.")
+                             }
+                         } else if (result is NetworkResult.Error) {
+                             // Fallback to userId if profile fetch fails, but likely to fail on backend too if mismatched
+                             // But let's try the old way as last resort or show error
+                             _state.value = NetworkResult.Error(result.message ?: "Failed to fetch profile")
+                         }
+                         throw java.util.concurrent.CancellationException("Profile fetched")
+                     }
+                } catch (e: java.util.concurrent.CancellationException) {
+                    // ignore
+                } catch (e: Exception) {
+                    _state.value = NetworkResult.Error("Error: ${e.message}")
+                }
+            } else {
+                proceedWithCreation(title, description, category, city, locationName, scheduledTime, maxParticipants, latitude, longitude, imageUri, activeProfileId)
+            }
+        }
+    }
+
+    private fun proceedWithCreation(
+        title: String,
+        description: String,
+        category: String,
+        city: String,
+        locationName: String,
+        scheduledTime: String,
+        maxParticipants: Int,
+        latitude: Double?,
+        longitude: Double?,
+        imageUri: Uri?,
+        profileId: Long
+    ) {
+        viewModelScope.launch {
             val imageParts = mutableListOf<MultipartBody.Part>()
             imageUri?.let {
                 val part = context.createMultipartBodyPart(it, "images")
@@ -55,7 +109,6 @@ class StartMoveViewModel @Inject constructor(
                 }
             }
 
-            val activeProfileId = prefsManager.getActiveProfileId()
             val request = CreateSocialRequest(
                 title = title,
                 description = description,
@@ -64,11 +117,11 @@ class StartMoveViewModel @Inject constructor(
                 locationName = locationName,
                 scheduledTime = scheduledTime,
                 maxParticipants = maxParticipants,
-                profileId = if (activeProfileId != -1L) activeProfileId else prefsManager.getUserId(),
+                profileId = profileId,
                 latitude = latitude,
                 longitude = longitude
             )
-            socialRepository.createSocial(request).collectLatest {
+            socialRepository.createSocial(request, if (imageParts.isNotEmpty()) imageParts else null).collectLatest {
                 _state.value = it
             }
         }

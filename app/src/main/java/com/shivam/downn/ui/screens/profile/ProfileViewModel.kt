@@ -24,10 +24,13 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+import com.shivam.downn.data.repository.SocialRepository
+
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val prefsManager: PrefsManager,
     private val profileRepository: ProfileRepository,
+    private val socialRepository: SocialRepository, // Injected SocialRepository
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -46,6 +49,17 @@ class ProfileViewModel @Inject constructor(
     private val _userUpdateResponse = MutableStateFlow<NetworkResult<UserDetailsResponse>?>(null)
     val userUpdateResponse: StateFlow<NetworkResult<UserDetailsResponse>?> =
         _userUpdateResponse.asStateFlow()
+
+    // Pagination for User Activities
+    private val _userActivities = MutableStateFlow<NetworkResult<List<com.shivam.downn.data.models.SocialResponse>>>(NetworkResult.Loading())
+    val userActivities: StateFlow<NetworkResult<List<com.shivam.downn.data.models.SocialResponse>>> = _userActivities.asStateFlow()
+
+    private var userActivitiesPage = 0
+    private var isUserActivitiesLastPage = false
+    private var isUserActivitiesLoadingMore = false
+    private val pageSize = 10
+    private var currentUserActivityId: Long? = null
+
 
 
     init {
@@ -119,6 +133,21 @@ class ProfileViewModel @Inject constructor(
     }
 
     fun fetchCurrentUserDetails() {
+        // If activeProfile is null (e.g., init ran before login),
+        // try to re-initialize from PrefsManager
+        if (_activeProfile.value == null) {
+            prefsManager.getAuthResponse()?.let {
+                _activeProfile.value = it.toUserProfileData()
+            }
+        }
+
+        // If profiles are empty (e.g., loadProfiles failed during init because no token),
+        // reload them now that the user is authenticated
+        if (_profiles.value.isEmpty() && prefsManager.getToken() != null) {
+            loadProfiles()
+            return // loadProfiles will call fetchCurrentUserDetails after loading
+        }
+
         val currentProfile = _activeProfile.value ?: return
         viewModelScope.launch {
             if (currentProfile.type == ProfileType.PERSONAL) {
@@ -127,6 +156,8 @@ class ProfileViewModel @Inject constructor(
                     if (result is NetworkResult.Success) {
                         val updatedProfile = result.data?.toUserProfileData()
                         _activeProfile.value = updatedProfile
+                        // Fetch activities for the current user
+                        fetchUserActivities(updatedProfile!!.id, isRefresh = true)
                         // Also update in profiles list
                         updatedProfile?.let { it1 ->
                             _profiles.value =
@@ -166,7 +197,9 @@ class ProfileViewModel @Inject constructor(
         bio: String,
         location: String,
         coverImage: String,
-        vibes: List<String>
+        vibes: List<String>,
+        latitude: Double? = null,
+        longitude: Double? = null
     ) {
         viewModelScope.launch {
             val request = CreateProfileRequest(
@@ -174,7 +207,9 @@ class ProfileViewModel @Inject constructor(
                 bio = bio,
                 coverImage = coverImage,
                 vibes = vibes.joinToString(","),
-                type = ProfileType.BUSINESS
+                type = ProfileType.BUSINESS,
+                latitude = latitude,
+                longitude = longitude
             )
             profileRepository.createProfile(request).collectLatest { result ->
                 if (result is NetworkResult.Success) {
@@ -194,6 +229,13 @@ class ProfileViewModel @Inject constructor(
 
             profileRepository.updateUser(request, avatarPart).collectLatest { result ->
                 _userUpdateResponse.value = result
+                if (result is NetworkResult.Success) {
+                    val updatedUser = result.data?.toUserProfileData()
+                    updatedUser?.let {
+                        _activeProfile.value = it
+                        loadProfiles()
+                    }
+                }
             }
         }
     }
@@ -203,16 +245,25 @@ class ProfileViewModel @Inject constructor(
         name: String,
         bio: String,
         location: String,
-        vibes: List<String>,
+        vibes: String,
         avatarUri: Uri?,
-        coverUri: Uri?
+        coverUri: Uri?,
+        latitude: Double? = null,
+        longitude: Double? = null
     ) {
         viewModelScope.launch {
             val request =
-                UpdateProfileRequest(name = name, bio = bio, location = location, vibes = vibes)
+                UpdateProfileRequest(
+                    name = name, 
+                    bio = bio, 
+                    location = location, 
+                    vibes = vibes,
+                    latitude = latitude,
+                    longitude = longitude
+                )
             val avatarPart = avatarUri?.let { context.createMultipartBodyPart(it, "avatar") }
             val coverPart = coverUri?.let { context.createMultipartBodyPart(it, "cover") }
-
+            
             profileRepository.updateProfile(profileId, request, avatarPart, coverPart)
                 .collectLatest { result ->
                     // Handle result
@@ -220,6 +271,54 @@ class ProfileViewModel @Inject constructor(
                         loadProfiles() // Reload profiles to get updated data
                     }
                 }
+        }
+    }
+
+    fun fetchUserActivities(userId: Long, isRefresh: Boolean = false) {
+        if (isRefresh) {
+            userActivitiesPage = 0
+            isUserActivitiesLastPage = false
+            _userActivities.value = NetworkResult.Loading()
+        }
+        
+        currentUserActivityId = userId
+
+        viewModelScope.launch {
+            socialRepository.getUserSocials(userId, userActivitiesPage, pageSize).collectLatest { result ->
+                when (result) {
+                    is NetworkResult.Success -> {
+                        val pagedResponse = result.data
+                        val newItems = pagedResponse?.content ?: emptyList()
+                        isUserActivitiesLastPage = pagedResponse?.last ?: true
+
+                        if (userActivitiesPage == 0) {
+                             _userActivities.value = NetworkResult.Success(newItems)
+                        } else {
+                            val currentItems = (_userActivities.value.data ?: emptyList()) + newItems
+                            _userActivities.value = NetworkResult.Success(currentItems)
+                        }
+                    }
+                    is NetworkResult.Error -> {
+                         if (userActivitiesPage == 0) {
+                             _userActivities.value = NetworkResult.Error(result.message)
+                         }
+                    }
+                    is NetworkResult.Loading -> {
+                        if (userActivitiesPage == 0) {
+                            _userActivities.value = NetworkResult.Loading()
+                        }
+                    }
+                }
+                isUserActivitiesLoadingMore = false
+            }
+        }
+    }
+
+    fun loadMoreUserActivities() {
+        if (!isUserActivitiesLastPage && !isUserActivitiesLoadingMore && _userActivities.value is NetworkResult.Success) {
+            isUserActivitiesLoadingMore = true
+            userActivitiesPage++
+            currentUserActivityId?.let { fetchUserActivities(it) }
         }
     }
 }

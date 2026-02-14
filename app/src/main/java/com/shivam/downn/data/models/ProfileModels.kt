@@ -19,7 +19,9 @@ data class ProfileResponse(
     val location: String?,
     val type: ProfileType,
     val createdAt: LocalDateTime,
-    val avatarThumbnail: String?=""
+    val avatarThumbnail: String?="",
+    val latitude: Double? = null,
+    val longitude: Double? = null
 )
 
 data class CreateProfileRequest(
@@ -28,7 +30,9 @@ data class CreateProfileRequest(
     val coverImage: String? = null,
     val vibes: String? = null,
     val bio: String? = null,
-    val type: ProfileType = ProfileType.BUSINESS
+    val type: ProfileType = ProfileType.BUSINESS,
+    val latitude: Double? = null,
+    val longitude: Double? = null
 )
 
 data class InterestTag(
@@ -47,7 +51,9 @@ data class UpdateProfileRequest(
     val name: String,
     val bio: String,
     val location: String,
-    val vibes: List<String>
+    val vibes: String,
+    val latitude: Double? = null,
+    val longitude: Double? = null
 )
 
 data class UserDetailsResponse(
@@ -60,7 +66,9 @@ data class UserDetailsResponse(
     val location: String?="",
     val type: ProfileType?,
     val createdAt: LocalDateTime?,
-    val avatarThumbnail: String?=""
+    val avatarThumbnail: String?="",
+    val latitude: Double? = null,
+    val longitude: Double? = null
 )
 
 data class UserProfileData(
@@ -72,6 +80,8 @@ data class UserProfileData(
     val bio: String? = "",
     val location: String? = "Denver",
     val type: ProfileType,
-    val avatarThumbnail: String?=""
+    val avatarThumbnail: String?="",
+    val latitude: Double? = null,
+    val longitude: Double? = null
 )
 

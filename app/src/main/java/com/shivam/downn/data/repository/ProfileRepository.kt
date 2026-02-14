@@ -15,12 +15,14 @@ import javax.inject.Singleton
 
 @Singleton
 class ProfileRepository @Inject constructor(
-    private val profileApi: ProfileApi
+    private val profileApi: ProfileApi,
+    private val appSettingsRepository: AppSettingsRepository
 ) {
     fun getProfiles(): Flow<NetworkResult<List<ProfileResponse>>> = flow {
         emit(NetworkResult.Loading())
         try {
-            val response = profileApi.getProfiles()
+            val url = appSettingsRepository.getEndpoint("users.getProfiles")!!
+            val response = profileApi.getProfiles(url)
             if (response.isSuccessful && response.body() != null) {
                 emit(NetworkResult.Success(response.body()!!))
             } else {
@@ -34,7 +36,8 @@ class ProfileRepository @Inject constructor(
     fun createProfile(request: CreateProfileRequest): Flow<NetworkResult<ProfileResponse>> = flow {
         emit(NetworkResult.Loading())
         try {
-            val response = profileApi.createProfile(request)
+            val url = appSettingsRepository.getEndpoint("users.createProfile")!!
+            val response = profileApi.createProfile(url, request)
             if (response.isSuccessful && response.body() != null) {
                 emit(NetworkResult.Success(response.body()!!))
             } else {
@@ -48,7 +51,9 @@ class ProfileRepository @Inject constructor(
     fun getProfileDetails(profileId: Long): Flow<NetworkResult<ProfileResponse>> = flow {
         emit(NetworkResult.Loading())
         try {
-            val response = profileApi.getProfileDetails(profileId)
+            val urlTemplate = appSettingsRepository.getEndpoint("users.getProfileDetails")!!
+            val url = urlTemplate.replace("{profileId}", profileId.toString())
+            val response = profileApi.getProfileDetails(url)
             if (response.isSuccessful && response.body() != null) {
                 emit(NetworkResult.Success(response.body()!!))
             } else {
@@ -62,7 +67,9 @@ class ProfileRepository @Inject constructor(
     fun getUserDetails(userId: Long): Flow<NetworkResult<UserDetailsResponse>> = flow {
         emit(NetworkResult.Loading())
         try {
-            val response = profileApi.getUserDetails(userId)
+            val urlTemplate = appSettingsRepository.getEndpoint("users.getDetails")!!
+            val url = urlTemplate.replace("{userId}", userId.toString())
+            val response = profileApi.getUserDetails(url)
             if (response.isSuccessful && response.body() != null) {
                 emit(NetworkResult.Success(response.body()!!))
             } else {
@@ -79,7 +86,8 @@ class ProfileRepository @Inject constructor(
     ): Flow<NetworkResult<UserDetailsResponse>> = flow {
         emit(NetworkResult.Loading())
         try {
-            val response = profileApi.updateUser(request, avatar)
+            val url = appSettingsRepository.getEndpoint("users.updateUser")!!
+            val response = profileApi.updateUser(url, request, avatar)
             if (response.isSuccessful && response.body() != null) {
                 emit(NetworkResult.Success(response.body()!!))
             } else {
@@ -98,7 +106,9 @@ class ProfileRepository @Inject constructor(
     ): Flow<NetworkResult<ProfileResponse>> = flow {
         emit(NetworkResult.Loading())
         try {
-            val response = profileApi.updateProfile(profileId, request, avatar, cover)
+            val urlTemplate = appSettingsRepository.getEndpoint("users.updateProfile")!!
+            val url = urlTemplate.replace("{profileId}", profileId.toString())
+            val response = profileApi.updateProfile(url, request, avatar, cover)
             if (response.isSuccessful && response.body() != null) {
                 emit(NetworkResult.Success(response.body()!!))
             } else {

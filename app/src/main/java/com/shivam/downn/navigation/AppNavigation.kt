@@ -35,12 +35,54 @@ import com.shivam.downn.ui.screens.profile.EditBusinessProfileScreen
 import com.shivam.downn.ui.screens.profile.PublicProfileRoute
 import com.shivam.downn.ui.screens.profile.UserProfileRoute
 
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import com.shivam.downn.data.local.SessionManager
+
 @Composable
-fun AppNavigation(startDestination: String = "login") {
+fun AppNavigation(
+    startDestination: String = "login",
+    sessionManager: SessionManager? = null
+) {
     val navController = rememberNavController()
     val sharedProfileViewModel: ProfileViewModel = hiltViewModel()
+    val navigationViewModel: com.shivam.downn.navigation.NavigationViewModel = hiltViewModel()
+    val notificationViewModel: com.shivam.downn.ui.screens.notification.NotificationViewModel = hiltViewModel()
+    val unreadCount by notificationViewModel.unreadCount.collectAsState()
+    val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
 
-    Scaffold(bottomBar = { BottomBar(navController) }) { outerPadding ->
+    // Global Snackbar collection
+    LaunchedEffect(Unit) {
+        com.shivam.downn.utils.SnackbarManager.messages.collect { msg ->
+            snackbarHostState.showSnackbar(
+                message = msg.message,
+                actionLabel = msg.actionLabel,
+                duration = if (msg.isError) androidx.compose.material3.SnackbarDuration.Long 
+                           else androidx.compose.material3.SnackbarDuration.Short
+            )
+        }
+    }
+
+    val context = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(Unit) {
+        sessionManager?.logoutEvent?.collect { message ->
+            if (message != null) {
+                android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
+            }
+            navController.navigate("login") {
+                popUpTo(0) { inclusive = true }
+            }
+        }
+    }
+
+    Scaffold(
+        snackbarHost = { androidx.compose.material3.SnackbarHost(snackbarHostState) },
+        bottomBar = { 
+            BottomBar(navController, unreadNotificationCount = unreadCount) { route ->
+                navigationViewModel.onBottomNavClick(route)
+            }
+        }
+    ) { outerPadding ->
         NavHost(
             navController = navController,
             startDestination = startDestination,
@@ -183,7 +225,13 @@ fun AppNavigation(startDestination: String = "login") {
                     socialId = socialId,
                     onClose = { navController.navigateUp() },
                     onOpenChat = { navController.navigate("group_chat/$socialId") },
-                    onViewProfile = { userId -> navController.navigate("public_profile/$userId") },
+                    onViewProfile = { userId, isBusiness ->
+                        if (isBusiness) {
+                            navController.navigate("public_business_profile/$userId")
+                        } else {
+                            navController.navigate("public_profile/$userId")
+                        }
+                    },
                     onSeeAllParticipants = { id -> navController.navigate("participants/$id") }
                 )
             }

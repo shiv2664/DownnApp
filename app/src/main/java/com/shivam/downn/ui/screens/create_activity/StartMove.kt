@@ -35,6 +35,7 @@ import androidx.compose.material3.TimePickerDialog
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import com.shivam.downn.data.models.SocialResponse
+import com.shivam.downn.utils.TimeUtils
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -51,6 +52,7 @@ import com.shivam.downn.ui.components.FancyMap
 import com.google.maps.android.compose.MarkerComposable
 import com.google.maps.android.compose.rememberMarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import kotlinx.coroutines.launch
 
 data class Category(
     val id: String,
@@ -72,12 +74,12 @@ fun StartMove(
         state,
         outerPadding = outerPadding,
         onClose = onClose,
-        onCreateSocial = { title, description, category, location, time, lat, lng, imageUri ->
+        onCreateSocial = { title, description, category, city, location, time, lat, lng, imageUri ->
             viewModel.createSocial(
                 title = title,
                 description = description,
                 category = category,
-                city = "Denver",
+                city = city,
                 locationName = location,
                 scheduledTime = time,
                 maxParticipants = 10,
@@ -96,7 +98,7 @@ fun StartMoveContent(
     state: NetworkResult<SocialResponse?>?,
     outerPadding: PaddingValues,
     onClose: () -> Unit,
-    onCreateSocial: (String, String, String, String, String, Double?, Double?, Uri?) -> Unit,
+    onCreateSocial: (String, String, String, String, String, String, Double?, Double?, Uri?) -> Unit,
     onResetState: () -> Unit
 ) {
     var title by remember { mutableStateOf("") }
@@ -107,8 +109,11 @@ fun StartMoveContent(
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var latitude by remember { mutableStateOf<Double?>(null) }
     var longitude by remember { mutableStateOf<Double?>(null) }
+    var detectedCity by remember { mutableStateOf("Denver") } // Default fallback
     var showMapPicker by remember { mutableStateOf(false) }
-    
+
+    val scope = rememberCoroutineScope()
+
     // Default to a reasonable location if none selected (e.g., Denver)
     val mapCenter = remember(latitude, longitude) {
         if (latitude != null && longitude != null) LatLng(latitude!!, longitude!!)
@@ -116,7 +121,7 @@ fun StartMoveContent(
     }
 
     val previewCameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(mapCenter, 13f)
+        position = CameraPosition.fromLatLngZoom(mapCenter, 16f)
     }
 
     // Sync preview camera when coordinates change
@@ -124,7 +129,7 @@ fun StartMoveContent(
         if (latitude != null && longitude != null) {
             previewCameraPositionState.position = CameraPosition.fromLatLngZoom(
                 LatLng(latitude!!, longitude!!),
-                13f
+                16f
             )
         }
     }
@@ -423,9 +428,10 @@ fun StartMoveContent(
                             tint = Color(0xFF94A3B8)
                         )
                         Text(
-                            text = if (formattedDateTime.isNotEmpty()) formattedDateTime else "Select Time (Today)", // Updated placeholder
+                            text = if (formattedDateTime.isNotEmpty()) TimeUtils.formatScheduledTime(formattedDateTime) else "Select Time (Today)", // Updated placeholder
                             color = if (formattedDateTime.isNotEmpty()) Color.White else Color(0xFF64748B),
-                            fontSize = 16.sp
+                            fontSize = 16.sp,
+                            fontWeight = if (formattedDateTime.isNotEmpty()) FontWeight.Bold else FontWeight.Normal
                         )
                     }
                 }
@@ -508,10 +514,12 @@ fun StartMoveContent(
                         gesturesEnabled = false
                     ) {
                         if (latitude != null && longitude != null) {
-                            val markerState = rememberMarkerState(
-                                key = "${latitude}_${longitude}",
-                                position = LatLng(latitude!!, longitude!!)
-                            )
+                            val markerState = rememberMarkerState(position = LatLng(latitude!!, longitude!!))
+                            
+                            LaunchedEffect(latitude, longitude) {
+                                markerState.position = LatLng(latitude!!, longitude!!)
+                            }
+
                             MarkerComposable(
                                 state = markerState,
                                 anchor = Offset(0.5f, 1.0f)
@@ -529,9 +537,10 @@ fun StartMoveContent(
                     // Overlay to emphasize it's clickable
                     Box(
                         modifier = Modifier
+                            .padding(bottom = 2.dp)
                             .fillMaxSize()
                             .background(Color.Black.copy(alpha = 0.1f)),
-                        contentAlignment = Alignment.Center
+                        contentAlignment = Alignment.BottomCenter
                     ) {
                         Surface(
                             color = Color.Black.copy(alpha = 0.6f),
@@ -562,7 +571,7 @@ fun StartMoveContent(
 
                 Button(
                     onClick = {
-                        onCreateSocial(title, description, selectedCategoryId, location, time, latitude, longitude, selectedImageUri)
+                        onCreateSocial(title, description, selectedCategoryId, detectedCity, location, time, latitude, longitude, selectedImageUri)
                     },
                     enabled = isFormValid && state !is NetworkResult.Loading,
                     modifier = Modifier
@@ -613,10 +622,15 @@ fun StartMoveContent(
 
         if (showMapPicker) {
             LocationPicker(
+                outerPadding=outerPadding,
                 initialLocation = if (latitude != null && longitude != null) LatLng(latitude!!, longitude!!) else mapCenter,
                 onLocationSelected = { lat, lng ->
                     latitude = lat
                     longitude = lng
+                    scope.launch {
+                        val city = com.shivam.downn.utils.LocationUtils.getCityFromCoordinates(context, lat, lng)
+                        city?.let { detectedCity = it }
+                    }
                     showMapPicker = false
                 },
                 onDismiss = { showMapPicker = false }
@@ -682,7 +696,7 @@ fun StartMovePreview() {
             state = null,
             outerPadding = PaddingValues(0.dp),
             onClose = {},
-            onCreateSocial = { _, _, _, _, _, _, _, _ -> },
+            onCreateSocial = { _, _, _, _, _, _, _, _,_ -> },
             onResetState = {}
         )
     }
@@ -690,6 +704,7 @@ fun StartMovePreview() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LocationPicker(
+    outerPadding: PaddingValues=PaddingValues(0.dp),
     initialLocation: LatLng,
     onLocationSelected: (Double, Double) -> Unit,
     onDismiss: () -> Unit
@@ -700,6 +715,7 @@ fun LocationPicker(
     
     Box(
         modifier = Modifier
+            .padding(bottom = outerPadding.calculateBottomPadding())
             .fillMaxSize()
             .background(Color(0xFF0F172A))
     ) {

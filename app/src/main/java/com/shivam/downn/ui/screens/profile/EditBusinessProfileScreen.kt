@@ -28,6 +28,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.google.android.gms.maps.model.LatLng
+import androidx.compose.material.icons.filled.Place
+import com.shivam.downn.ui.components.FancyMap
+import com.shivam.downn.ui.screens.create_activity.LocationPicker
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.maps.android.compose.rememberCameraPositionState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,14 +42,32 @@ fun EditBusinessProfileScreen(
     onClose: () -> Unit,
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
-    // Mock initial data
-    var name by remember { mutableStateOf("The Daily Grind") }
-    var bio by remember { mutableStateOf("Your friendly neighborhood coffee shop. Serving the best craft coffee and vibes in town since 2022.") }
-    var location by remember { mutableStateOf("123 Coffee St, Denver, CO") }
-    var vibes by remember { mutableStateOf("Cozy, Jazz, Craft Coffee") } // Storing as a single string for the text field
+    val activeProfile by viewModel.activeProfile.collectAsState()
+
+    // Initialize state from activeProfile
+    var name by remember { mutableStateOf(activeProfile?.name ?: "") }
+    var bio by remember { mutableStateOf(activeProfile?.bio ?: "") }
+    var location by remember { mutableStateOf(activeProfile?.location ?: "") }
+    var vibes by remember { mutableStateOf(activeProfile?.vibes?.joinToString(", ") ?: "") }
+    
+    var latitude by remember { mutableStateOf(activeProfile?.latitude) }
+    var longitude by remember { mutableStateOf(activeProfile?.longitude) }
+    var showMapPicker by remember { mutableStateOf(false) }
 
     var selectedAvatarUri by remember { mutableStateOf<Uri?>(null) }
     var selectedCoverUri by remember { mutableStateOf<Uri?>(null) }
+
+    // Update state when activeProfile changes (e.g. after loading)
+    LaunchedEffect(activeProfile) {
+        activeProfile?.let {
+            name = it.name
+            bio = it.bio ?: ""
+            location = it.location ?: ""
+            vibes = it.vibes?.joinToString(", ") ?: ""
+            latitude = it.latitude
+            longitude = it.longitude
+        }
+    }
 
     val avatarPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -57,6 +81,7 @@ fun EditBusinessProfileScreen(
         selectedCoverUri = uri
     }
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -75,8 +100,17 @@ fun EditBusinessProfileScreen(
                 },
                 actions = {
                     TextButton(onClick = {
-                        val vibesList = vibes.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-                        viewModel.updateProfile(businessId, name, bio, location, vibesList, selectedAvatarUri, selectedCoverUri)
+                        viewModel.updateProfile(
+                            businessId, 
+                            name, 
+                            bio, 
+                            location, 
+                            vibes, 
+                            selectedAvatarUri, 
+                            selectedCoverUri,
+                            latitude,
+                            longitude
+                        )
                         onClose()
                     }) {
                         Text("Save", color = Color(0xFFA855F7), fontWeight = FontWeight.Bold, fontSize = 16.sp)
@@ -166,9 +200,89 @@ fun EditBusinessProfileScreen(
                 EditField(label = "Business Name", value = name, onValueChange = { name = it })
                 EditField(label = "Bio", value = bio, onValueChange = { bio = it }, singleLine = false, maxLines = 5)
                 EditField(label = "Location", value = location, onValueChange = { location = it })
+                
+                // Map Preview
+                val mapCenter = LatLng(39.7392, -104.9903) // Default to Denver
+                val cameraPositionState = rememberCameraPositionState {
+                    position = CameraPosition.fromLatLngZoom(
+                        if (latitude != null && longitude != null) LatLng(latitude!!, longitude!!) else mapCenter,
+                        15f
+                    )
+                }
+                
+                // Update camera when location changes
+                LaunchedEffect(latitude, longitude) {
+                    if (latitude != null && longitude != null) {
+                        cameraPositionState.position = CameraPosition.fromLatLngZoom(LatLng(latitude!!, longitude!!), 15f)
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color(0xFF1E293B))
+                ) {
+                    FancyMap(
+                        cameraPositionState = cameraPositionState,
+                        modifier = Modifier.fillMaxSize(),
+                        onMapClick = { showMapPicker = true }
+                    )
+                    
+                    // Overlay to indicate clickability
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.1f))
+                            .clickable { showMapPicker = true },
+                        contentAlignment = Alignment.Center
+                    ) {
+                         if (latitude == null || longitude == null) {
+                             Text(
+                                 "Tap to set location on map",
+                                 color = Color.White,
+                                 fontWeight = FontWeight.Bold,
+                                 modifier = Modifier
+                                     .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
+                                     .padding(8.dp)
+                             )
+                         }
+                    }
+
+                    // Change Location Button
+                    Button(
+                        onClick = { showMapPicker = true },
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(16.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9333EA)),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                    ) {
+                        Icon(Icons.Default.Place, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Change Location", color = Color.White, fontSize = 12.sp)
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(24.dp))
+
                 EditField(label = "Vibes (comma-separated)", value = vibes, onValueChange = { vibes = it })
             }
         }
+    }
+    
+    if (showMapPicker) {
+        LocationPicker(
+            initialLocation = if (latitude != null && longitude != null) LatLng(latitude!!, longitude!!) else LatLng(39.7392, -104.9903),
+            onLocationSelected = { lat, lng ->
+                latitude = lat
+                longitude = lng
+                showMapPicker = false
+            },
+            onDismiss = { showMapPicker = false }
+        )
+    }
     }
 }
 

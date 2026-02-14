@@ -22,6 +22,9 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.shivam.downn.data.network.NetworkResult
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
@@ -37,6 +40,8 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val logoutState by viewModel.logoutState.collectAsState()
+    val deleteAccountState by viewModel.deleteAccountState.collectAsState()
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(logoutState) {
         if (logoutState is NetworkResult.Success) {
@@ -44,6 +49,16 @@ fun SettingsScreen(
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             onLogout()
             viewModel.resetLogoutState()
+        }
+    }
+
+    LaunchedEffect(deleteAccountState) {
+        if (deleteAccountState is NetworkResult.Success) {
+            Toast.makeText(context, "Account deleted", Toast.LENGTH_SHORT).show()
+            onLogout()
+            viewModel.resetDeleteAccountState()
+        } else if (deleteAccountState is NetworkResult.Error) {
+             Toast.makeText(context, deleteAccountState?.message ?: "Delete failed", Toast.LENGTH_SHORT).show()
         }
     }
     Scaffold(
@@ -131,13 +146,50 @@ fun SettingsScreen(
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
             }
+
+            // Delete Account Section
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                 TextButton(onClick = { showDeleteDialog = true }) {
+                     Text("Delete Account", color = Color.Red.copy(alpha = 0.7f), fontSize = 14.sp)
+                 }
+            }
             
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(10.dp))
+            
             Text(
                 "Version 1.0.0 (Build 22)",
                 modifier = Modifier.align(Alignment.CenterHorizontally),
                 color = Color(0xFF64748B),
                 fontSize = 12.sp
+            )
+        }
+        
+        if (showDeleteDialog) {
+            AlertDialog(
+                onDismissRequest = { showDeleteDialog = false },
+                title = { Text("Delete Account") },
+                text = { Text("Are you sure you want to delete your account? This action cannot be undone and you will lose all your data.") },
+                confirmButton = {
+                    TextButton(
+                        onClick = { 
+                            viewModel.deleteAccount()
+                            showDeleteDialog = false
+                        }
+                    ) {
+                        Text("Delete", color = Color.Red)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteDialog = false }) {
+                        Text("Cancel")
+                    }
+                },
+                containerColor = Color(0xFF1E293B),
+                titleContentColor = Color.White,
+                textContentColor = Color(0xFFCBD5E1)
             )
         }
     }

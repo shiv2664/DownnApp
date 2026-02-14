@@ -175,7 +175,7 @@ private fun ParticipantRow(
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             AsyncImage(
-                model = participant.avatar,
+                model = com.shivam.downn.utils.ImageUtils.getFullImageUrl(participant.avatar),
                 contentDescription = null,
                 modifier = Modifier
                     .size(52.dp)

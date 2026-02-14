@@ -30,8 +30,8 @@ import com.shivam.downn.data.models.NotificationType
 import com.shivam.downn.data.models.NotificationContent
 import com.shivam.downn.data.models.ActivityStatus
 import com.shivam.downn.data.network.NetworkResult
-import com.shivam.downn.utils.toTimeAgo
 import com.google.gson.Gson
+import com.shivam.downn.utils.TimeUtils
 import java.time.LocalDateTime
 
 data class NotificationItem(
@@ -62,18 +62,6 @@ fun NotificationsRoute(
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     
     // Refresh notifications when screen resumes (user switches back to this tab)
-    DisposableEffect(lifecycleOwner) {
-        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
-                viewModel.fetchNotifications()
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
-    
     val state by viewModel.state.collectAsState()
     val actionState by viewModel.actionState.collectAsState()
     val notificationActions by viewModel.notificationActions.collectAsState()
@@ -173,7 +161,7 @@ fun NotificationsContent(
             type = response.type,
             title = title,
             description = description,
-            time = response.createdAt.toTimeAgo(),
+            time = TimeUtils.formatRelativeTime(response.createdAt.toString()),
             avatar = response.senderUser?.avatar,
             icon = icon,
             iconBg = iconBg,

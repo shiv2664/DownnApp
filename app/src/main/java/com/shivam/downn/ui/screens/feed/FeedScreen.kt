@@ -11,7 +11,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.EventBusy
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.shivam.downn.ui.components.EmptyState
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -20,6 +23,9 @@ import com.shivam.downn.data.network.NetworkResult
 import com.shivam.downn.SocialCategory
 import com.shivam.downn.data.models.SocialResponse
 import com.shivam.downn.data.models.SocialType
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Close
 
 @Composable
 fun FeedRoute(
@@ -29,18 +35,6 @@ fun FeedRoute(
     val viewModel = hiltViewModel<FeedViewModel>()
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                viewModel.fetchSocials()
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
-    
     val state by viewModel.state.collectAsState()
 
     FeedContent(
@@ -51,10 +45,12 @@ fun FeedRoute(
         },
         onCardClick = onCardClick,
         onJoinedClick = onJoinedClick,
-        onRetry = { viewModel.fetchSocials() }
+        onRetry = { viewModel.fetchSocials() },
+        onLoadMore = { viewModel.loadMore() }
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FeedContent(
     state: NetworkResult<List<SocialResponse>>,
@@ -62,11 +58,17 @@ fun FeedContent(
     onCategorySelected: (String) -> Unit,
     onCardClick: (SocialType, Int) -> Unit,
     onJoinedClick: (SocialType, Int) -> Unit,
-    onRetry: () -> Unit
+    onRetry: () -> Unit,
+    onLoadMore: () -> Unit
 ) {
+    var searchQuery by remember { mutableStateOf("") }
+
     Scaffold(
         topBar = { 
-            FeedTopBar(onCategorySelected = onCategorySelected) 
+            FeedTopBar(
+                onCategorySelected = onCategorySelected,
+                onSearchQuery = { searchQuery = it }
+            ) 
         },
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { paddingValues ->
@@ -74,30 +76,70 @@ fun FeedContent(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFF0F172A))
+                .padding(paddingValues)
         ) {
-            when (val currentState = state) {
-                is NetworkResult.Loading -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                }
-                is NetworkResult.Error -> {
-                    Column(
-                        modifier = Modifier.align(Alignment.Center),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(text = "Error: ${currentState.message}", color = Color.Red)
-                        Button(onClick = onRetry) {
-                            Text("Retry")
+            val isRefreshing = state is NetworkResult.Loading
+            
+            androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = onRetry,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                when (val currentState = state) {
+                    is NetworkResult.Loading -> {
+                        if ((currentState.data ?: emptyList()).isEmpty()) {
+                             com.shivam.downn.ui.components.ShimmerLoadingList()
+                        } else {
+                            // Show list with loading indicator on top (handled by PullToRefreshBox)
+                            MoveList(
+                                socials = currentState.data ?: emptyList(),
+                                currentUserId = currentUserId,
+                                paddingValues = PaddingValues(0.dp), // Padding handled by Box
+                                onCardClick = onCardClick,
+                                onJoinClick = onJoinedClick,
+                                onLoadMore = onLoadMore
+                            )
                         }
                     }
-                }
-                is NetworkResult.Success -> {
-                    MoveList(
-                        socials = currentState.data ?: emptyList(),
-                        currentUserId = currentUserId,
-                        paddingValues = paddingValues,
-                        onCardClick = onCardClick,
-                        onJoinClick = onJoinedClick
-                    )
+                    is NetworkResult.Error -> {
+                        Column(
+                            modifier = Modifier.align(Alignment.Center),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(text = "Error: ${currentState.message}", color = Color.Red)
+                            Button(onClick = onRetry) {
+                                Text("Retry")
+                            }
+                        }
+                    }
+                    is NetworkResult.Success -> {
+                        val allSocials = currentState.data ?: emptyList()
+                        val socials = if (searchQuery.isBlank()) allSocials
+                                      else allSocials.filter { s ->
+                                          s.title.contains(searchQuery, ignoreCase = true) ||
+                                          (s.description?.contains(searchQuery, ignoreCase = true) == true) ||
+                                          s.category.contains(searchQuery, ignoreCase = true)
+                                      }
+                        if (socials.isEmpty()) {
+                            com.shivam.downn.ui.components.EmptyState(
+                                icon = androidx.compose.material.icons.Icons.Default.EventBusy,
+                                title = "No Moves Found",
+                                description = "Looks like there's nothing happening right now. Be the first to host one!",
+                                actionLabel = "Refresh",
+                                onActionClick = onRetry,
+                                modifier = Modifier.align(Alignment.Center)
+                            )
+                        } else {
+                            MoveList(
+                                socials = socials,
+                                currentUserId = currentUserId,
+                                paddingValues = PaddingValues(0.dp),
+                                onCardClick = onCardClick,
+                                onJoinClick = onJoinedClick,
+                                onLoadMore = onLoadMore
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -106,8 +148,10 @@ fun FeedContent(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FeedTopBar(onCategorySelected: (String) -> Unit) {
+fun FeedTopBar(onCategorySelected: (String) -> Unit, onSearchQuery: (String) -> Unit = {}) {
     var selectedCategory by remember { mutableStateOf("All") }
+    var searchQuery by remember { mutableStateOf("") }
+    var showSearch by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -115,7 +159,49 @@ fun FeedTopBar(onCategorySelected: (String) -> Unit) {
             .background(Color(0xFF0F172A))
     ) {
         TopAppBar(
-            title = { Text("Downn", color = Color.White) },
+            title = {
+                if (showSearch) {
+                    TextField(
+                        value = searchQuery,
+                        onValueChange = {
+                            searchQuery = it
+                            onSearchQuery(it)
+                        },
+                        placeholder = { Text("Search moves...", color = Color(0xFF64748B)) },
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color(0xFF1E293B),
+                            unfocusedContainerColor = Color(0xFF1E293B),
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            cursorColor = Color(0xFF818CF8),
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } else {
+                    Text("Downn", color = Color.White)
+                }
+            },
+            actions = {
+                /*
+                IconButton(onClick = {
+                    showSearch = !showSearch
+                    if (!showSearch) {
+                        searchQuery = ""
+                        onSearchQuery("")
+                    }
+                }) {
+                    Icon(
+                        if (showSearch) Icons.Default.Close else Icons.Default.Search,
+                        contentDescription = if (showSearch) "Close search" else "Search",
+                        tint = Color.White
+                    )
+                }
+                */
+            },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = Color(0xFF0F172A)
             )
@@ -160,7 +246,8 @@ fun MoveList(
     currentUserId: Long?,
     paddingValues: PaddingValues,
     onCardClick: (SocialType, Int) -> Unit,
-    onJoinClick: (SocialType,Int) -> Unit
+    onJoinClick: (SocialType,Int) -> Unit,
+    onLoadMore: () -> Unit
 ) {
     val businessItems = listOf(
         SocialResponse(
@@ -207,14 +294,26 @@ fun MoveList(
             items = socials,
             key = { it.id }
         ) { social ->
+            // Trigger load more when reaching the last few items
+            if (social == socials.last()) {
+                LaunchedEffect(Unit) {
+                    onLoadMore()
+                }
+            }
+        
+            val displayName = if (social.socialType == SocialType.BUSINESS && social.profile != null)
+                social.profile.name else (social.userName ?: "Unknown")
+            val displayAvatar = if (social.socialType == SocialType.BUSINESS && social.profile != null)
+                (social.profile.avatar ?: "") else (social.userAvatar ?: "")
+
             MoveCard(
-                userName = social.userName ?: "Unknown",
-                userAvatar = social.userAvatar ?: "",
+                userName = displayName,
+                userAvatar = displayAvatar,
                 moveTitle = social.title,
                 description = social.description?:"",
                 category = social.category,
                 categoryEmoji = "📍", // Default emoji or map from category
-                timeAgo = social.timeAgo ?: "Just now",
+                timeAgo = if (social.scheduledTime != null) com.shivam.downn.utils.DateUtils.formatEventTime(social.scheduledTime) else (social.timeAgo ?: "Just now"),
                 distance = social.distance ?: "Nearby",
                 participantCount = social.participantCount,
                 maxParticipants = social.maxParticipants,
@@ -228,5 +327,7 @@ fun MoveList(
                 onJoinClick = { onJoinClick(social.socialType,social.id) }
             )
         }
+        
+        // Show loading indicator at the bottom if needed - handled by parent state for now or add footer item
     }
 }
