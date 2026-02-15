@@ -15,6 +15,6 @@ sealed class NetworkResult<T>(
 
     class Error<T>(message: String?) : NetworkResult<T>( message=message)
 
-    class Loading<T> : NetworkResult<T>()
+    class Loading<T>(data: T? = null) : NetworkResult<T>(data)
 
 }

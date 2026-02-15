@@ -213,67 +213,120 @@ fun NotificationsContent(
             .fillMaxSize()
             .padding(bottom = outerPadding.calculateBottomPadding(), top = innerPadding.calculateTopPadding())
         ) {
-            when (val currentState = state) {
-                is NetworkResult.Loading -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color(0xFFA855F7))
-                }
-                        is NetworkResult.Error -> {
-                    Column(
-                        modifier = Modifier.align(Alignment.Center).padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(text = currentState.message ?: "An error occurred", color = Color.Red.copy(alpha = 0.8f))
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(
-                            onClick = { onRetry() },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B))
-                        ) {
-                            Text("Retry", color = Color.White)
+            val isRefreshing = state is NetworkResult.Loading
+            
+            androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = onRetry,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                when (val currentState = state) {
+                    is NetworkResult.Loading -> {
+                        if (currentState.data.isNullOrEmpty()) {
+                            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color(0xFFA855F7))
+                        } else {
+                            NotificationList(
+                                notifications = currentState.data!!.map { mapToUI(it) },
+                                filter = filter,
+                                onNotificationClick = onNotificationClick,
+                                onApprove = onApprove,
+                                onReject = onReject,
+                                actioningNotificationId = actioningNotificationId,
+                                notificationActions = notificationActions
+                            )
                         }
                     }
-                }
-                is NetworkResult.Success -> {
-                    val notifications = currentState.data?.map { mapToUI(it) } ?: emptyList()
-                    val filteredNotifications = if (filter == "unread") notifications.filter { it.isUnread } else notifications
-
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 24.dp)
-                    ) {
-                        item {
-                            SectionHeader("Recent")
-                        }
-                        
-                        if (filteredNotifications.isEmpty()) {
-                            item {
-                                Box(modifier = Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) {
-                                    Text("No notifications found", color = Color(0xFF94A3B8))
+                    is NetworkResult.Error -> {
+                        if (currentState.data.isNullOrEmpty()) {
+                            Column(
+                                modifier = Modifier.align(Alignment.Center).padding(24.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(text = currentState.message ?: "An error occurred", color = Color.Red.copy(alpha = 0.8f))
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Button(
+                                    onClick = { onRetry() },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B))
+                                ) {
+                                    Text("Retry", color = Color.White)
                                 }
                             }
                         } else {
-                            items(filteredNotifications) { notification ->
-                                NotificationRow(
-                                    notification = notification,
-                                    onClick = { 
-                                        if (notification.activityId != null) {
-                                            onNotificationClick(notification) 
-                                        }
-                                    },
-                                    onApprove = { onApprove(notification.id) },
-                                    onReject = { onReject(notification.id) },
-                                    isLoading = actioningNotificationId == notification.id,
-                                    anyActionInProgress = actioningNotificationId != null
-                                )
-                            }
+                             // Show cached data with error toast maybe? For now just show list
+                             NotificationList(
+                                notifications = currentState.data!!.map { mapToUI(it) },
+                                filter = filter,
+                                onNotificationClick = onNotificationClick,
+                                onApprove = onApprove,
+                                onReject = onReject,
+                                actioningNotificationId = actioningNotificationId,
+                                notificationActions = notificationActions
+                             )
                         }
-
-                        item {
-                            Spacer(modifier = Modifier.height(24.dp))
-                            WeeklyStatsCard()
-                        }
+                    }
+                    is NetworkResult.Success -> {
+                        NotificationList(
+                            notifications = currentState.data!!.map { mapToUI(it) },
+                            filter = filter,
+                            onNotificationClick = onNotificationClick,
+                            onApprove = onApprove,
+                            onReject = onReject,
+                            actioningNotificationId = actioningNotificationId,
+                            notificationActions = notificationActions
+                        )
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun NotificationList(
+    notifications: List<NotificationItem>,
+    filter: String,
+    onNotificationClick: (NotificationItem) -> Unit,
+    onApprove: (Long) -> Unit,
+    onReject: (Long) -> Unit,
+    actioningNotificationId: Long?,
+    notificationActions: Map<Long, String>
+) {
+    val filteredNotifications = if (filter == "unread") notifications.filter { it.isUnread } else notifications
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(bottom = 24.dp)
+    ) {
+        item {
+            SectionHeader("Recent")
+        }
+        
+        if (filteredNotifications.isEmpty()) {
+            item {
+                Box(modifier = Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) {
+                    Text("No notifications found", color = Color(0xFF94A3B8))
+                }
+            }
+        } else {
+            items(filteredNotifications) { notification ->
+                NotificationRow(
+                    notification = notification,
+                    onClick = { 
+                        if (notification.activityId != null) {
+                            onNotificationClick(notification) 
+                        }
+                    },
+                    onApprove = { onApprove(notification.id) },
+                    onReject = { onReject(notification.id) },
+                    isLoading = actioningNotificationId == notification.id,
+                    anyActionInProgress = actioningNotificationId != null
+                )
+            }
+        }
+
+        item {
+            Spacer(modifier = Modifier.height(24.dp))
+            WeeklyStatsCard()
         }
     }
 }

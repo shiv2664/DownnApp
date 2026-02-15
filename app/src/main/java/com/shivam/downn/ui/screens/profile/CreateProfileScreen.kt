@@ -37,6 +37,7 @@ import com.google.maps.android.compose.rememberMarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.shivam.downn.ui.screens.create_activity.LocationPicker
 import androidx.compose.ui.geometry.Offset
+import com.shivam.downn.data.network.NetworkResult
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -312,7 +313,7 @@ fun CreateProfileScreen(
                 Button(
                     onClick = { 
                         if (businessName.isNotBlank() && category.isNotBlank()) {
-                            onCreateSuccess(businessName, category, bio, location)
+                            // Don't call onCreateSuccess immediately. Wait for API result.
                             profileViewModel.createBusinessProfile(
                                 businessName, category, bio, location,
                                 selectedCoverUri?.toString() ?: "", 
@@ -367,6 +368,36 @@ fun CreateProfileScreen(
             },
             onDismiss = { showMapPicker = false }
         )
+    }
+    val createProfileState by profileViewModel.createProfileState.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    LaunchedEffect(createProfileState) {
+        when (createProfileState) {
+            is NetworkResult.Success -> {
+                val profile = (createProfileState as NetworkResult.Success).data
+                onCreateSuccess(businessName, category, bio, location) // Keep existing callback
+                profileViewModel.resetCreateProfileState()
+                onClose()
+            }
+            is NetworkResult.Error -> {
+                android.widget.Toast.makeText(context, (createProfileState as NetworkResult.Error).message ?: "Failed to create profile", android.widget.Toast.LENGTH_LONG).show()
+                profileViewModel.resetCreateProfileState()
+            }
+            else -> {}
+        }
+    }
+
+    if (createProfileState is NetworkResult.Loading) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.5f))
+                .clickable(enabled = false) {},
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator(color = Color(0xFFA855F7))
+        }
     }
     }
 }

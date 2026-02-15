@@ -11,6 +11,7 @@ enum class ProfileType {
 
 data class ProfileResponse(
     val id: Long,
+    val userId: Long, // Added userId
     val name: String,
     val avatar: String?,
     val coverImage: String?,
@@ -21,7 +22,10 @@ data class ProfileResponse(
     val createdAt: LocalDateTime,
     val avatarThumbnail: String?="",
     val latitude: Double? = null,
-    val longitude: Double? = null
+    val longitude: Double? = null,
+    val followersCount: Int = 0,
+    val followingCount: Int = 0,
+    val isFollowing: Boolean = false
 )
 
 data class CreateProfileRequest(
@@ -68,11 +72,15 @@ data class UserDetailsResponse(
     val createdAt: LocalDateTime?,
     val avatarThumbnail: String?="",
     val latitude: Double? = null,
-    val longitude: Double? = null
+    val longitude: Double? = null,
+    val followersCount: Int = 0,
+    val followingCount: Int = 0,
+    val isFollowing: Boolean = false
 )
 
 data class UserProfileData(
     val id: Long,
+    val userId: Long, // Added userId (For Business profiles, this is owner ID. For Personal, same as id)
     val name: String="",
     val avatar: String?="",
     val coverImage: String? = "",
@@ -82,6 +90,9 @@ data class UserProfileData(
     val type: ProfileType,
     val avatarThumbnail: String?="",
     val latitude: Double? = null,
-    val longitude: Double? = null
+    val longitude: Double? = null,
+    val followersCount: Int = 0,
+    val followingCount: Int = 0,
+    val isFollowing: Boolean = false
 )
 

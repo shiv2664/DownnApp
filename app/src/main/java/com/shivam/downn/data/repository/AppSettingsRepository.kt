@@ -103,6 +103,8 @@ class AppSettingsRepository @Inject constructor(
                 "updateUser" -> settings.endpoints.users.updateUser
                 "updateProfile" -> settings.endpoints.users.updateProfile
                 "joinRequest" -> settings.endpoints.users.joinRequest
+                "follow" -> "/api/v1/users/{userId}/follow"
+                "unfollow" -> "/api/v1/users/{userId}/follow"
                 else -> null
             }
             "notifications" -> when (parts[1]) {

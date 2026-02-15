@@ -105,7 +105,6 @@ fun StartMoveContent(
     var description by remember { mutableStateOf("") }
     var selectedCategoryId by remember { mutableStateOf("") }
     var time by remember { mutableStateOf("") }
-    var location by remember { mutableStateOf("") }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var latitude by remember { mutableStateOf<Double?>(null) }
     var longitude by remember { mutableStateOf<Double?>(null) }
@@ -176,7 +175,7 @@ fun StartMoveContent(
     )
 //    OTHER, HOBBY, PARTY, EVENTS, TRAVEL, FOOD, SPORTS
 
-    val isFormValid = title.isNotEmpty() && description.isNotEmpty() && selectedCategoryId.isNotEmpty() && time.isNotEmpty() && location.isNotEmpty()
+    val isFormValid = title.isNotEmpty() && description.isNotEmpty() && selectedCategoryId.isNotEmpty() && time.isNotEmpty() && detectedCity.isNotEmpty()
 
     LaunchedEffect(state) {
         if (state is NetworkResult.Success) {
@@ -458,14 +457,16 @@ fun StartMoveContent(
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // Location Input
+                // Location Input (Restricted to City)
                 InputLabel("Where?")
                 OutlinedTextField(
-                    value = location,
-                    onValueChange = { location = it },
-                    placeholder = { Text("Bear Creek Trail (Denver)", color = Color(0xFF64748B)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
+                    value = detectedCity,
+                    onValueChange = { },
+                    readOnly = true,
+                    placeholder = { Text("Select active city", color = Color(0xFF64748B)) },
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
                     leadingIcon = {
                         Icon(
                             Icons.Default.Place,
@@ -571,9 +572,9 @@ fun StartMoveContent(
 
                 Button(
                     onClick = {
-                        onCreateSocial(title, description, selectedCategoryId, detectedCity, location, time, latitude, longitude, selectedImageUri)
+                        onCreateSocial(title, description, selectedCategoryId, detectedCity, detectedCity, time, latitude, longitude, selectedImageUri)
                     },
-                    enabled = isFormValid && state !is NetworkResult.Loading,
+                    enabled = title.isNotBlank() && description.isNotBlank() && detectedCity.isNotBlank() && selectedCategoryId.isNotEmpty() && state !is NetworkResult.Loading,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(60.dp),

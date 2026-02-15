@@ -33,6 +33,25 @@ class StartMoveViewModel @Inject constructor(
     private val _state = MutableStateFlow<NetworkResult<SocialResponse?>?>(null)
     val state: StateFlow<NetworkResult<SocialResponse?>?> = _state
 
+    private val _profileLocation = MutableStateFlow<Pair<Double, Double>?>(null)
+    val profileLocation: StateFlow<Pair<Double, Double>?> = _profileLocation
+
+    fun fetchActiveProfileLocation() {
+        viewModelScope.launch {
+            val profileId = prefsManager.getActiveProfileId()
+            if (profileId != -1L) {
+                profileRepository.getProfiles().collect { result ->
+                    if (result is NetworkResult.Success) {
+                        val profile = result.data?.find { it.id == profileId }
+                        if (profile != null && profile.latitude != null && profile.longitude != null) {
+                            _profileLocation.value = profile.latitude to profile.longitude
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     fun createSocial(
         title: String,
         description: String,

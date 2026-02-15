@@ -69,7 +69,13 @@ fun PublicProfileRoute(
                     isOwnProfile = false,
                     outerPadding = PaddingValues(0.dp),
                     onClose = onClose,
-                    onFollowClick = onFollowClick,
+                    onFollowClick = {
+                        if (profileData.isFollowing) {
+                            viewModel.unfollowUser(profileData.userId)
+                        } else {
+                            viewModel.followUser(profileData.userId)
+                        }
+                    },
                     activeProfile = profileData // Pass fetched data
                 )
             }

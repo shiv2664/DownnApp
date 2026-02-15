@@ -118,4 +118,36 @@ class ProfileRepository @Inject constructor(
             emit(NetworkResult.Error(e.localizedMessage ?: "Unknown error"))
         }
     }
+
+    fun followUser(userId: Long): Flow<NetworkResult<Unit>> = flow {
+        emit(NetworkResult.Loading())
+        try {
+            val urlTemplate = appSettingsRepository.getEndpoint("users.follow")!!
+            val url = urlTemplate.replace("{userId}", userId.toString())
+            val response = profileApi.followUser(url)
+            if (response.isSuccessful) {
+                emit(NetworkResult.Success(Unit))
+            } else {
+                emit(NetworkResult.Error("Follow failed: ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            emit(NetworkResult.Error(e.localizedMessage ?: "Unknown error"))
+        }
+    }
+
+    fun unfollowUser(userId: Long): Flow<NetworkResult<Unit>> = flow {
+        emit(NetworkResult.Loading())
+        try {
+            val urlTemplate = appSettingsRepository.getEndpoint("users.unfollow")!!
+            val url = urlTemplate.replace("{userId}", userId.toString())
+            val response = profileApi.unfollowUser(url)
+            if (response.isSuccessful) {
+                emit(NetworkResult.Success(Unit))
+            } else {
+                emit(NetworkResult.Error("Unfollow failed: ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            emit(NetworkResult.Error(e.localizedMessage ?: "Unknown error"))
+        }
+    }
 }

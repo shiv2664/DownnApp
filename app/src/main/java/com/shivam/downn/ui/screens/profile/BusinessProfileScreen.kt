@@ -32,6 +32,7 @@ import com.shivam.downn.data.models.ProfileType
 import androidx.compose.runtime.*
 import androidx.compose.runtime.collectAsState
 import com.shivam.downn.data.models.UserProfileData
+import okhttp3.internal.userAgent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -333,7 +334,7 @@ fun BusinessStats() {
         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        StatItem("4.8k", "Regulars")
+        // StatItem("4.8k", "Regulars") // Hidden as per request
         StatItem("12", "Active Moves")
         StatItem("4.9", "Vibe Rating")
     }
@@ -355,6 +356,7 @@ fun BusinessActions() {
     ) {
         ActionIconButton(Icons.Default.Directions, "Directions", Color(0xFF334155))
         ActionIconButton(Icons.Default.Phone, "Call", Color(0xFF334155))
+        /*
         Button(
             onClick = {},
             modifier = Modifier.weight(1f).height(48.dp),
@@ -363,6 +365,7 @@ fun BusinessActions() {
         ) {
             Text("Follow Vibe", fontWeight = FontWeight.Bold)
         }
+        */
     }
 }
 
@@ -531,6 +534,7 @@ fun PreviewBusinessProfileScreen() {
     val profiles = listOf(
         UserProfileData(
             id = 1,
+            userId = 1,
             name = "Shivam",
             avatar = "https://images.unsplash.com/photo-1521119989659-a83eee488004?w=400",
             type = ProfileType.PERSONAL,
@@ -539,6 +543,7 @@ fun PreviewBusinessProfileScreen() {
         ),
         UserProfileData(
             id = 16,
+            userId = 1,
             name = "The Daily Grind",
             avatar = "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400",
             type = ProfileType.BUSINESS,

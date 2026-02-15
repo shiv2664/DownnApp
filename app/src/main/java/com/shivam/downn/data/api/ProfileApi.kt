@@ -38,4 +38,10 @@ interface ProfileApi {
         @Part avatar: MultipartBody.Part?,
         @Part cover: MultipartBody.Part?
     ): Response<ProfileResponse>
+
+    @POST
+    suspend fun followUser(@Url url: String): Response<Void>
+
+    @DELETE
+    suspend fun unfollowUser(@Url url: String): Response<Void>
 }

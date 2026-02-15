@@ -58,11 +58,13 @@ fun LoginScreen(
 
     LoginContent(
         authState,
-        onLoginClick = { email, password ->
-            viewModel.login(AuthRequest(email, password))
+        onLoginClick = { email, password, isAdmin ->
+            val role = if (isAdmin) "ADMIN" else null // Send null if not admin to avoid unnecessary updates
+            viewModel.login(AuthRequest(email, password, role))
         },
-        onRegisterClick = { name, phone, email, password ->
-            viewModel.register(RegisterRequest(email, password, name, phone))
+        onRegisterClick = { name, phone, email, password, isAdmin ->
+            val role = if (isAdmin) "ADMIN" else "USER"
+            viewModel.register(RegisterRequest(email, password, name, phone, role = role))
         }
     )
 }
@@ -71,8 +73,8 @@ fun LoginScreen(
 @Composable
 fun LoginContent(
     authState: NetworkResult<AuthResponse?>?,
-    onLoginClick: (String, String) -> Unit,
-    onRegisterClick: (String, String, String, String) -> Unit
+    onLoginClick: (String, String, Boolean) -> Unit,
+    onRegisterClick: (String, String, String, String, Boolean) -> Unit
 ) {
     var isRegisterMode by remember { mutableStateOf(false) }
 
@@ -80,6 +82,7 @@ fun LoginContent(
     var password by remember { mutableStateOf("") }
     var name by remember { mutableStateOf("") }
     var phoneNumber by remember { mutableStateOf("") }
+    var isAdmin by remember { mutableStateOf(false) } // Admin Checkbox State
     var validationError by remember { mutableStateOf<String?>(null) }
 
     Box(
@@ -236,6 +239,26 @@ fun LoginContent(
                             unfocusedLabelColor = Color(0xFF94A3B8)
                         )
                     )
+                    
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(top = 8.dp).clickable { isAdmin = !isAdmin }
+                    ) {
+                        Checkbox(
+                            checked = isAdmin,
+                            onCheckedChange = { isAdmin = it },
+                            colors = CheckboxDefaults.colors(
+                                checkedColor = Color(0xFFA855F7),
+                                uncheckedColor = Color(0xFF94A3B8),
+                                checkmarkColor = Color.White
+                            )
+                        )
+                        Text(
+                            text = if (isRegisterMode) "Register as Admin" else "Login as Admin",
+                            color = Color.White,
+                            fontSize = 14.sp
+                        )
+                    }
                 }
             }
 
@@ -293,9 +316,9 @@ fun LoginContent(
                     }
 
                     if (isRegisterMode) {
-                        onRegisterClick(name, phoneNumber, email, password)
+                        onRegisterClick(name, phoneNumber, email, password, isAdmin)
                     } else {
-                        onLoginClick(email, password)
+                        onLoginClick(email, password, isAdmin)
                     }
                 },
                 modifier = Modifier
@@ -362,8 +385,8 @@ fun LoginContent(
 fun PreviewLoginScreen() {
     LoginContent(
         authState = null,
-        onLoginClick = { _, _ -> },
-        onRegisterClick = { _, _, _, _ -> }
+        onLoginClick = { _, _, _ -> },
+        onRegisterClick = { _, _, _, _, _ -> }
     )
 }
 

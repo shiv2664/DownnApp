@@ -197,13 +197,7 @@ fun ProfileContent(
                             }
                         }
                         is NetworkResult.Loading -> {
-                             item {
-                                 Column {
-                                     repeat(3) {
-                                         ShimmerActivityItem()
-                                     }
-                                 }
-                             }
+                             // No loader as per user request
                         }
                         is NetworkResult.Error -> {
                             item {

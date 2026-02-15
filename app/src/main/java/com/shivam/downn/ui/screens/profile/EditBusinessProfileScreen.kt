@@ -34,6 +34,9 @@ import com.shivam.downn.ui.components.FancyMap
 import com.shivam.downn.ui.screens.create_activity.LocationPicker
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.maps.android.compose.rememberCameraPositionState
+import com.google.maps.android.compose.MarkerComposable
+import com.google.maps.android.compose.rememberMarkerState
+import androidx.compose.ui.geometry.Offset
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -228,7 +231,27 @@ fun EditBusinessProfileScreen(
                         cameraPositionState = cameraPositionState,
                         modifier = Modifier.fillMaxSize(),
                         onMapClick = { showMapPicker = true }
-                    )
+                    ) {
+                        if (latitude != null && longitude != null) {
+                            val markerState = rememberMarkerState(position = LatLng(latitude!!, longitude!!))
+                            
+                            LaunchedEffect(latitude, longitude) {
+                                markerState.position = LatLng(latitude!!, longitude!!)
+                            }
+
+                            MarkerComposable(
+                                state = markerState,
+                                anchor = Offset(0.5f, 1.0f)
+                            ) {
+                                Icon(
+                                    Icons.Default.Place,
+                                    contentDescription = null,
+                                    tint = Color(0xFFF87171),
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
+                        }
+                    }
                     
                     // Overlay to indicate clickability
                     Box(

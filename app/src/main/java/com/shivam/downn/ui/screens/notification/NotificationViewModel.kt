@@ -30,13 +30,22 @@ class NotificationViewModel @Inject constructor(
     val actionState: StateFlow<NetworkResult<Unit>?> = _actionState
 
     init {
-        fetchNotifications()
+        startPolling()
         
         viewModelScope.launch {
             navigationEventBus.events.collect { route ->
                 if (route == "alerts") {
                     fetchNotifications()
                 }
+            }
+        }
+    }
+
+    private fun startPolling() {
+        viewModelScope.launch {
+            while (true) {
+                fetchNotifications()
+                kotlinx.coroutines.delay(60000) // 60 seconds
             }
         }
     }
@@ -98,7 +107,11 @@ class NotificationViewModel @Inject constructor(
     fun fetchNotifications() {
         viewModelScope.launch {
             repository.getNotifications().collect { result ->
-                _state.value = result
+                if (result is NetworkResult.Loading) {
+                    _state.value = NetworkResult.Loading(_state.value.data)
+                } else {
+                    _state.value = result
+                }
             }
         }
     }

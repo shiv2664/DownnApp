@@ -57,19 +57,22 @@ fun StartBusinessMove(
     var capacity by remember { mutableStateOf("") }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     
-    // Default business location (Mocked - in real app would come from profile)
-    var latitude by remember { mutableStateOf<Double?>(37.4219999) }
-    var longitude by remember { mutableStateOf<Double?>(-122.0840575) }
-    var detectedCity by remember { mutableStateOf("Denver") }
-    val mapCenter = remember(latitude, longitude) { LatLng(latitude ?: 37.421, longitude ?: -122.084) }
+    // Use location from profile (implied business location)
+    val profileLocation by viewModel.profileLocation.collectAsState()
+    var latitude by remember { mutableStateOf<Double?>(null) }
+    var longitude by remember { mutableStateOf<Double?>(null) }
+    var detectedCity by remember { mutableStateOf("Loading location...") }
 
-    val scope = rememberCoroutineScope()
-    
-    // Detect city on launch
-    LaunchedEffect(latitude, longitude) {
-        if (latitude != null && longitude != null) {
-            val city = com.shivam.downn.utils.LocationUtils.getCityFromCoordinates(context, latitude!!, longitude!!)
-            city?.let { detectedCity = it }
+    LaunchedEffect(Unit) {
+        viewModel.fetchActiveProfileLocation()
+    }
+
+    LaunchedEffect(profileLocation) {
+        profileLocation?.let { (lat, lng) ->
+            latitude = lat
+            longitude = lng
+            val city = com.shivam.downn.utils.LocationUtils.getCityFromCoordinates(context, lat, lng)
+            city?.let { detectedCity = it } ?: run { detectedCity = "Unknown City" }
         }
     }
     
@@ -213,34 +216,20 @@ fun StartBusinessMove(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(150.dp)
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(Color(0xFF1E293B))
-                    .border(1.dp, Color(0xFF334155), RoundedCornerShape(20.dp))
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFF1E293B).copy(alpha = 0.5f))
+                    .border(1.dp, Color(0xFF334155), RoundedCornerShape(12.dp))
+                    .padding(16.dp)
             ) {
-                FancyMap(
-                    modifier = Modifier.fillMaxSize(),
-                    initialCameraPosition = mapCenter,
-                    gesturesEnabled = false
-                ) {
-                    val markerState = rememberMarkerState(position = mapCenter)
-                    
-                    LaunchedEffect(mapCenter) {
-                        markerState.position = mapCenter
-                    }
-
-                    MarkerComposable(
-                        state = markerState,
-                        anchor = Offset(0.5f, 1.0f)
-                    ) {
-                        Icon(
-                            Icons.Default.Storefront,
-                            contentDescription = null,
-                            tint = Color(0xFFF97316),
-                            modifier = Modifier.size(32.dp)
-                        )
-                    }
-                }
+                 Row(verticalAlignment = Alignment.CenterVertically) {
+                     Icon(Icons.Default.LocationOn, contentDescription=null, tint=Color(0xFFA855F7))
+                     Spacer(modifier = Modifier.width(8.dp))
+                     Text(
+                         text = detectedCity,
+                         color = Color.White,
+                         fontWeight = FontWeight.Medium
+                     )
+                 }
             }
 
             Spacer(modifier = Modifier.height(24.dp))

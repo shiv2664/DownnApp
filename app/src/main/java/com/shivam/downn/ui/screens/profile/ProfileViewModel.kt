@@ -43,6 +43,9 @@ class ProfileViewModel @Inject constructor(
     private val _canCreateBusinessProfile = MutableStateFlow(true)
     val canCreateBusinessProfile: StateFlow<Boolean> = _canCreateBusinessProfile.asStateFlow()
 
+    private val _createProfileState = MutableStateFlow<NetworkResult<UserProfileData>?>(null)
+    val createProfileState: StateFlow<NetworkResult<UserProfileData>?> = _createProfileState.asStateFlow()
+
     private val _viewedProfile = MutableStateFlow<NetworkResult<UserProfileData>?>(null)
     val viewedProfile: StateFlow<NetworkResult<UserProfileData>?> = _viewedProfile.asStateFlow()
 
@@ -202,6 +205,7 @@ class ProfileViewModel @Inject constructor(
         longitude: Double? = null
     ) {
         viewModelScope.launch {
+            _createProfileState.value = NetworkResult.Loading()
             val request = CreateProfileRequest(
                 name = name,
                 bio = bio,
@@ -217,9 +221,16 @@ class ProfileViewModel @Inject constructor(
                     _profiles.value += newProfile
                     _activeProfile.value = newProfile
                     prefsManager.saveActiveProfileId(newProfile.id)
+                    _createProfileState.value = NetworkResult.Success(newProfile)
+                } else if (result is NetworkResult.Error) {
+                    _createProfileState.value = NetworkResult.Error(result.message)
                 }
             }
         }
+    }
+
+    fun resetCreateProfileState() {
+        _createProfileState.value = null
     }
 
     fun updateUser(name: String, bio: String, location: String, avatarUri: Uri?) {
@@ -319,6 +330,48 @@ class ProfileViewModel @Inject constructor(
             isUserActivitiesLoadingMore = true
             userActivitiesPage++
             currentUserActivityId?.let { fetchUserActivities(it) }
+        }
+    }
+
+    fun followUser(userId: Long) {
+        viewModelScope.launch {
+            profileRepository.followUser(userId).collectLatest { result ->
+                if (result is NetworkResult.Success) {
+                    val currentResult = _viewedProfile.value
+                    if (currentResult is NetworkResult.Success) {
+                        val currentDetails = currentResult.data!!
+                        if (currentDetails.userId == userId) {
+                             _viewedProfile.value = NetworkResult.Success(
+                                 currentDetails.copy(
+                                     isFollowing = true,
+                                     followersCount = currentDetails.followersCount + 1
+                                 )
+                             )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fun unfollowUser(userId: Long) {
+        viewModelScope.launch {
+            profileRepository.unfollowUser(userId).collectLatest { result ->
+                if (result is NetworkResult.Success) {
+                    val currentResult = _viewedProfile.value
+                    if (currentResult is NetworkResult.Success) {
+                        val currentDetails = currentResult.data!!
+                        if (currentDetails.userId == userId) {
+                            _viewedProfile.value = NetworkResult.Success(
+                                currentDetails.copy(
+                                    isFollowing = false,
+                                    followersCount = kotlin.math.max(0, currentDetails.followersCount - 1)
+                                )
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
