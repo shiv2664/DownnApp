@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.shivam.downn.data.models.NotificationResponse
 import com.shivam.downn.data.network.NetworkResult
 import com.shivam.downn.data.repository.NotificationRepository
+import com.shivam.downn.navigation.NavigationEventBus
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -14,7 +16,7 @@ import javax.inject.Inject
 @HiltViewModel
 class NotificationViewModel @Inject constructor(
     private val repository: NotificationRepository,
-    private val navigationEventBus: com.shivam.downn.navigation.NavigationEventBus
+    private val navigationEventBus: NavigationEventBus
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<NetworkResult<List<NotificationResponse>>>(NetworkResult.Loading())
@@ -30,7 +32,7 @@ class NotificationViewModel @Inject constructor(
     val actionState: StateFlow<NetworkResult<Unit>?> = _actionState
 
     init {
-        startPolling()
+       /* startPolling()*/
         
         viewModelScope.launch {
             navigationEventBus.events.collect { route ->
@@ -45,7 +47,7 @@ class NotificationViewModel @Inject constructor(
         viewModelScope.launch {
             while (true) {
                 fetchNotifications()
-                kotlinx.coroutines.delay(60000) // 60 seconds
+                delay(60000) // 60 seconds
             }
         }
     }

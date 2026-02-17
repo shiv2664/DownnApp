@@ -11,13 +11,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import com.shivam.downn.data.network.NetworkResult
+import com.shivam.downn.navigation.NavigationEventBus
 
 
 @HiltViewModel
 class FeedViewModel @Inject constructor(
     private val socialRepository: SocialRepository,
     private val prefsManager: PrefsManager,
-    private val navigationEventBus: com.shivam.downn.navigation.NavigationEventBus
+    private val navigationEventBus: NavigationEventBus
 ) : ViewModel() {
     val currentUserId = prefsManager.getUserId()
 

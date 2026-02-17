@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -22,11 +23,14 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.shivam.downn.utils.DateUtils
 
 data class Message(
     val id: Int,
@@ -44,22 +48,67 @@ data class QuickReply(
     val text: String
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GroupChat(
+fun GroupChatRoute(
+    activityId: Long,
     innerPadding: PaddingValues,
     socialTitle: String,
     categoryIcon: @Composable () -> Unit,
     categoryColor: Color,
     participantCount: Int,
+    onClose: () -> Unit,
+    viewModel: ChatViewModel = hiltViewModel()
+) {
+    val messages by viewModel.messages.collectAsState()
+    val currentProfileId by viewModel.currentProfileId.collectAsState()
+
+    // Connect to chat on enter, disconnect on leave
+    DisposableEffect(activityId) {
+        viewModel.connectToChat(activityId)
+        onDispose {
+            viewModel.disconnectFromChat()
+        }
+    }
+
+    GroupChatContent(
+        activityId = activityId,
+        innerPadding = innerPadding,
+        socialTitle = socialTitle,
+        categoryIcon = categoryIcon,
+        categoryColor = categoryColor,
+        participantCount = participantCount,
+        messages = messages,
+        currentProfileId = currentProfileId ?: -1L,
+        onSendMessage = { content -> viewModel.sendMessage(activityId, content) },
+        onClose = onClose
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun GroupChatContent(
+    activityId: Long,
+    innerPadding: PaddingValues,
+    socialTitle: String,
+    categoryIcon: @Composable () -> Unit,
+    categoryColor: Color,
+    participantCount: Int,
+    messages: List<com.shivam.downn.data.models.ChatMessageResponse>,
+    currentProfileId: Long,
+    onSendMessage: (String) -> Unit,
     onClose: () -> Unit
 ) {
     var messageText by remember { mutableStateOf("") }
-    val mockMessages = listOf(
-        Message(1, 2, "Sarah K.", "https://images.unsplash.com/photo-1638996030249-abc99a735463", "Hey everyone! Super excited for this! 🎉", "10:23 AM"),
-        Message(2, 3, "Mike R.", "https://images.unsplash.com/photo-1567516364473-233c4b6fcfbe", "Same here! Should I bring anything?", "10:25 AM"),
-        Message(3, 1, "You", "https://images.unsplash.com/flagged/photo-1596479042555-9265a7fa7983", "Just bring yourself! We're all set ✨", "10:27 AM", true),
-    )
+    val context = LocalContext.current
+    val listState = rememberLazyListState()
+    
+    // Auto-scroll to bottom when new messages arrive
+    LaunchedEffect(messages.size) {
+        if (messages.isNotEmpty()) {
+            listState.animateScrollToItem(messages.size - 1)
+        }
+    }
+
     val quickReplies = listOf(
         QuickReply(1, Icons.Default.Place, "Share location"),
         QuickReply(2, Icons.Default.Schedule, "I'm on my way!"),
@@ -201,7 +250,12 @@ fun GroupChat(
                     )
 
                     IconButton(
-                        onClick = { if (messageText.isNotBlank()) messageText = "" },
+                        onClick = { 
+                            if (messageText.isNotBlank()) {
+                                onSendMessage(messageText)
+                                messageText = "" 
+                            }
+                        },
                         enabled = messageText.isNotBlank(),
                         modifier = Modifier
                             .size(48.dp)
@@ -219,13 +273,25 @@ fun GroupChat(
         containerColor = Color(0xFF020617)
     ) { padding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize().padding(padding),
             reverseLayout = false,
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            items(mockMessages) { msg ->
-                ChatMessageItem(msg)
+            items(messages) { msg ->
+                val isCurrentUser = msg.profileId == currentProfileId
+                ChatMessageItem(
+                    Message(
+                        id = msg.id.toInt(),
+                        userId = msg.profileId.toInt(),
+                        userName = msg.profileName,
+                        avatar = msg.profileAvatar ?: "",
+                        text = msg.content,
+                        timestamp = DateUtils.formatEventTime(msg.createdAt), // Or use a proper chat time formatter
+                        isCurrentUser = isCurrentUser
+                    )
+                )
             }
         }
     }
@@ -280,7 +346,8 @@ private fun ChatMessageItem(msg: Message) {
 @Preview(showBackground = true, showSystemUi = true, backgroundColor = 0xFF020617)
 @Composable
 fun GroupChatPreview() {
-    GroupChat(
+    GroupChatContent(
+        activityId = 1L,
         innerPadding = PaddingValues(0.dp),
         socialTitle = "Downtown Coffee Meetup",
         categoryIcon = {
@@ -288,7 +355,10 @@ fun GroupChatPreview() {
             Text("☕️", fontSize = 20.sp)
         },
         categoryColor = Color(0xFFFBBF24).copy(alpha = 0.2f),
-        participantCount = 12
-    ) {}
-    // }
+        participantCount = 12,
+        messages = emptyList(),
+        currentProfileId = 1L,
+        onSendMessage = {},
+        onClose = {}
+    )
 }

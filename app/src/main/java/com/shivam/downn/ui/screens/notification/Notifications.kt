@@ -24,6 +24,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.AsyncImage
 import com.shivam.downn.data.models.NotificationResponse
 import com.shivam.downn.data.models.NotificationType
@@ -34,22 +35,7 @@ import com.google.gson.Gson
 import com.shivam.downn.utils.TimeUtils
 import java.time.LocalDateTime
 
-data class NotificationItem(
-    val id: Long,
-    val type: NotificationType,
-    val title: String,
-    val description: String,
-    val time: String,
-    val avatar: String? = null,
-    val icon: ImageVector,
-    val iconBg: Brush,
-    val gradient: Brush,
-    val isUnread: Boolean,
-    val actionable: Boolean = false,
-    val senderUserId: Long? = null,
-    val activityId: Long? = null,
-    val actionStatus: String? = null
-)
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,7 +45,7 @@ fun NotificationsRoute(
     onMarkAllRead: () -> Unit = {}
 ) {
     val viewModel = hiltViewModel<NotificationViewModel>()
-    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     
     // Refresh notifications when screen resumes (user switches back to this tab)
     val state by viewModel.state.collectAsState()

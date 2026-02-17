@@ -2,6 +2,7 @@ package com.shivam.downn.ui.screens.activity_detail
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.shivam.downn.data.models.SocialResponse
 import com.shivam.downn.data.network.NetworkResult
 import com.shivam.downn.data.repository.SocialRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -13,13 +14,17 @@ import javax.inject.Inject
 @HiltViewModel
 class SocialDetailViewModel @Inject constructor(
     private val repository: SocialRepository,
+    private val profileRepository: com.shivam.downn.data.repository.ProfileRepository,
     private val prefsManager: com.shivam.downn.data.local.PrefsManager
 ) : ViewModel() {
 
     val currentUserId = prefsManager.getUserId()
 
-    private val _state = MutableStateFlow<NetworkResult<com.shivam.downn.data.models.SocialResponse>>(NetworkResult.Loading())
-    val state: StateFlow<NetworkResult<com.shivam.downn.data.models.SocialResponse>> = _state
+    private val _state = MutableStateFlow<NetworkResult<SocialResponse>>(NetworkResult.Loading())
+    val state: StateFlow<NetworkResult<SocialResponse>> = _state
+
+    private val _isBusinessProfile = MutableStateFlow(false)
+    val isBusinessProfile: StateFlow<Boolean> = _isBusinessProfile
 
     fun loadSocialDetails(socialId: Int) {
         viewModelScope.launch {
@@ -37,6 +42,10 @@ class SocialDetailViewModel @Inject constructor(
 
     private val _removeState = MutableStateFlow<NetworkResult<Unit>?>(null)
     val removeState: StateFlow<NetworkResult<Unit>?> = _removeState
+
+    init {
+        checkCurrentProfileType()
+    }
 
     fun joinSocial(socialId: Int) {
         viewModelScope.launch {
@@ -105,6 +114,30 @@ class SocialDetailViewModel @Inject constructor(
         viewModelScope.launch {
             repository.deleteActivity(socialId).collect { result ->
                 _deleteState.value = result
+            }
+        }
+    }
+
+
+
+
+    private fun checkCurrentProfileType() {
+        val activeProfileId = prefsManager.getActiveProfileId()
+        val userId = prefsManager.getUserId()
+
+        viewModelScope.launch {
+            if (activeProfileId != -1L) {
+                profileRepository.getProfileDetails(activeProfileId).collect { result ->
+                    if (result is NetworkResult.Success) {
+                        _isBusinessProfile.value = result.data?.type == com.shivam.downn.data.models.ProfileType.BUSINESS
+                    }
+                }
+            } else {
+                profileRepository.getUserDetails(userId).collect { result ->
+                     if (result is NetworkResult.Success) {
+                        _isBusinessProfile.value = result.data?.type == com.shivam.downn.data.models.ProfileType.BUSINESS
+                    }
+                }
             }
         }
     }

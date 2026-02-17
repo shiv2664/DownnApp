@@ -83,6 +83,7 @@ dependencies {
 
     implementation (libs.retrofit)
     implementation (libs.retrofit.gson.convertor)
+    implementation("com.squareup.okhttp3:okhttp:4.12.0") // For WebSockets
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
 

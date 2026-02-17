@@ -1,5 +1,6 @@
 package com.shivam.downn.navigation
 
+import android.widget.Toast
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -8,7 +9,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.shivam.downn.ui.screens.chat.GroupChat
+import com.shivam.downn.ui.screens.chat.GroupChatRoute
 import com.shivam.downn.ui.screens.create_activity.StartMove
 import com.shivam.downn.ui.screens.auth.LoginScreen
 import com.shivam.downn.ui.screens.profile.EditProfileScreen
@@ -37,7 +38,11 @@ import com.shivam.downn.ui.screens.profile.UserProfileRoute
 
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import com.shivam.downn.data.local.SessionManager
+import com.shivam.downn.ui.screens.chat.ChatListScreen
+import com.shivam.downn.ui.screens.notification.NotificationViewModel
+import com.shivam.downn.utils.SnackbarManager
 
 @Composable
 fun AppNavigation(
@@ -46,28 +51,28 @@ fun AppNavigation(
 ) {
     val navController = rememberNavController()
     val sharedProfileViewModel: ProfileViewModel = hiltViewModel()
-    val navigationViewModel: com.shivam.downn.navigation.NavigationViewModel = hiltViewModel()
-    val notificationViewModel: com.shivam.downn.ui.screens.notification.NotificationViewModel = hiltViewModel()
+    val navigationViewModel: NavigationViewModel = hiltViewModel()
+    val notificationViewModel: NotificationViewModel = hiltViewModel()
     val unreadCount by notificationViewModel.unreadCount.collectAsState()
     val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
 
     // Global Snackbar collection
     LaunchedEffect(Unit) {
-        com.shivam.downn.utils.SnackbarManager.messages.collect { msg ->
+        SnackbarManager.messages.collect { msg ->
             snackbarHostState.showSnackbar(
                 message = msg.message,
                 actionLabel = msg.actionLabel,
-                duration = if (msg.isError) androidx.compose.material3.SnackbarDuration.Long 
-                           else androidx.compose.material3.SnackbarDuration.Short
+                duration = if (msg.isError) androidx.compose.material3.SnackbarDuration.Long
+                else androidx.compose.material3.SnackbarDuration.Short
             )
         }
     }
 
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     LaunchedEffect(Unit) {
         sessionManager?.logoutEvent?.collect { message ->
             if (message != null) {
-                android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             }
             navController.navigate("login") {
                 popUpTo(0) { inclusive = true }
@@ -77,7 +82,7 @@ fun AppNavigation(
 
     Scaffold(
         snackbarHost = { androidx.compose.material3.SnackbarHost(snackbarHostState) },
-        bottomBar = { 
+        bottomBar = {
             BottomBar(navController, unreadNotificationCount = unreadCount) { route ->
                 navigationViewModel.onBottomNavClick(route)
             }
@@ -98,21 +103,20 @@ fun AppNavigation(
             composable(
                 route = itemsDataList[0].route
             ) {
-                FeedRoute({ socialType, socialId ->
-                    if (socialType == SocialType.BUSINESS) {
+                FeedRoute(
+                    { socialType, socialId ->
                         navController.navigate("social_detail/$socialId")
-                    } else {
-                        navController.navigate("social_detail/$socialId")
-                    }
-                }, {
-
-                        socialType, socialId ->
-                    if (socialType == SocialType.BUSINESS) {
-                        navController.navigate("social_detail/$socialId")
-                    } else {
-                        navController.navigate("social_detail/$socialId")
-                    }
-                })
+                    }, {
+                            socialType, socialId ->
+                        if (socialType == SocialType.BUSINESS) {
+                            navController.navigate("social_detail/$socialId")
+                        } else {
+                            navController.navigate("social_detail/$socialId")
+                        }
+                    },
+                    onChatClick = {
+                        navController.navigate("chat_list")
+                    })
             }
 
             composable(
@@ -177,8 +181,7 @@ fun AppNavigation(
                 )
             }
             composable("edit_business_profile/{businessId}") { backStackEntry ->
-                val businessId =
-                    backStackEntry.arguments?.getString("businessId")?.toLongOrNull() ?: -1L
+                val businessId = backStackEntry.arguments?.getString("businessId")?.toLongOrNull() ?: -1L
                 EditBusinessProfileScreen(
                     businessId = businessId,
                     onClose = { navController.navigateUp() },
@@ -199,7 +202,7 @@ fun AppNavigation(
                     }
                 )
             }
-            
+
             composable("settings_detail/{title}") { backStackEntry ->
                 val title = backStackEntry.arguments?.getString("title") ?: "Settings"
                 SettingsDetailScreen(
@@ -224,7 +227,7 @@ fun AppNavigation(
                 SocialDetailRoute(
                     socialId = socialId,
                     onClose = { navController.navigateUp() },
-                    onOpenChat = { navController.navigate("group_chat/$socialId") },
+                    onOpenChat = { title -> navController.navigate("group_chat/$socialId?title=$title") },
                     onViewProfile = { userId, isBusiness ->
                         if (isBusiness) {
                             navController.navigate("public_business_profile/$userId")
@@ -246,8 +249,7 @@ fun AppNavigation(
             }
 
             composable(route = "business_profile/{businessId}") { backStackEntry ->
-                val businessId =
-                    backStackEntry.arguments?.getString("businessId")?.toLongOrNull() ?: 16L
+                val businessId = backStackEntry.arguments?.getString("businessId")?.toLongOrNull() ?: 16L
                 BusinessProfileRoute(
                     businessId = businessId,
                     onClose = { navController.navigateUp() },
@@ -257,16 +259,34 @@ fun AppNavigation(
                 )
             }
 
-            composable("group_chat/{socialId}") { backStackEntry ->
-                val socialId = backStackEntry.arguments?.getString("socialId")?.toIntOrNull() ?: 1
-                GroupChat(
-                    outerPadding,
-                    socialTitle = "Downtown Coffee Meetup",
+            composable("chat_list") {
+                ChatListScreen(navController = navController)
+            }
+
+            composable(
+                "group_chat/{socialId}?title={title}",
+                arguments = listOf(
+                    androidx.navigation.navArgument("socialId") {
+                        type = androidx.navigation.NavType.StringType
+                    },
+                    androidx.navigation.navArgument("title") {
+                        type = androidx.navigation.NavType.StringType; defaultValue = "Chat"
+                    }
+                )
+            ) { backStackEntry ->
+                val socialIdString = backStackEntry.arguments?.getString("socialId")
+                val socialId = socialIdString?.toLongOrNull() ?: 1L
+                val title = backStackEntry.arguments?.getString("title") ?: "Chat"
+
+                GroupChatRoute(
+                    activityId = socialId,
+                    innerPadding = outerPadding,
+                    socialTitle = title,
                     categoryIcon = {
-                        Text("☕️", fontSize = 20.sp)
+                        Text("💬", fontSize = 20.sp)
                     },
                     categoryColor = Color(0xFFFBBF24).copy(alpha = 0.2f),
-                    participantCount = 12,
+                    participantCount = 0, // In real app, pass this or fetch in VM
                     onClose = {
                         navController.navigateUp()
                     }

@@ -20,6 +20,8 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonDeserializer
 import com.google.gson.JsonSerializer
+import com.shivam.downn.data.api.ChatApi
+import com.shivam.downn.utils.NetworkUtils
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -53,7 +55,7 @@ object NetworkModule {
         val cacheInterceptor = okhttp3.Interceptor { chain ->
             var request = chain.request()
             // For GET requests, add cache headers
-            request = if (com.shivam.downn.utils.NetworkUtils.isNetworkAvailable(context)) {
+            request = if (NetworkUtils.isNetworkAvailable(context)) {
                 request.newBuilder()
                     .header("Cache-Control", "public, max-age=${5 * 60}") // 5 min fresh
                     .build()
@@ -111,5 +113,11 @@ object NetworkModule {
     @Singleton
     fun provideAppSettingsApi(retrofit: Retrofit): AppSettingsApi {
         return retrofit.create(AppSettingsApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideChatApi(retrofit: Retrofit): ChatApi {
+        return retrofit.create(ChatApi::class.java)
     }
 }

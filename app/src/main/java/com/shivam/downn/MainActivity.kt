@@ -2,11 +2,13 @@ package com.shivam.downn
 
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.lifecycleScope
 import com.shivam.downn.data.local.PrefsManager
+import com.shivam.downn.data.local.SessionManager
 import com.shivam.downn.data.repository.AppSettingsRepository
 import com.shivam.downn.ui.theme.DownnTheme
 import com.shivam.downn.navigation.AppNavigation
@@ -23,7 +25,7 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var prefsManager: PrefsManager
     @Inject
-    lateinit var sessionManager: com.shivam.downn.data.local.SessionManager
+    lateinit var sessionManager: SessionManager
     @Inject
     lateinit var appSettingsRepository: AppSettingsRepository
 
@@ -43,7 +45,7 @@ class MainActivity : ComponentActivity() {
             if (!success && !appSettingsRepository.hasCachedSettings()) {
                 // First launch and server unreachable — still proceed
                 // (API calls will fail gracefully with error messages)
-                android.util.Log.w("MainActivity", "No cached settings and server unreachable")
+                Log.w("MainActivity", "No cached settings and server unreachable")
             }
             isSettingsReady = true
         }

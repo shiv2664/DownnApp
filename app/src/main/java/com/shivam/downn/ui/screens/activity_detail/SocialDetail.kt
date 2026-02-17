@@ -65,13 +65,14 @@ fun SocialDetail(
     removeState: NetworkResult<Unit>? = null,
     deleteState: NetworkResult<Unit>? = null,
     onClose: () -> Unit,
-    onOpenChat: () -> Unit,
+    onOpenChat: (String) -> Unit,
     onViewProfile: (userId: Long, isBusiness: Boolean) -> Unit,
     onSeeAllParticipants: () -> Unit,
     onJoinSocial: (socialId: Int) -> Unit,
     onLeaveSocial: (socialId: Int) -> Unit,
     onRemoveParticipant: (socialId: Int, participantId: Long) -> Unit,
-    onDeleteActivity: (socialId: Int) -> Unit = {}
+    onDeleteActivity: (socialId: Int) -> Unit = {},
+    isBusinessProfile: Boolean = false
 ) {
     val isOwner = social.userId?.toLong() == currentUserId
     val isParticipant = social.participants.any { it.id == currentUserId }
@@ -244,17 +245,23 @@ fun SocialDetail(
                                 com.shivam.downn.utils.DateUtils.formatEventTime(social.scheduledTime),
                                 primaryColor
                             )
-                            InfoChip(Icons.Default.Place, social.distance ?: "Nearby", secondaryColor)
+                            InfoChip(
+                                Icons.Default.Place,
+                                social.distance ?: "Nearby",
+                                secondaryColor
+                            )
                             if (isBusiness) {
                                 InfoChip(Icons.Default.Verified, "4.9", Color(0xFF22C55E))
                             }
                         }
 
                         // Host info
-                        val userName = if (social.socialType == SocialType.BUSINESS && social.profile != null)
-                            social.profile.name else (social.userName ?: "Unknown")
-                        val userAvatar = if (social.socialType == SocialType.BUSINESS && social.profile != null)
-                            (social.profile.avatar ?: "") else (social.userAvatar ?: "")
+                        val userName =
+                            if (social.socialType == SocialType.BUSINESS && social.profile != null)
+                                social.profile.name else (social.userName ?: "Unknown")
+                        val userAvatar =
+                            if (social.socialType == SocialType.BUSINESS && social.profile != null)
+                                (social.profile.avatar ?: "") else (social.userAvatar ?: "")
 
                         Surface(
                             modifier = Modifier
@@ -269,7 +276,9 @@ fun SocialDetail(
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 AsyncImage(
-                                    model = com.shivam.downn.utils.ImageUtils.getFullImageUrl(userAvatar),
+                                    model = com.shivam.downn.utils.ImageUtils.getFullImageUrl(
+                                        userAvatar
+                                    ),
                                     contentDescription = "Host",
                                     modifier = Modifier
                                         .size(48.dp)
@@ -797,7 +806,7 @@ fun SocialDetail(
                         // Chat Button - Only for participants/owners
                         if (isParticipant || isOwner) {
                             Button(
-                                onClick = { onOpenChat() },
+                                onClick = { onOpenChat(social.title) },
                                 modifier = Modifier
                                     .weight(1f)
                                     .height(56.dp),
@@ -898,149 +907,153 @@ fun SocialDetail(
 
                             else -> {
                                 // I'M DOWN button (Default for non-participants)
-                                Button(
-                                    onClick = { onJoinSocial(social.id) },
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(56.dp),
-                                    shape = RoundedCornerShape(16.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                                    contentPadding = PaddingValues()
-                                ) {
-                                    Box(
+                                if (!isBusinessProfile) {
+                                    Button(
+                                        onClick = { onJoinSocial(social.id) },
                                         modifier = Modifier
-                                            .fillMaxSize()
-                                            .background(accentBrush),
-                                        contentAlignment = Alignment.Center
+                                            .weight(1f)
+                                            .height(56.dp),
+                                        shape = RoundedCornerShape(16.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                                        contentPadding = PaddingValues()
                                     ) {
-                                        Text(
-                                            "I'M DOWN",
-                                            color = Color.White,
-                                            fontWeight = FontWeight.Bold
-                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .background(accentBrush),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                "I'M DOWN",
+                                                color = Color.White,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                }
-                // Participant Management Sheet
-                if (showParticipantActionSheet) {
-                    ModalBottomSheet(
-                        onDismissRequest = { showParticipantActionSheet = false },
-                        sheetState = sheetState,
-                        containerColor = Color(0xFF1E293B),
-                        scrimColor = Color.Black.copy(alpha = 0.5f)
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 24.dp)
-                                .padding(bottom = 48.dp)
+                    // Participant Management Sheet
+                    if (showParticipantActionSheet) {
+                        ModalBottomSheet(
+                            onDismissRequest = { showParticipantActionSheet = false },
+                            sheetState = sheetState,
+                            containerColor = Color(0xFF1E293B),
+                            scrimColor = Color.Black.copy(alpha = 0.5f)
                         ) {
-                            Text(
-                                if (isOwner) "Manage Participants" else "Participants",
-                                color = Color.White,
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(bottom = 24.dp)
-                            )
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 24.dp)
+                                    .padding(bottom = 48.dp)
+                            ) {
+                                Text(
+                                    if (isOwner) "Manage Participants" else "Participants",
+                                    color = Color.White,
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(bottom = 24.dp)
+                                )
 
-                            social.participants.forEach { participant ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    AsyncImage(
-                                        model = com.shivam.downn.utils.ImageUtils.getFullImageUrl(participant.avatar),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(40.dp).clip(CircleShape),
-                                        contentScale = ContentScale.Crop
-                                    )
-                                    Text(
-                                        participant.name,
-                                        color = Color.White,
-                                        modifier = Modifier.weight(1f)
-                                            .padding(horizontal = 16.dp),
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    if (isOwner && participant.id != currentUserId) {
-                                        TextButton(
-                                            onClick = {
-                                                onRemoveParticipant(
-                                                    social.id,
-                                                    participant.id
+                                social.participants.forEach { participant ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        AsyncImage(
+                                            model = com.shivam.downn.utils.ImageUtils.getFullImageUrl(
+                                                participant.avatar
+                                            ),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(40.dp).clip(CircleShape),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                        Text(
+                                            participant.name,
+                                            color = Color.White,
+                                            modifier = Modifier.weight(1f)
+                                                .padding(horizontal = 16.dp),
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                        if (isOwner && participant.id != currentUserId) {
+                                            TextButton(
+                                                onClick = {
+                                                    onRemoveParticipant(
+                                                        social.id,
+                                                        participant.id
+                                                    )
+                                                },
+                                                colors = ButtonDefaults.textButtonColors(
+                                                    contentColor = Color(0xFFEF4444)
                                                 )
-                                            },
-                                            colors = ButtonDefaults.textButtonColors(
-                                                contentColor = Color(0xFFEF4444)
+                                            ) {
+                                                Text("Remove")
+                                            }
+                                        } else if (participant.id == currentUserId) {
+                                            Text(
+                                                if (isOwner) "Owner" else "You",
+                                                color = primaryColor,
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold
                                             )
-                                        ) {
-                                            Text("Remove")
+                                        } else if (social.userId?.toLong() == participant.id) {
+                                            Text(
+                                                "Host",
+                                                color = primaryColor,
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
                                         }
-                                    } else if (participant.id == currentUserId) {
-                                        Text(
-                                            if (isOwner) "Owner" else "You",
-                                            color = primaryColor,
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    } else if (social.userId?.toLong() == participant.id) {
-                                        Text(
-                                            "Host",
-                                            color = primaryColor,
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
                                     }
+                                    Divider(color = Color(0xFF334155), thickness = 0.5.dp)
                                 }
-                                Divider(color = Color(0xFF334155), thickness = 0.5.dp)
                             }
                         }
                     }
                 }
             }
-        }
 
 
-        // Delete Confirmation Dialog
-        if (showDeleteConfirm) {
-            AlertDialog(
-                onDismissRequest = { showDeleteConfirm = false },
-                title = {
-                    Text(
-                        "Delete Activity",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                text = {
-                    Text(
-                        "Are you sure you want to delete this activity? This action cannot be undone.",
-                        color = Color(0xFF94A3B8)
-                    )
-                },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            showDeleteConfirm = false
-                            onDeleteActivity(social.id)
-                        },
-                        colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFEF4444))
-                    ) {
-                        Text("Delete", fontWeight = FontWeight.Bold)
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showDeleteConfirm = false }) {
-                        Text("Cancel", color = Color(0xFF94A3B8))
-                    }
-                },
-                containerColor = Color(0xFF1E293B),
-                shape = RoundedCornerShape(24.dp)
-            )
+            // Delete Confirmation Dialog
+            if (showDeleteConfirm) {
+                AlertDialog(
+                    onDismissRequest = { showDeleteConfirm = false },
+                    title = {
+                        Text(
+                            "Delete Activity",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                    },
+                    text = {
+                        Text(
+                            "Are you sure you want to delete this activity? This action cannot be undone.",
+                            color = Color(0xFF94A3B8)
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                showDeleteConfirm = false
+                                onDeleteActivity(social.id)
+                            },
+                            colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFEF4444))
+                        ) {
+                            Text("Delete", fontWeight = FontWeight.Bold)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showDeleteConfirm = false }) {
+                            Text("Cancel", color = Color(0xFF94A3B8))
+                        }
+                    },
+                    containerColor = Color(0xFF1E293B),
+                    shape = RoundedCornerShape(24.dp)
+                )
+            }
         }
     }
 }
@@ -1075,6 +1088,7 @@ fun SocialDetail(
             )
         }
     }
+
 
     @Composable
     fun AvatarsItem(avatar: String = "", name: String = "", brush: Brush? = null) {

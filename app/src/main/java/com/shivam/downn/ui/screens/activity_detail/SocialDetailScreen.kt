@@ -26,7 +26,7 @@ import com.shivam.downn.data.models.SocialResponse
 fun SocialDetailRoute(
     socialId: Int,
     onClose: () -> Unit,
-    onOpenChat: () -> Unit,
+    onOpenChat: (title: String) -> Unit,
     onViewProfile: (userId: Long, isBusiness: Boolean) -> Unit,
     onSeeAllParticipants: (socialId: Int) -> Unit,
     viewModel: SocialDetailViewModel = hiltViewModel()
@@ -69,7 +69,8 @@ fun SocialDetailRoute(
         onJoinSocial = { id -> viewModel.joinSocial(id) },
         onLeaveSocial = { id -> viewModel.leaveSocial(id) },
         onRemoveParticipant = { sId, pId -> viewModel.removeParticipant(sId, pId) },
-        onDeleteActivity = { id -> viewModel.deleteActivity(id) }
+        onDeleteActivity = { id -> viewModel.deleteActivity(id) },
+        isBusinessProfile = viewModel.isBusinessProfile.collectAsState().value
     )
 }
 
@@ -82,13 +83,14 @@ fun SocialDetailContent(
     deleteState: NetworkResult<Unit>? = null,
     socialId: Int,
     onClose: () -> Unit,
-    onOpenChat: () -> Unit,
+    onOpenChat: (String) -> Unit,
     onViewProfile: (userId: Long, isBusiness: Boolean) -> Unit,
     onSeeAllParticipants: (socialId: Int) -> Unit,
     onJoinSocial: (Int) -> Unit,
     onLeaveSocial: (Int) -> Unit,
     onRemoveParticipant: (Int, Long) -> Unit,
-    onDeleteActivity: (Int) -> Unit = {}
+    onDeleteActivity: (Int) -> Unit = {},
+    isBusinessProfile: Boolean = false
 ) {
     val view = LocalView.current
 
@@ -127,7 +129,8 @@ fun SocialDetailContent(
                 onJoinSocial = { id -> onJoinSocial(id) },
                 onLeaveSocial = { id -> onLeaveSocial(id) },
                 onRemoveParticipant = { sId, pId -> onRemoveParticipant(sId, pId) },
-                onDeleteActivity = { id -> onDeleteActivity(id) }
+                onDeleteActivity = { id -> onDeleteActivity(id) },
+                isBusinessProfile = isBusinessProfile
             )
         }
     }
