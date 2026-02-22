@@ -43,9 +43,10 @@ import androidx.compose.ui.geometry.Offset
 fun EditBusinessProfileScreen(
     businessId: Long,
     onClose: () -> Unit,
-    viewModel: ProfileViewModel = hiltViewModel()
+    activeProfile: com.shivam.downn.data.models.UserProfileData? = null,
+    viewModel: EditProfileViewModel = hiltViewModel()
 ) {
-    val activeProfile by viewModel.activeProfile.collectAsState()
+
 
     // Initialize state from activeProfile
     var name by remember { mutableStateOf(activeProfile?.name ?: "") }

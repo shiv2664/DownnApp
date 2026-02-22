@@ -71,7 +71,7 @@ class StartMoveViewModel @Inject constructor(
 
             if (activeProfileId == -1L) {
                 try {
-                     socialRepository.getSocialsPaged("Denver", null, 0, 1) // Dummy call to wake up if needed? No.
+//                     socialRepository.getSocialsPaged("Denver", null, 0, 1) // Dummy call to wake up if needed? No.
                      // Fetch profiles
                      profileRepository.getProfiles().collect { result ->
                          if (result is NetworkResult.Loading) return@collect
@@ -138,7 +138,8 @@ class StartMoveViewModel @Inject constructor(
                 maxParticipants = maxParticipants,
                 profileId = profileId,
                 latitude = latitude,
-                longitude = longitude
+                longitude = longitude,
+                timezone = java.util.TimeZone.getDefault().id
             )
             socialRepository.createSocial(request, if (imageParts.isNotEmpty()) imageParts else null).collectLatest {
                 _state.value = it

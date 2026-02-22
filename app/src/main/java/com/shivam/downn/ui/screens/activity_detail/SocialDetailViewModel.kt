@@ -26,6 +26,9 @@ class SocialDetailViewModel @Inject constructor(
     private val _isBusinessProfile = MutableStateFlow(false)
     val isBusinessProfile: StateFlow<Boolean> = _isBusinessProfile
 
+    private val _activeProfileId = MutableStateFlow(prefsManager.getActiveProfileId())
+    val activeProfileId: StateFlow<Long> = _activeProfileId
+
     fun loadSocialDetails(socialId: Int) {
         viewModelScope.launch {
             repository.getSocialById(socialId).collect { result ->
@@ -121,8 +124,30 @@ class SocialDetailViewModel @Inject constructor(
 
 
 
+    private val _reportState = MutableStateFlow<NetworkResult<Unit>?>(null)
+    val reportState: StateFlow<NetworkResult<Unit>?> = _reportState
+
+    fun reportActivity(activityId: Int, reason: String) {
+        viewModelScope.launch {
+            _reportState.value = NetworkResult.Loading()
+            profileRepository.reportContent(
+                com.shivam.downn.data.models.ReportRequest(
+                    activityId = activityId.toLong(),
+                    reason = reason
+                )
+            ).collect { result ->
+                _reportState.value = result
+            }
+        }
+    }
+
+    fun resetReportState() {
+        _reportState.value = null
+    }
+
     private fun checkCurrentProfileType() {
         val activeProfileId = prefsManager.getActiveProfileId()
+        _activeProfileId.value = activeProfileId
         val userId = prefsManager.getUserId()
 
         viewModelScope.launch {

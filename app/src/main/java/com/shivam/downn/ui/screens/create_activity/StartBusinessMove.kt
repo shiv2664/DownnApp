@@ -323,7 +323,8 @@ fun StartBusinessMove(
                         scheduledTime = time.ifEmpty { "2026-01-31T20:00:00" }, // Use selected time or fallback
                         maxParticipants = capacity.toIntOrNull() ?: 0,
                         latitude = latitude,
-                        longitude = longitude
+                        longitude = longitude,
+                        imageUri = selectedImageUri
                     )
                 },
                 enabled = title.isNotBlank() && description.isNotBlank() && state !is NetworkResult.Loading,

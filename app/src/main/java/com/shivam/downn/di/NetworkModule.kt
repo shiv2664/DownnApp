@@ -21,6 +21,7 @@ import com.google.gson.GsonBuilder
 import com.google.gson.JsonDeserializer
 import com.google.gson.JsonSerializer
 import com.shivam.downn.data.api.ChatApi
+import com.shivam.downn.utils.Constants
 import com.shivam.downn.utils.NetworkUtils
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -79,7 +80,7 @@ object NetworkModule {
     @Singleton
     fun provideRetrofit(okHttpClient: OkHttpClient, gson: Gson): Retrofit {
         return Retrofit.Builder()
-            .baseUrl("http://192.168.1.8:8081") // Use 10.0.2.2 for localhost from Android Emulator
+            .baseUrl(Constants.BASE_URL) // Use 10.0.2.2 for localhost from Android Emulator
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create(gson))
             .build()

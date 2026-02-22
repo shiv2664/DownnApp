@@ -45,8 +45,9 @@ import com.shivam.downn.data.network.NetworkResult
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
-    viewModel: AuthViewModel = hiltViewModel(),
-    onLoginSuccess: () -> Unit = {}
+    onLoginSuccess: () -> Unit,
+    onNavigateToForgotPassword: () -> Unit,
+    viewModel: AuthViewModel = hiltViewModel()
 ) {
     val authState by viewModel.authState.collectAsState()
 
@@ -59,13 +60,14 @@ fun LoginScreen(
     LoginContent(
         authState,
         onLoginClick = { email, password, isAdmin ->
-            val role = if (isAdmin) "ADMIN" else null // Send null if not admin to avoid unnecessary updates
+            val role = if (isAdmin) "ADMIN" else null
             viewModel.login(AuthRequest(email, password, role))
         },
         onRegisterClick = { name, phone, email, password, isAdmin ->
             val role = if (isAdmin) "ADMIN" else "USER"
             viewModel.register(RegisterRequest(email, password, name, phone, role = role))
-        }
+        },
+        onForgotPasswordClick = onNavigateToForgotPassword
     )
 }
 
@@ -74,9 +76,12 @@ fun LoginScreen(
 fun LoginContent(
     authState: NetworkResult<AuthResponse?>?,
     onLoginClick: (String, String, Boolean) -> Unit,
-    onRegisterClick: (String, String, String, String, Boolean) -> Unit
+    onRegisterClick: (String, String, String, String, Boolean) -> Unit,
+    onForgotPasswordClick: () -> Unit // Receive callback
 ) {
     var isRegisterMode by remember { mutableStateOf(false) }
+
+
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -126,14 +131,20 @@ fun LoginContent(
                 modifier = Modifier
                     .size(80.dp)
                     .clip(CircleShape)
-                    .border(2.dp, Brush.linearGradient(listOf(Color(0xFFA855F7), Color(0xFFEC4899))), CircleShape),
+                    .border(
+                        2.dp,
+                        Brush.linearGradient(listOf(Color(0xFFA855F7), Color(0xFFEC4899))),
+                        CircleShape
+                    ),
                 color = Color(0xFF1E293B),
                 shadowElevation = 10.dp
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.splash_logo),
                     contentDescription = "App Logo",
-                    modifier = Modifier.size(80.dp).clip(CircleShape),
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(CircleShape),
                     contentScale = ContentScale.Fit
                 )
             }
@@ -177,12 +188,18 @@ fun LoginContent(
                         )
                         OutlinedTextField(
                             value = phoneNumber,
-                            onValueChange = { if (it.length <= 15 && it.all { char -> char.isDigit() }) phoneNumber = it },
+                            onValueChange = {
+                                if (it.length <= 15 && it.all { char -> char.isDigit() }) phoneNumber =
+                                    it
+                            },
                             label = { Text("Phone Number") },
                             modifier = Modifier.fillMaxWidth(),
                             leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
                             singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Number,
+                                imeAction = ImeAction.Next
+                            ),
                             shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedTextColor = Color.White,
@@ -200,7 +217,10 @@ fun LoginContent(
                         modifier = Modifier.fillMaxWidth(),
                         leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
                         singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Email,
+                            imeAction = ImeAction.Next
+                        ),
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = Color.White,
@@ -222,7 +242,8 @@ fun LoginContent(
                                 Icons.Default.Visibility
                             else Icons.Default.VisibilityOff
 
-                            val description = if (passwordVisible) "Hide password" else "Show password"
+                            val description =
+                                if (passwordVisible) "Hide password" else "Show password"
 
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
                                 Icon(imageVector = image, contentDescription = description)
@@ -230,7 +251,10 @@ fun LoginContent(
                         },
                         visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Password,
+                            imeAction = ImeAction.Done
+                        ),
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = Color.White,
@@ -239,10 +263,12 @@ fun LoginContent(
                             unfocusedLabelColor = Color(0xFF94A3B8)
                         )
                     )
-                    
-                    Row(
+
+/*                    Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(top = 8.dp).clickable { isAdmin = !isAdmin }
+                        modifier = Modifier
+                            .padding(top = 8.dp)
+                            .clickable { isAdmin = !isAdmin }
                     ) {
                         Checkbox(
                             checked = isAdmin,
@@ -258,6 +284,15 @@ fun LoginContent(
                             color = Color.White,
                             fontSize = 14.sp
                         )
+                    }*/
+
+                    if (!isRegisterMode) {
+                        TextButton(
+                            onClick = onForgotPasswordClick,
+                            modifier = Modifier.align(Alignment.End)
+                        ) {
+                            Text("Forgot Password?", color = Color(0xFFA855F7), fontSize = 14.sp)
+                        }
                     }
                 }
             }
@@ -289,27 +324,27 @@ fun LoginContent(
             Button(
                 onClick = {
                     validationError = null
-                    
+
                     // Validation Logic
                     val isEmailValid = android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
-                    
+
                     if (isRegisterMode) {
                         if (name.isBlank() || phoneNumber.isBlank() || email.isBlank() || password.isBlank()) {
                             validationError = "All fields are required"
                             return@Button
                         }
                     } else {
-                         if (email.isBlank() || password.isBlank()) {
+                        if (email.isBlank() || password.isBlank()) {
                             validationError = "Email and password are required"
                             return@Button
                         }
                     }
-                    
+
                     if (!isEmailValid) {
                         validationError = "Invalid email address"
                         return@Button
                     }
-                    
+
                     if (password.length < 6) {
                         validationError = "Password must be at least 6 characters"
                         return@Button
@@ -333,7 +368,11 @@ fun LoginContent(
                 if (authState is NetworkResult.Loading) {
                     CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
                 } else {
-                    Text(if (isRegisterMode) "Create Account" else "Sign In", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(
+                        if (isRegisterMode) "Create Account" else "Sign In",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
                 }
             }
 
@@ -371,9 +410,19 @@ fun LoginContent(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    Text("G", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF4285F4))
+                    Text(
+                        "G",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF4285F4)
+                    )
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text("Continue with Google", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF0F172A))
+                    Text(
+                        "Continue with Google",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF0F172A)
+                    )
                 }
             }
         }
@@ -386,7 +435,8 @@ fun PreviewLoginScreen() {
     LoginContent(
         authState = null,
         onLoginClick = { _, _, _ -> },
-        onRegisterClick = { _, _, _, _, _ -> }
+        onRegisterClick = { _, _, _, _, _ -> },
+        onForgotPasswordClick = {}
     )
 }
 

@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.google.gson.Gson
 import com.shivam.downn.data.models.AuthResponse
+import com.shivam.downn.data.models.AppSettings
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -47,6 +48,33 @@ class PrefsManager @Inject constructor(
     }
 
     fun clear() {
-        prefs.edit { clear() }
+        prefs.edit(commit = true) {
+            remove("auth_data")
+            remove("token")
+            remove("userId")
+            remove("active_profile_id")
+            remove("current_profile_type")
+        }
+    }
+
+    fun saveAppSettings(settings: AppSettings) {
+        val json = gson.toJson(settings)
+        prefs.edit(commit = true) {
+            putString("app_settings", json)
+            putLong("settings_last_fetched_at", System.currentTimeMillis())
+        }
+    }
+
+    fun getAppSettings(): AppSettings? {
+        val json = prefs.getString("app_settings", null)
+        return try {
+            gson.fromJson(json, AppSettings::class.java)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    fun getLastFetchedAppSettingsTime(): Long {
+        return prefs.getLong("settings_last_fetched_at", 0)
     }
 }

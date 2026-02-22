@@ -4,11 +4,13 @@ import com.shivam.downn.data.api.AuthApi
 import com.shivam.downn.data.local.PrefsManager
 import com.shivam.downn.data.models.AuthRequest
 import com.shivam.downn.data.models.AuthResponse
+import com.shivam.downn.data.models.ForgotPasswordRequest
 import com.shivam.downn.data.models.RegisterRequest
 import com.shivam.downn.data.network.NetworkResult
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import com.shivam.downn.data.models.LogoutResponse
+import com.shivam.downn.data.models.ResetPasswordRequest
 import retrofit2.Response
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -97,6 +99,36 @@ class AuthRepository @Inject constructor(
             }
         } catch (e: Exception) {
              emit(NetworkResult.Error(e.localizedMessage ?: "Network error"))
+        }
+    }
+
+    fun forgotPassword(email: String): Flow<NetworkResult<String?>> = flow {
+        emit(NetworkResult.Loading())
+        try {
+            val url = appSettingsRepository.getEndpoint("auth.forgotPassword") ?: ""
+            val response = authApi.forgotPassword(url, ForgotPasswordRequest(email))
+            if (response.isSuccessful) {
+                emit(NetworkResult.Success("Password reset email sent"))
+            } else {
+                emit(NetworkResult.Error("Failed to send reset email"))
+            }
+        } catch (e: Exception) {
+            emit(NetworkResult.Error(e.localizedMessage ?: "Network error"))
+        }
+    }
+
+    fun resetPassword(token: String, newPassword: String): Flow<NetworkResult<String?>> = flow {
+        emit(NetworkResult.Loading())
+        try {
+            val url = appSettingsRepository.getEndpoint("auth.resetPassword") ?: ""
+            val response = authApi.resetPassword(url, ResetPasswordRequest(token, newPassword))
+            if (response.isSuccessful) {
+                emit(NetworkResult.Success("Password reset successfully"))
+            } else {
+                emit(NetworkResult.Error("Failed to reset password"))
+            }
+        } catch (e: Exception) {
+            emit(NetworkResult.Error(e.localizedMessage ?: "Network error"))
         }
     }
 

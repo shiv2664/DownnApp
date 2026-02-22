@@ -1,32 +1,25 @@
 package com.shivam.downn.data.repository
 
-import android.content.Context
-import android.content.SharedPreferences
 import android.util.Log
-import com.google.gson.Gson
 import com.shivam.downn.data.api.AppSettingsApi
+import com.shivam.downn.data.local.PrefsManager
 import com.shivam.downn.data.models.AppSettings
-import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Fetches endpoint configuration from the server and caches it in SharedPreferences.
+ * Fetches endpoint configuration from the server and caches it in SharedPreferences via PrefsManager.
  * On app launch, call [refreshSettings] to update the cached endpoints.
  * If the network call fails, the previously cached version is used as fallback.
  */
 @Singleton
 class AppSettingsRepository @Inject constructor(
-    @ApplicationContext private val context: Context,
+    private val prefsManager: PrefsManager,
     private val appSettingsApi: AppSettingsApi
 ) {
-    private val prefs: SharedPreferences = context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
-    private val gson = Gson()
 
     companion object {
         private const val TAG = "AppSettingsRepo"
-        private const val KEY_SETTINGS = "cached_settings"
-        private const val KEY_LAST_FETCHED = "last_fetched_at"
     }
 
     /**
@@ -55,13 +48,7 @@ class AppSettingsRepository @Inject constructor(
      * Get the cached settings. Returns null if never fetched.
      */
     fun getSettings(): AppSettings? {
-        val json = prefs.getString(KEY_SETTINGS, null) ?: return null
-        return try {
-            gson.fromJson(json, AppSettings::class.java)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error parsing cached settings", e)
-            null
-        }
+        return prefsManager.getAppSettings()
     }
 
     /**
@@ -69,9 +56,14 @@ class AppSettingsRepository @Inject constructor(
      * Falls back to the default v1 path if not cached.
      */
     fun getEndpoint(key: String): String? {
-        val settings = getSettings() ?: return null
+        val settings = getSettings()
         val parts = key.split(".")
         if (parts.size != 2) return null
+
+        // If settings are null (not yet fetched), use hardcoded defaults
+        if (settings == null) {
+            return getDefaultEndpoint(key)
+        }
 
         return when (parts[0]) {
             "auth" -> when (parts[1]) {
@@ -79,6 +71,8 @@ class AppSettingsRepository @Inject constructor(
                 "register" -> settings.endpoints.auth.register
                 "logout" -> settings.endpoints.auth.logout
                 "deleteAccount" -> settings.endpoints.auth.deleteAccount
+                "forgotPassword" -> "/api/v1/auth/forgot-password"
+                "resetPassword" -> "/api/v1/auth/reset-password"
                 else -> null
             }
             "activities" -> when (parts[1]) {
@@ -93,6 +87,7 @@ class AppSettingsRepository @Inject constructor(
                 "delete" -> settings.endpoints.activities.delete
                 "update" -> settings.endpoints.activities.update
                 "messages" -> settings.endpoints.activities.messages
+                "getByProfile" -> "/api/v1/activities/profile/{profileId}"
                 else -> null
             }
             "users" -> when (parts[1]) {
@@ -118,6 +113,43 @@ class AppSettingsRepository @Inject constructor(
         }
     }
 
+    private fun getDefaultEndpoint(key: String): String? {
+        return when (key) {
+            "auth.login" -> "api/v1/auth/login"
+            "auth.register" -> "api/v1/auth/register"
+            "auth.logout" -> "api/v1/auth/logout"
+            "auth.deleteAccount" -> "api/v1/auth/delete"
+            "auth.forgotPassword" -> "/api/v1/auth/forgot-password"
+            "auth.resetPassword" -> "/api/v1/auth/reset-password"
+            "activities.create" -> "api/v1/activities"
+            "activities.getByCity" -> "api/v1/activities/city/{city}"
+            "activities.getByUser" -> "api/v1/activities/user/{userId}"
+            "activities.getRecent" -> "api/v1/activities/recent"
+            "activities.getById" -> "api/v1/activities/{id}"
+            "activities.join" -> "api/v1/activities/{id}/request-to-join"
+            "activities.leave" -> "api/v1/activities/{id}/leave"
+            "activities.removeParticipant" -> "api/v1/activities/{id}/participants/{participantId}"
+            "activities.delete" -> "api/v1/activities/{id}"
+            "activities.update" -> "api/v1/activities/{id}"
+            "activities.messages" -> "api/v1/activities/{activityId}/messages"
+            "activities.getByProfile" -> "/api/v1/activities/profile/{profileId}"
+            "users.getDetails" -> "api/v1/users/{userId}"
+            "users.getProfiles" -> "api/v1/users/profiles"
+            "users.createProfile" -> "api/v1/users/profiles"
+            "users.getProfileDetails" -> "api/v1/users/profiles/{profileId}"
+            "users.updateUser" -> "api/v1/users/save"
+            "users.updateProfile" -> "api/v1/users/profiles/{profileId}"
+            "users.joinRequest" -> "api/v1/users/profiles/{profileId}/join-request"
+            "users.follow" -> "/api/v1/users/{userId}/follow"
+            "users.unfollow" -> "/api/v1/users/{userId}/follow"
+            "notifications.getAll" -> "api/v1/notifications"
+            "notifications.approve" -> "api/v1/notifications/{id}/approve"
+            "notifications.reject" -> "api/v1/notifications/{id}/reject"
+            "notifications.clearAll" -> "api/v1/notifications/clear-all"
+            else -> null
+        }
+    }
+
     /**
      * Get the API version from cached settings.
      */
@@ -129,22 +161,18 @@ class AppSettingsRepository @Inject constructor(
      * Check if settings have ever been fetched.
      */
     fun hasCachedSettings(): Boolean {
-        return prefs.contains(KEY_SETTINGS)
+        return prefsManager.getAppSettings() != null
     }
 
     /**
      * Get timestamp of last successful fetch.
      */
     fun getLastFetchedAt(): Long {
-        return prefs.getLong(KEY_LAST_FETCHED, 0)
+        return prefsManager.getLastFetchedAppSettingsTime()
     }
 
     private fun saveSettings(settings: AppSettings) {
-        prefs.edit().apply {
-            putString(KEY_SETTINGS, gson.toJson(settings))
-            putLong(KEY_LAST_FETCHED, System.currentTimeMillis())
-            apply()
-        }
+        prefsManager.saveAppSettings(settings)
     }
 }
 

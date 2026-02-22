@@ -333,6 +333,8 @@ fun StartMoveContent(
                         .fillMaxWidth()
                         .height(120.dp),
                     shape = RoundedCornerShape(16.dp),
+                    singleLine = false,
+                    textStyle = LocalTextStyle.current.copy(textAlign = androidx.compose.ui.text.style.TextAlign.Start),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = Color(0xFF1E293B).copy(alpha = 0.5f),
                         unfocusedContainerColor = Color(0xFF1E293B).copy(alpha = 0.5f),

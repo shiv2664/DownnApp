@@ -33,11 +33,15 @@ class ProfileRepository @Inject constructor(
         }
     }
 
-    fun createProfile(request: CreateProfileRequest): Flow<NetworkResult<ProfileResponse>> = flow {
+    fun createProfile(
+        request: CreateProfileRequest,
+        avatar: MultipartBody.Part?,
+        cover: MultipartBody.Part?
+    ): Flow<NetworkResult<ProfileResponse>> = flow {
         emit(NetworkResult.Loading())
         try {
             val url = appSettingsRepository.getEndpoint("users.createProfile")!!
-            val response = profileApi.createProfile(url, request)
+            val response = profileApi.createProfile(url, request, avatar, cover)
             if (response.isSuccessful && response.body() != null) {
                 emit(NetworkResult.Success(response.body()!!))
             } else {
@@ -145,6 +149,51 @@ class ProfileRepository @Inject constructor(
                 emit(NetworkResult.Success(Unit))
             } else {
                 emit(NetworkResult.Error("Unfollow failed: ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            emit(NetworkResult.Error(e.localizedMessage ?: "Unknown error"))
+        }
+    }
+
+    fun blockUser(userId: Long): Flow<NetworkResult<Unit>> = flow {
+        emit(NetworkResult.Loading())
+        try {
+            val url = "/api/v1/users/$userId/block"
+            val response = profileApi.blockUser(url)
+            if (response.isSuccessful) {
+                emit(NetworkResult.Success(Unit))
+            } else {
+                emit(NetworkResult.Error("Block failed: ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            emit(NetworkResult.Error(e.localizedMessage ?: "Unknown error"))
+        }
+    }
+
+    fun unblockUser(userId: Long): Flow<NetworkResult<Unit>> = flow {
+        emit(NetworkResult.Loading())
+        try {
+            val url = "/api/v1/users/$userId/block"
+            val response = profileApi.unblockUser(url)
+            if (response.isSuccessful) {
+                emit(NetworkResult.Success(Unit))
+            } else {
+                emit(NetworkResult.Error("Unblock failed: ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            emit(NetworkResult.Error(e.localizedMessage ?: "Unknown error"))
+        }
+    }
+
+    fun reportContent(request: com.shivam.downn.data.models.ReportRequest): Flow<NetworkResult<Unit>> = flow {
+        emit(NetworkResult.Loading())
+        try {
+            val url = "/api/v1/users/reports"
+            val response = profileApi.reportContent(url, request)
+            if (response.isSuccessful) {
+                emit(NetworkResult.Success(Unit))
+            } else {
+                emit(NetworkResult.Error("Report failed: ${response.message()}"))
             }
         } catch (e: Exception) {
             emit(NetworkResult.Error(e.localizedMessage ?: "Unknown error"))

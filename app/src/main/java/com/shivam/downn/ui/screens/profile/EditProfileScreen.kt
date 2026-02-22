@@ -38,10 +38,10 @@ import androidx.compose.ui.platform.LocalContext
 @Composable
 fun EditProfileScreen(
     onClose: () -> Unit,
-    viewModel: ProfileViewModel = hiltViewModel()
+    activeProfile: com.shivam.downn.data.models.UserProfileData? = null,
+    viewModel: EditProfileViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
-    val activeProfile by viewModel.activeProfile.collectAsState()
 
     var name by remember { mutableStateOf(activeProfile?.name ?: "") }
     var bio by remember { mutableStateOf(activeProfile?.bio ?: "") }

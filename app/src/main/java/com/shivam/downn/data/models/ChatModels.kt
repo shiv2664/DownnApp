@@ -8,7 +8,11 @@ data class ChatListResponse(
     @SerializedName("image") val image: String?,
     @SerializedName("lastMessage") val lastMessage: String?,
     @SerializedName("lastMessageTime") val lastMessageTime: String?,
-    @SerializedName("unreadCount") val unreadCount: Int = 0
+    @SerializedName("unreadCount") val unreadCount: Int = 0,
+    @SerializedName("isBusiness") val isBusiness: Boolean = false,
+    @SerializedName("isOwner") val isOwner: Boolean = false,
+    @SerializedName("businessName") val businessName: String? = null,
+    @SerializedName("businessAvatar") val businessAvatar: String? = null
 )
 
 data class ChatMessageResponse(

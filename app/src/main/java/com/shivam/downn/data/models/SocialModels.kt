@@ -50,6 +50,7 @@ data class CreateSocialRequest(
     @SerializedName("socialType") val socialType: SocialType = SocialType.BUSINESS,
     @SerializedName("latitude") val latitude: Double? = null,
     @SerializedName("longitude") val longitude: Double? = null,
+    @SerializedName("timezone") val timezone: String? = null,
     @SerializedName("images") val images: MutableList<MultipartBody.Part>?=null
 )
 

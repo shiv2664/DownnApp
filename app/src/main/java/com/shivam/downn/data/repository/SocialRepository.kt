@@ -17,7 +17,7 @@ class SocialRepository @Inject constructor(
     private val socialApi: SocialApi,
     private val appSettingsRepository: AppSettingsRepository
 ) {
-    fun createSocial(request: CreateSocialRequest, images: List<okhttp3.MultipartBody.Part>? = null): Flow<NetworkResult<SocialResponse?>> = flow {
+    fun createSocial(request: CreateSocialRequest, images: List<MultipartBody.Part>? = null): Flow<NetworkResult<SocialResponse?>> = flow {
         try {
             val url = appSettingsRepository.getEndpoint("activities.create")!!
             val gson = com.google.gson.Gson()
@@ -85,6 +85,25 @@ class SocialRepository @Inject constructor(
         try {
             val urlTemplate = appSettingsRepository.getEndpoint("activities.getByUser")!!
             val url = urlTemplate.replace("{userId}", userId.toString())
+            val response = socialApi.getUserSocials(url, page, size)
+            if (response.isSuccessful && response.body() != null) {
+                emit(NetworkResult.Success(response.body()!!))
+            } else {
+                emit(NetworkResult.Error("Fetch failed: ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            emit(NetworkResult.Error(e.localizedMessage ?: "Unknown error"))
+        }
+    }
+
+    fun getProfileSocials(
+        profileId: Long,
+        page: Int = 0,
+        size: Int = 10
+    ): Flow<NetworkResult<com.shivam.downn.data.models.PagedResponse<SocialResponse>>> = flow {
+        try {
+            val urlTemplate = appSettingsRepository.getEndpoint("activities.getByProfile")!!
+            val url = urlTemplate.replace("{profileId}", profileId.toString())
             val response = socialApi.getUserSocials(url, page, size)
             if (response.isSuccessful && response.body() != null) {
                 emit(NetworkResult.Success(response.body()!!))

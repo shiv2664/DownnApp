@@ -57,6 +57,7 @@ fun GroupChatRoute(
     categoryColor: Color,
     participantCount: Int,
     onClose: () -> Unit,
+    onViewDetails: () -> Unit,
     viewModel: ChatViewModel = hiltViewModel()
 ) {
     val messages by viewModel.messages.collectAsState()
@@ -80,7 +81,11 @@ fun GroupChatRoute(
         messages = messages,
         currentProfileId = currentProfileId ?: -1L,
         onSendMessage = { content -> viewModel.sendMessage(activityId, content) },
-        onClose = onClose
+        onClose = onClose,
+        onViewDetails = onViewDetails,
+        onReportActivity = { reason ->
+            viewModel.reportActivity(activityId, reason)
+        }
     )
 }
 
@@ -96,11 +101,16 @@ fun GroupChatContent(
     messages: List<com.shivam.downn.data.models.ChatMessageResponse>,
     currentProfileId: Long,
     onSendMessage: (String) -> Unit,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    onViewDetails: () -> Unit,
+    onReportActivity: (String) -> Unit = {}
 ) {
     var messageText by remember { mutableStateOf("") }
+    val maxLength = 500
     val context = LocalContext.current
     val listState = rememberLazyListState()
+    var showReportDialog by remember { mutableStateOf(false) }
+    var reportReason by remember { mutableStateOf("") }
     
     // Auto-scroll to bottom when new messages arrive
     LaunchedEffect(messages.size) {
@@ -143,8 +153,35 @@ fun GroupChatContent(
                         }
                     },
                     actions = {
-                        IconButton(onClick = { }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "More", tint = Color(0xFF94A3B8))
+                        var showMenu by remember { mutableStateOf(false) }
+                        Box {
+                            IconButton(onClick = { showMenu = true }) {
+                                Icon(Icons.Default.MoreVert, contentDescription = "More", tint = Color(0xFF94A3B8))
+                            }
+                            DropdownMenu(
+                                expanded = showMenu,
+                                onDismissRequest = { showMenu = false },
+                                modifier = Modifier.background(Color(0xFF1E293B))
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("View Move Details", color = Color.White) },
+                                    onClick = {
+                                        showMenu = false
+                                        onViewDetails()
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Mute Notifications", color = Color.White) },
+                                    onClick = { showMenu = false }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Report Activity", color = Color.Red) },
+                                    onClick = {
+                                        showMenu = false
+                                        showReportDialog = true
+                                    }
+                                )
+                            }
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0F172A))
@@ -223,9 +260,18 @@ fun GroupChatContent(
                     }
                     OutlinedTextField(
                         value = messageText,
-                        onValueChange = { messageText = it },
+                        onValueChange = { if (it.length <= maxLength) messageText = it },
                         placeholder = {
                             Text("Type a message...", color = Color(0xFF64748B))
+                        },
+                        supportingText = {
+                            Text(
+                                text = "${messageText.length} / $maxLength",
+                                color = if (messageText.length >= maxLength) Color.Red else Color(0xFF64748B),
+                                fontSize = 10.sp,
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.End
+                            )
                         },
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(24.dp),
@@ -286,7 +332,7 @@ fun GroupChatContent(
                         id = msg.id.toInt(),
                         userId = msg.profileId.toInt(),
                         userName = msg.profileName,
-                        avatar = msg.profileAvatar ?: "",
+                        avatar = com.shivam.downn.utils.ImageUtils.getFullImageUrl(msg.profileAvatar),
                         text = msg.content,
                         timestamp = DateUtils.formatEventTime(msg.createdAt), // Or use a proper chat time formatter
                         isCurrentUser = isCurrentUser
@@ -294,6 +340,62 @@ fun GroupChatContent(
                 )
             }
         }
+    }
+
+    // Report Activity Dialog
+    if (showReportDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showReportDialog = false },
+            title = { Text("Report Activity", color = Color.White, fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text(
+                        "Please describe why you are reporting this activity:",
+                        color = Color(0xFF94A3B8),
+                        fontSize = 12.sp
+                    )
+                    androidx.compose.material3.OutlinedTextField(
+                        value = reportReason,
+                        onValueChange = { reportReason = it },
+                        modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                        placeholder = { Text("Reason...", color = Color(0xFF64748B)) },
+                        colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedBorderColor = Color(0xFF6366F1),
+                            unfocusedBorderColor = Color(0xFF334155)
+                        ),
+                        maxLines = 3
+                    )
+                }
+            },
+            confirmButton = {
+                androidx.compose.material3.Button(
+                    onClick = {
+                        if (reportReason.isNotBlank()) {
+                            onReportActivity(reportReason)
+                            showReportDialog = false
+                            reportReason = ""
+                        }
+                    },
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFEF4444)
+                    ),
+                    enabled = reportReason.isNotBlank()
+                ) {
+                    Text("Submit Report")
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    showReportDialog = false
+                    reportReason = ""
+                }) {
+                    Text("Cancel", color = Color(0xFF94A3B8))
+                }
+            },
+            containerColor = Color(0xFF1E293B)
+        )
     }
 }
 
@@ -359,6 +461,7 @@ fun GroupChatPreview() {
         messages = emptyList(),
         currentProfileId = 1L,
         onSendMessage = {},
-        onClose = {}
+        onClose = {},
+        onViewDetails = {}
     )
 }

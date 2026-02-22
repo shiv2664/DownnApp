@@ -22,10 +22,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import androidx.compose.ui.res.painterResource
+import com.shivam.downn.utils.PlaceholderUtils
 import com.shivam.downn.data.models.InterestTag
 import androidx.compose.foundation.layout.FlowRow
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.shivam.downn.data.models.ProfileType
+import com.shivam.downn.data.models.SocialResponse
 import com.shivam.downn.data.models.UserProfileData
 import com.shivam.downn.data.network.NetworkResult
 import com.shivam.downn.ui.theme.Dimens
@@ -42,8 +45,9 @@ fun UserProfileRoute(
     onEditClick: () -> Unit = {},
     onCreateProfileClick: () -> Unit = {},
     onBusinessMoveClick: (Int) -> Unit = {},
-    viewModel: ProfileViewModel = hiltViewModel(),
-    onEditBusinessProfileClick: (businessId: Long) -> Unit
+    viewModel: MyProfileViewModel = hiltViewModel(),
+    onEditBusinessProfileClick: (businessId: Long) -> Unit,
+    onActivityClick: (Int) -> Unit = {}
 ) {
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     
@@ -68,6 +72,17 @@ fun UserProfileRoute(
     val profiles by viewModel.profiles.collectAsState()
     val canCreateProfile by viewModel.canCreateBusinessProfile.collectAsState()
     val userActivitiesState by viewModel.userActivities.collectAsState()
+    
+    // Fetch activities whenever the active profile changes (e.g., on first load)
+    LaunchedEffect(activeProfile?.id) {
+        activeProfile?.let { profile ->
+            if (profile.type == com.shivam.downn.data.models.ProfileType.PERSONAL) {
+                viewModel.fetchUserActivities(profile.id, isRefresh = true)
+            } else {
+                viewModel.fetchProfileActivities(profile.id, isRefresh = true)
+            }
+        }
+    }
     
     // Trigger load more for user activities
     val onLoadMoreUserActivities = { viewModel.loadMoreUserActivities() }
@@ -94,7 +109,8 @@ fun UserProfileRoute(
             canCreateProfile = canCreateProfile,
             onProfileSwitch = { viewModel.switchProfile(it) },
             userActivitiesState = userActivitiesState,
-            onLoadMore = onLoadMoreUserActivities
+            onLoadMore = onLoadMoreUserActivities,
+            onActivityClick = onActivityClick
         )
     }
 }
@@ -111,9 +127,13 @@ fun ProfileContent(
     activeProfile: UserProfileData? = null,
     profiles: List<UserProfileData> = emptyList(),
     canCreateProfile: Boolean = true,
-    userActivitiesState: NetworkResult<List<com.shivam.downn.data.models.SocialResponse>>? = null,
+    userActivitiesState: NetworkResult<List<SocialResponse>>? = null,
     onProfileSwitch: (UserProfileData) -> Unit = {},
-    onLoadMore: () -> Unit = {}
+    onLoadMore: () -> Unit = {},
+    onBlockClick: () -> Unit = {},
+    onReportClick: () -> Unit = {},
+    isBlocked: Boolean = false,
+    onActivityClick: (Int) -> Unit = {}
 ) {
     var activeTab by remember { mutableStateOf(ProfileTab.Recent) }
     var showInterestsSheet by remember { mutableStateOf(false) }
@@ -143,7 +163,10 @@ fun ProfileContent(
                 activeProfile = activeProfile,
                 hasMultipleProfiles = profiles.size > 1,
                 canCreateProfile=canCreateProfile,
-                onTitleClick = { if (isOwnProfile) showProfileSwitcher = true }
+                onTitleClick = { if (isOwnProfile) showProfileSwitcher = true },
+                onBlockClick = onBlockClick,
+                onReportClick = onReportClick,
+                isBlocked = isBlocked
             )
         },
         containerColor = Color.Transparent
@@ -192,7 +215,7 @@ fun ProfileContent(
                                         }
                                     }
                                     
-                                    ActivityFeedItem(social)
+                                    ActivityFeedItem(social, onItemClick = { onActivityClick(social.id) })
                                 }
                             }
                         }
@@ -379,8 +402,11 @@ private fun ProfileSwitcherBottomSheet(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
+                    val profileAvatarPlaceholder = painterResource(PlaceholderUtils.getAvatarPlaceholder(profile.type))
                     AsyncImage(
                         model = profile.avatar,
+                        placeholder = profileAvatarPlaceholder,
+                        error = profileAvatarPlaceholder,
                         contentDescription = profile.name,
                         modifier = Modifier
                             .size(48.dp)

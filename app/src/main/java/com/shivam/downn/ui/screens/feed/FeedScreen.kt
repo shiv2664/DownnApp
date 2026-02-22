@@ -161,169 +161,7 @@ fun FeedContent(
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    fun FeedTopBar(
-        onCategorySelected: (String) -> Unit,
-        onSearchQuery: (String) -> Unit = {},
-        onChatClick: () -> Unit
-    ) {
-        var selectedCategory by remember { mutableStateOf("All") }
-        var searchQuery by remember { mutableStateOf("") }
-        var showSearch by remember { mutableStateOf(false) }
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFF0F172A))
-        ) {
-            TopAppBar(
-                title = {
-                    if (showSearch) {
-                        TextField(
-                            value = searchQuery,
-                            onValueChange = {
-                                searchQuery = it
-                                onSearchQuery(it)
-                            },
-                            placeholder = { Text("Search moves...", color = Color(0xFF64748B)) },
-                            colors = TextFieldDefaults.colors(
-                                focusedContainerColor = Color(0xFF1E293B),
-                                unfocusedContainerColor = Color(0xFF1E293B),
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White,
-                                cursorColor = Color(0xFF818CF8),
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent
-                            ),
-                            shape = RoundedCornerShape(12.dp),
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    } else {
-                        Text("Downn", color = Color.White)
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onChatClick) {
-                        Icon(
-                            Icons.Default.ChatBubbleOutline, // Make sure to import or use correct icon
-                            contentDescription = "Chats",
-                            tint = Color.White
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF0F172A)
-                )
-            )
-        }
-    }
-
-    @OptIn(ExperimentalMaterial3Api::class)
-    @Composable
-    fun FeedContent(
-        state: NetworkResult<List<SocialResponse>>,
-        currentUserId: Long?,
-        onCategorySelected: (String) -> Unit,
-        onCardClick: (SocialType, Int) -> Unit,
-        onJoinedClick: (SocialType, Int) -> Unit,
-        onRetry: () -> Unit,
-        onLoadMore: () -> Unit
-    ) {
-        var searchQuery by remember { mutableStateOf("") }
-
-        Scaffold(
-            topBar = {
-                FeedTopBar(
-                    onCategorySelected = onCategorySelected,
-                    onSearchQuery = { searchQuery = it },
-                    onChatClick = {}
-                )
-            },
-            contentWindowInsets = WindowInsets(0, 0, 0, 0)
-        ) { paddingValues ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color(0xFF0F172A))
-                    .padding(paddingValues)
-            ) {
-                val isRefreshing = state is NetworkResult.Loading
-
-                PullToRefreshBox(
-                    isRefreshing = isRefreshing,
-                    onRefresh = onRetry,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    when (val currentState = state) {
-                        is NetworkResult.Loading -> {
-                            if ((currentState.data ?: emptyList()).isEmpty()) {
-                                ShimmerLoadingList()
-                            } else {
-                                // Show list with loading indicator on top (handled by PullToRefreshBox)
-                                MoveList(
-                                    socials = currentState.data ?: emptyList(),
-                                    currentUserId = currentUserId,
-                                    paddingValues = PaddingValues(0.dp), // Padding handled by Box
-                                    onCardClick = onCardClick,
-                                    onJoinClick = onJoinedClick,
-                                    onLoadMore = onLoadMore
-                                )
-                            }
-                        }
-
-                        is NetworkResult.Error -> {
-                            Column(
-                                modifier = Modifier.align(Alignment.Center),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(text = "Error: ${currentState.message}", color = Color.Red)
-                                Button(onClick = onRetry) {
-                                    Text("Retry")
-                                }
-                            }
-                        }
-
-                        is NetworkResult.Success -> {
-                            val allSocials = currentState.data ?: emptyList()
-                            val socials = if (searchQuery.isBlank()) allSocials
-                            else allSocials.filter { s ->
-                                s.title.contains(searchQuery, ignoreCase = true) ||
-                                        (s.description?.contains(
-                                            searchQuery,
-                                            ignoreCase = true
-                                        ) == true) ||
-                                        s.category.contains(searchQuery, ignoreCase = true)
-                            }
-                            if (socials.isEmpty()) {
-                                EmptyState(
-                                    icon = Icons.Default.EventBusy,
-                                    title = "No Moves Found",
-                                    description = "Looks like there's nothing happening right now. Be the first to host one!",
-                                    actionLabel = "Refresh",
-                                    onActionClick = onRetry,
-                                    modifier = Modifier.align(Alignment.Center)
-                                )
-                            } else {
-                                MoveList(
-                                    socials = socials,
-                                    currentUserId = currentUserId,
-                                    paddingValues = PaddingValues(0.dp),
-                                    onCardClick = onCardClick,
-                                    onJoinClick = onJoinedClick,
-                                    onLoadMore = onLoadMore
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-
-    @OptIn(ExperimentalMaterial3Api::class)
-    @Composable
-    fun FeedTopBar(onCategorySelected: (String) -> Unit, onSearchQuery: (String) -> Unit = {}) {
+    fun FeedTopBar(onCategorySelected: (String) -> Unit, onSearchQuery: (String) -> Unit = {}, onChatClick: () -> Unit) {
         var selectedCategory by remember { mutableStateOf("All") }
         var searchQuery by remember { mutableStateOf("") }
         var showSearch by remember { mutableStateOf(false) }
@@ -366,21 +204,13 @@ fun FeedContent(
                     }
                 },
                 actions = {
-                    /*
-            IconButton(onClick = {
-                showSearch = !showSearch
-                if (!showSearch) {
-                    searchQuery = ""
-                    onSearchQuery("")
-                }
-            }) {
+                    IconButton(onClick = onChatClick) {
                 Icon(
-                    if (showSearch) Icons.Default.Close else Icons.Default.Search,
-                    contentDescription = if (showSearch) "Close search" else "Search",
+                            Icons.Default.ChatBubbleOutline,
+                            contentDescription = "Chats",
                     tint = Color.White
                 )
             }
-            */
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color(0xFF0F172A)
@@ -429,41 +259,6 @@ fun FeedContent(
         onJoinClick: (SocialType, Int) -> Unit,
         onLoadMore: () -> Unit
     ) {
-        val businessItems = listOf(
-            SocialResponse(
-                id = 16,
-                userName = "The Daily Grind",
-                userAvatar = "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=150",
-                title = "Live Jazz Night 🎷",
-                description = "Join us for a chill evening of live jazz and 20% off all brews!",
-                category = "Food",
-                city = "Delhi",
-                locationName = "The Daily Grind",
-                scheduledTime = "2026-01-21T20:00:00",
-                maxParticipants = 100,
-                participantCount = 45,
-                socialType = SocialType.BUSINESS,
-                timeAgo = "Just now",
-                distance = "0.5 km away"
-            ),
-            SocialResponse(
-                id = 17,
-                userName = "Club Social",
-                userAvatar = "https://images.unsplash.com/photo-1566737236500-c8ac1f852382?w=150",
-                title = "Friday Night Fever 🕺",
-                description = "The biggest party in town. Special discount for groups of 4!",
-                category = "Party",
-                city = "Delhi",
-                locationName = "Club Social",
-                scheduledTime = "2026-01-21T22:00:00",
-                maxParticipants = 500,
-                participantCount = 120,
-                socialType = SocialType.BUSINESS,
-                timeAgo = "2h ago",
-                distance = "1.2 km away"
-            )
-        )
-        val displaySocials = businessItems + socials
 
         LazyColumn(
             modifier = Modifier
@@ -496,7 +291,11 @@ fun FeedContent(
                     moveTitle = social.title,
                     description = social.description ?: "",
                     category = social.category,
-                    categoryEmoji = "📍", // Default emoji or map from category
+                    categoryEmoji = try {
+                        SocialCategory.valueOf(social.category.uppercase()).emoji
+                    } catch (e: Exception) {
+                        "📍"
+                    },
                     timeAgo = if (social.scheduledTime != null) DateUtils.formatEventTime(social.scheduledTime) else (social.timeAgo
                         ?: "Just now"),
                     distance = social.distance ?: "Nearby",

@@ -2,6 +2,9 @@ package com.shivam.downn.navigation
 
 import android.widget.Toast
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -18,7 +21,7 @@ import com.shivam.downn.ui.screens.create_activity.StartBusinessMove
 import com.shivam.downn.ui.screens.chat.LiveBoardScreen
 import com.shivam.downn.ui.screens.settings.SettingsScreen
 import com.shivam.downn.ui.screens.settings.SettingsDetailScreen
-import com.shivam.downn.ui.screens.profile.ProfileViewModel
+import com.shivam.downn.ui.screens.profile.MyProfileViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -39,8 +42,12 @@ import com.shivam.downn.ui.screens.profile.UserProfileRoute
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import com.shivam.downn.data.local.SessionManager
-import com.shivam.downn.ui.screens.chat.ChatListScreen
+import com.shivam.downn.ui.screens.auth.ForgotPasswordRoute
+import com.shivam.downn.ui.screens.auth.ResetPasswordRoute
+import com.shivam.downn.ui.screens.chat.ChatListRoute
 import com.shivam.downn.ui.screens.notification.NotificationViewModel
 import com.shivam.downn.utils.SnackbarManager
 
@@ -50,11 +57,11 @@ fun AppNavigation(
     sessionManager: SessionManager? = null
 ) {
     val navController = rememberNavController()
-    val sharedProfileViewModel: ProfileViewModel = hiltViewModel()
+    val myProfileViewModel: MyProfileViewModel = hiltViewModel()
     val navigationViewModel: NavigationViewModel = hiltViewModel()
     val notificationViewModel: NotificationViewModel = hiltViewModel()
     val unreadCount by notificationViewModel.unreadCount.collectAsState()
-    val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
+    val snackbarHostState = remember { SnackbarHostState() }
 
     // Global Snackbar collection
     LaunchedEffect(Unit) {
@@ -62,8 +69,8 @@ fun AppNavigation(
             snackbarHostState.showSnackbar(
                 message = msg.message,
                 actionLabel = msg.actionLabel,
-                duration = if (msg.isError) androidx.compose.material3.SnackbarDuration.Long
-                else androidx.compose.material3.SnackbarDuration.Short
+                duration = if (msg.isError) SnackbarDuration.Long
+                else SnackbarDuration.Short
             )
         }
     }
@@ -81,7 +88,7 @@ fun AppNavigation(
     }
 
     Scaffold(
-        snackbarHost = { androidx.compose.material3.SnackbarHost(snackbarHostState) },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             BottomBar(navController, unreadNotificationCount = unreadCount) { route ->
                 navigationViewModel.onBottomNavClick(route)
@@ -97,7 +104,28 @@ fun AppNavigation(
                     navController.navigate(itemsDataList[0].route) {
                         popUpTo("login") { inclusive = true }
                     }
+                },
+                onNavigateToForgotPassword = {
+                    navController.navigate("forgot_password")
                 })
+            }
+
+            composable("forgot_password") {
+                ForgotPasswordRoute(
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToResetPassword = { navController.navigate("reset_password") }
+                )
+            }
+
+            composable("reset_password") {
+                ResetPasswordRoute(
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToLogin = {
+                        navController.navigate("login") {
+                            popUpTo("login") { inclusive = true }
+                        }
+                    }
+                )
             }
 
             composable(
@@ -130,7 +158,7 @@ fun AppNavigation(
             composable(
                 route = itemsDataList[2].route
             ) {
-                val activeProfile by sharedProfileViewModel.activeProfile.collectAsState()
+                val activeProfile by myProfileViewModel.activeProfile.collectAsState()
 
                 if (activeProfile?.type == ProfileType.BUSINESS) {
                     StartBusinessMove(
@@ -168,16 +196,16 @@ fun AppNavigation(
                     onEditClick = { navController.navigate("edit_profile") },
                     onCreateProfileClick = { navController.navigate("create_profile") },
                     onBusinessMoveClick = { moveId -> navController.navigate("social_detail/$moveId") },
-                    viewModel = sharedProfileViewModel,
-                    onEditBusinessProfileClick = { id -> navController.navigate("edit_business_profile/$id") }
-
+                    viewModel = myProfileViewModel,
+                    onEditBusinessProfileClick = { id -> navController.navigate("edit_business_profile/$id") },
+                    onActivityClick = { id -> navController.navigate("social_detail/$id") }
                 )
             }
 
             composable("edit_profile") {
                 EditProfileScreen(
                     onClose = { navController.navigateUp() },
-                    viewModel = sharedProfileViewModel
+                    activeProfile = myProfileViewModel.activeProfile.collectAsState().value
                 )
             }
             composable("edit_business_profile/{businessId}") { backStackEntry ->
@@ -185,7 +213,7 @@ fun AppNavigation(
                 EditBusinessProfileScreen(
                     businessId = businessId,
                     onClose = { navController.navigateUp() },
-                    viewModel = sharedProfileViewModel
+                    activeProfile = myProfileViewModel.activeProfile.collectAsState().value
                 )
             }
             composable("settings") {
@@ -216,8 +244,7 @@ fun AppNavigation(
                 PublicProfileRoute(
                     userId = userId,
                     onClose = { navController.navigateUp() },
-                    onFollowClick = { /* Handle follow */ },
-                    viewModel = sharedProfileViewModel
+                    onFollowClick = { /* Handle follow */ }
                 )
             }
 
@@ -228,6 +255,12 @@ fun AppNavigation(
                     socialId = socialId,
                     onClose = { navController.navigateUp() },
                     onOpenChat = { title -> navController.navigate("group_chat/$socialId?title=$title") },
+                    onOpenLiveBoard = { title, businessName, businessAvatar, isOwner ->
+                        val encodedTitle = java.net.URLEncoder.encode(title, java.nio.charset.StandardCharsets.UTF_8.toString())
+                        val encodedName = java.net.URLEncoder.encode(businessName, java.nio.charset.StandardCharsets.UTF_8.toString())
+                        val encodedAvatar = java.net.URLEncoder.encode(businessAvatar, java.nio.charset.StandardCharsets.UTF_8.toString())
+                        navController.navigate("live_board/$socialId?title=$encodedTitle&businessName=$encodedName&businessAvatar=$encodedAvatar&isOwner=$isOwner")
+                    },
                     onViewProfile = { userId, isBusiness ->
                         if (isBusiness) {
                             navController.navigate("public_business_profile/$userId")
@@ -235,7 +268,17 @@ fun AppNavigation(
                             navController.navigate("public_profile/$userId")
                         }
                     },
-                    onSeeAllParticipants = { id -> navController.navigate("participants/$id") }
+                    onSeeAllParticipants = { id -> navController.navigate("participants/$id") },
+                    onEditActivity = { id -> navController.navigate("edit_activity/$id") }
+                )
+            }
+            
+            composable(route = "edit_activity/{socialId}") { backStackEntry ->
+                val socialId = backStackEntry.arguments?.getString("socialId")?.toIntOrNull() ?: -1
+                com.shivam.downn.ui.screens.create_activity.EditActivityScreen(
+                    socialId = socialId,
+                    onClose = { navController.navigateUp() },
+                    onUpdateSuccess = { navController.navigateUp() }
                 )
             }
 
@@ -255,22 +298,22 @@ fun AppNavigation(
                     onClose = { navController.navigateUp() },
                     onMoveClick = { moveId -> navController.navigate("social_detail/$moveId") },
                     onEditBusinessProfileClick = { id -> navController.navigate("edit_business_profile/$id") },
-                    viewModel = sharedProfileViewModel
+                    viewModel = myProfileViewModel
                 )
             }
 
             composable("chat_list") {
-                ChatListScreen(navController = navController)
+                ChatListRoute(navController = navController)
             }
 
             composable(
                 "group_chat/{socialId}?title={title}",
                 arguments = listOf(
-                    androidx.navigation.navArgument("socialId") {
-                        type = androidx.navigation.NavType.StringType
+                    navArgument("socialId") {
+                        type = NavType.StringType
                     },
-                    androidx.navigation.navArgument("title") {
-                        type = androidx.navigation.NavType.StringType; defaultValue = "Chat"
+                    navArgument("title") {
+                        type = NavType.StringType; defaultValue = "Chat"
                     }
                 )
             ) { backStackEntry ->
@@ -289,6 +332,9 @@ fun AppNavigation(
                     participantCount = 0, // In real app, pass this or fetch in VM
                     onClose = {
                         navController.navigateUp()
+                    },
+                    onViewDetails = {
+                        navController.navigate("social_detail/$socialId")
                     }
                 )
             }
@@ -303,14 +349,28 @@ fun AppNavigation(
                 )
             }
 
-            composable("live_board/{socialId}") { backStackEntry ->
-                val socialId = backStackEntry.arguments?.getString("socialId")?.toIntOrNull() ?: 1
-                // Mock data for demo
+            composable(
+                "live_board/{socialId}?title={title}&businessName={businessName}&businessAvatar={businessAvatar}&isOwner={isOwner}",
+                arguments = listOf(
+                    navArgument("socialId") { type = NavType.IntType },
+                    navArgument("title") { type = NavType.StringType; defaultValue = "" },
+                    navArgument("businessName") { type = NavType.StringType; defaultValue = "" },
+                    navArgument("businessAvatar") { type = NavType.StringType; defaultValue = "" },
+                    navArgument("isOwner") { type = NavType.BoolType; defaultValue = false }
+                )
+            ) { backStackEntry ->
+                val socialId = backStackEntry.arguments?.getInt("socialId") ?: 0
+                val title = backStackEntry.arguments?.getString("title") ?: ""
+                val businessName = backStackEntry.arguments?.getString("businessName") ?: ""
+                val businessAvatar = backStackEntry.arguments?.getString("businessAvatar") ?: ""
+                val isOwner = backStackEntry.arguments?.getBoolean("isOwner") ?: false
+
                 LiveBoardScreen(
                     socialId = socialId,
-                    socialTitle = if (socialId == 16) "Live Jazz Night 🎷" else "Friday Night Fever 🕺",
-                    businessName = if (socialId == 16) "The Daily Grind" else "Club Social",
-                    businessAvatar = "",
+                    socialTitle = title,
+                    businessName = businessName,
+                    businessAvatar = businessAvatar,
+                    isOwner = isOwner,
                     onClose = { navController.navigateUp() }
                 )
             }

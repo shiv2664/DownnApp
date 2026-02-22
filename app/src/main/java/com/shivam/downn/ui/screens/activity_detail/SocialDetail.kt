@@ -28,6 +28,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import androidx.compose.ui.res.painterResource
+import com.shivam.downn.utils.PlaceholderUtils
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.shivam.downn.ui.components.FancyMap
@@ -47,6 +49,12 @@ import com.shivam.downn.data.network.NetworkResult
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
+import com.shivam.downn.data.models.ProfileType
+import com.shivam.downn.utils.DateUtils
+import com.shivam.downn.utils.ImageUtils
+import com.shivam.downn.utils.ShareUtils
 
 
 data class ChatPreview(
@@ -66,15 +74,25 @@ fun SocialDetail(
     deleteState: NetworkResult<Unit>? = null,
     onClose: () -> Unit,
     onOpenChat: (String) -> Unit,
+    onOpenLiveBoard: (title: String, businessName: String, businessAvatar: String, isOwner: Boolean) -> Unit = { _, _, _, _ -> },
     onViewProfile: (userId: Long, isBusiness: Boolean) -> Unit,
     onSeeAllParticipants: () -> Unit,
+    onEditActivity: (socialId: Int) -> Unit,
     onJoinSocial: (socialId: Int) -> Unit,
     onLeaveSocial: (socialId: Int) -> Unit,
     onRemoveParticipant: (socialId: Int, participantId: Long) -> Unit,
+    onReportActivity: (reason: String) -> Unit,
     onDeleteActivity: (socialId: Int) -> Unit = {},
-    isBusinessProfile: Boolean = false
+    isBusinessProfile: Boolean = false,
+    activeProfileId: Long = -1L
 ) {
-    val isOwner = social.userId?.toLong() == currentUserId
+    val isOwner = if (social.socialType == SocialType.BUSINESS) {
+        // For business posts, check if the active profile matches the post's profile
+        social.profile?.id == activeProfileId
+    } else {
+        // For personal posts, standard userId check
+        social.userId?.toLong() == currentUserId
+    }
     val isParticipant = social.participants.any { it.id == currentUserId }
     val isRequested = social.requestedUserIds?.contains(currentUserId) == true
     val isRejected = social.rejectedUserIds?.contains(currentUserId) == true
@@ -83,9 +101,11 @@ fun SocialDetail(
     var showParticipantActionSheet by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showReportDialog by remember { mutableStateOf(false) }
+    var reportReason by remember { mutableStateOf("") }
     val sheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
 
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -158,11 +178,9 @@ fun SocialDetail(
         )
     }
     val categoryColor = if (isBusiness) Color(0xFFF97316) else Color(0xFFA855F7)
-    val images = emptyList<String>() // You can add images from API if available
     val description: String? = social.description
 
-    val headerImage =
-        images.firstOrNull() ?: "https://images.unsplash.com/photo-1668884405041-aa8963908538"
+    val headerImage = social.images.firstOrNull()
     val participants = social.participants
     val chats = listOf(
         ChatPreview(1, "Sarah K.", "Can't wait for this! 🎉", "2m ago"),
@@ -178,8 +196,7 @@ fun SocialDetail(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFF0F172A))
-        )
-        {
+        ) {
 
             Box {
                 val scrollState = rememberScrollState()
@@ -200,8 +217,11 @@ fun SocialDetail(
                             .height(300.dp)
                     )
                     {
+                        val coverPlaceholder = painterResource(PlaceholderUtils.getCoverPlaceholder(social.category))
                         AsyncImage(
-                            model = com.shivam.downn.utils.ImageUtils.getFullImageUrl(headerImage),
+                            model = ImageUtils.getFullImageUrl(headerImage),
+                            placeholder = coverPlaceholder,
+                            error = coverPlaceholder,
                             contentDescription = social.title,
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
@@ -242,7 +262,7 @@ fun SocialDetail(
                         ) {
                             InfoChip(
                                 Icons.Default.Schedule,
-                                com.shivam.downn.utils.DateUtils.formatEventTime(social.scheduledTime),
+                                DateUtils.formatEventTime(social.scheduledTime),
                                 primaryColor
                             )
                             InfoChip(
@@ -275,10 +295,11 @@ fun SocialDetail(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
+                                val avatarPlaceholder = painterResource(PlaceholderUtils.getAvatarPlaceholder(if (isBusiness) ProfileType.BUSINESS else ProfileType.PERSONAL))
                                 AsyncImage(
-                                    model = com.shivam.downn.utils.ImageUtils.getFullImageUrl(
-                                        userAvatar
-                                    ),
+                                    model = ImageUtils.getFullImageUrl(userAvatar),
+                                    placeholder = avatarPlaceholder,
+                                    error = avatarPlaceholder,
                                     contentDescription = "Host",
                                     modifier = Modifier
                                         .size(48.dp)
@@ -353,12 +374,14 @@ fun SocialDetail(
 
                     // About
                     if (social.description != "") {
-                        Column(modifier = Modifier.padding(20.dp)) {
+                        Column(modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp, horizontal = 20.dp)) {
                             Text(
                                 "About",
                                 color = Color.White,
                                 fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = TextAlign.Start
                             )
                             Text(
                                 description
@@ -366,7 +389,8 @@ fun SocialDetail(
                                 color = Color(0xFFCBD5E1),
                                 fontSize = 16.sp,
                                 lineHeight = 24.sp,
-                                modifier = Modifier.padding(top = 12.dp)
+                                modifier = Modifier.padding(top = 12.dp).fillMaxWidth(),
+                                textAlign = TextAlign.Start
                             )
                         }
                         Spacer(
@@ -683,7 +707,7 @@ fun SocialDetail(
                                 if (isOwner) {
                                     showParticipantActionSheet = true
                                 } else {
-                                    com.shivam.downn.utils.ShareUtils.shareActivity(
+                                    ShareUtils.shareActivity(
                                         context,
                                         social.id,
                                         social.title
@@ -702,6 +726,8 @@ fun SocialDetail(
                                 modifier = Modifier.size(20.dp)
                             )
                         }
+
+                        Spacer(modifier = Modifier.width(2.dp))
 
                         // More Menu for Report
                         Box {
@@ -729,7 +755,7 @@ fun SocialDetail(
                                     text = { Text("Share", color = Color.White) },
                                     onClick = {
                                         showMenu = false
-                                        com.shivam.downn.utils.ShareUtils.shareActivity(
+                                        ShareUtils.shareActivity(
                                             context,
                                             social.id,
                                             social.title
@@ -748,9 +774,7 @@ fun SocialDetail(
                                     text = { Text("Report", color = Color.White) },
                                     onClick = {
                                         showMenu = false
-                                        scope.launch {
-                                            snackbarHostState.showSnackbar("Reported. Thank you for keeping Downn safe.")
-                                        }
+                                        showReportDialog = true
                                     },
                                     leadingIcon = {
                                         Icon(
@@ -762,6 +786,21 @@ fun SocialDetail(
                                 )
                                 if (isOwner) {
                                     HorizontalDivider(color = Color(0xFF334155))
+                                    DropdownMenuItem(
+                                        text = { Text("Edit Activity", color = Color.White) },
+                                        onClick = {
+                                            showMenu = false
+                                            android.widget.Toast.makeText(context, "Navigating to Edit ${social.id}", android.widget.Toast.LENGTH_SHORT).show()
+                                            onEditActivity(social.id)
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                Icons.Default.Edit,
+                                                contentDescription = null,
+                                                tint = Color.White
+                                            )
+                                        }
+                                    )
                                     DropdownMenuItem(
                                         text = {
                                             Text(
@@ -803,33 +842,46 @@ fun SocialDetail(
                 )
                 {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        // Chat Button - Only for participants/owners
+                        // Chat/LiveBoard Button - Only for participants/owners
                         if (isParticipant || isOwner) {
+                            val buttonText = if (isBusiness) "LIVE BOARD" else "CHAT"
+                            val buttonIcon = if (isBusiness) Icons.Default.Campaign else Icons.Default.ChatBubble
+                            val buttonColor = if (isBusiness) Color(0xFFF97316) else primaryColor
+                            
                             Button(
-                                onClick = { onOpenChat(social.title) },
+                                onClick = { 
+                                    if (isBusiness) {
+                                        onOpenLiveBoard(
+                                            social.title,
+                                            social.profile?.name ?: social.userName ?: "",
+                                            social.profile?.avatar ?: social.userAvatar ?: "",
+                                            isOwner
+                                        )
+                                    } else {
+                                        onOpenChat(social.title) 
+                                    }
+                                },
                                 modifier = Modifier
                                     .weight(1f)
                                     .height(56.dp),
                                 shape = RoundedCornerShape(16.dp),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(
-                                        0xFF1E293B
-                                    )
+                                    containerColor = Color(0xFF1E293B)
                                 ),
-                                border = BorderStroke(2.dp, primaryColor)
+                                border = BorderStroke(2.dp, buttonColor)
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     Icon(
-                                        Icons.Default.ChatBubble,
+                                        buttonIcon,
                                         contentDescription = null,
-                                        tint = primaryColor
+                                        tint = buttonColor
                                     )
                                     Text(
-                                        "CHAT",
-                                        color = primaryColor,
+                                        buttonText,
+                                        color = buttonColor,
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
@@ -865,7 +917,7 @@ fun SocialDetail(
 
                             isOwner -> {
                                 Button(
-                                    onClick = { /* Edit action */ },
+                                    onClick = { onEditActivity(social.id) },
                                     modifier = Modifier
                                         .weight(1f)
                                         .height(56.dp),
@@ -963,10 +1015,11 @@ fun SocialDetail(
                                             .padding(vertical = 12.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
+                                        val participantAvatarPlaceholder = painterResource(PlaceholderUtils.getAvatarPlaceholder(ProfileType.PERSONAL))
                                         AsyncImage(
-                                            model = com.shivam.downn.utils.ImageUtils.getFullImageUrl(
-                                                participant.avatar
-                                            ),
+                                            model = ImageUtils.getFullImageUrl(participant.avatar),
+                                            placeholder = participantAvatarPlaceholder,
+                                            error = participantAvatarPlaceholder,
                                             contentDescription = null,
                                             modifier = Modifier.size(40.dp).clip(CircleShape),
                                             contentScale = ContentScale.Crop
@@ -1105,8 +1158,11 @@ fun SocialDetail(
                     .background(brush ?: defaultBrush)
                     .padding(2.dp)
             ) {
+                val requestsAvatarPlaceholder = painterResource(PlaceholderUtils.getAvatarPlaceholder(ProfileType.PERSONAL))
                 AsyncImage(
-                    model = com.shivam.downn.utils.ImageUtils.getFullImageUrl(avatar),
+                    model = ImageUtils.getFullImageUrl(avatar),
+                    placeholder = requestsAvatarPlaceholder,
+                    error = requestsAvatarPlaceholder,
                     contentDescription = name,
                     modifier = Modifier
                         .fillMaxSize()
@@ -1144,7 +1200,7 @@ fun SocialDetail(
                 scheduledTime = "Today 5:00 PM",
                 maxParticipants = 10,
                 timeAgo = "2h ago",
-                userId = 1
+                userId = 1,
             ),
             currentUserId = 2, // Not the owner
             onClose = {},
@@ -1153,7 +1209,9 @@ fun SocialDetail(
             onSeeAllParticipants = {},
             onJoinSocial = {},
             onLeaveSocial = {},
-            onRemoveParticipant = { _, _ -> }
+            onRemoveParticipant = { _, _ -> },
+            onEditActivity = {},
+            onReportActivity = {}
         )
     }
 

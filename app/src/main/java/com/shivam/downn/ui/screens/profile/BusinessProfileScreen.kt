@@ -1,5 +1,6 @@
 package com.shivam.downn.ui.screens.profile
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,6 +24,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import androidx.compose.ui.res.painterResource
+import com.shivam.downn.utils.PlaceholderUtils
 import com.shivam.downn.data.models.SocialResponse
 import com.shivam.downn.data.models.SocialType
 import com.shivam.downn.ui.screens.feed.MoveCard
@@ -31,7 +34,11 @@ import com.shivam.downn.data.network.NetworkResult
 import com.shivam.downn.data.models.ProfileType
 import androidx.compose.runtime.*
 import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.shivam.downn.data.models.UserProfileData
+import com.shivam.downn.utils.ImageUtils
 import okhttp3.internal.userAgent
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,19 +49,15 @@ fun BusinessProfileRoute(
     onMoveClick: (Int) -> Unit,
     isOwnProfile: Boolean = true,
     onEditBusinessProfileClick: (businessId: Long) -> Unit,
-    viewModel: ProfileViewModel = hiltViewModel()
+    viewModel: MyProfileViewModel = hiltViewModel()
 ) {
-    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     
     // Refresh business profile when screen resumes
-    DisposableEffect(lifecycleOwner, businessId, isOwnProfile) {
-        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
-                if (!isOwnProfile) {
-                    viewModel.fetchProfileDetails(businessId)
-                } else {
-                    viewModel.fetchCurrentUserDetails()
-                }
+    DisposableEffect(lifecycleOwner, businessId) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.fetchCurrentUserDetails()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -63,32 +66,19 @@ fun BusinessProfileRoute(
         }
     }
     
-    LaunchedEffect(businessId, isOwnProfile) {
-        if (!isOwnProfile) {
-            viewModel.fetchProfileDetails(businessId)
-        }
+    LaunchedEffect(businessId) {
+        // Fetch activities for the business profile
+        viewModel.fetchProfileActivities(businessId, isRefresh = true)
     }
     
     val activeProfile by viewModel.activeProfile.collectAsState()
     val profiles by viewModel.profiles.collectAsState()
     val canCreateBusinessProfile by viewModel.canCreateBusinessProfile.collectAsState()
-    val viewedProfileResult by viewModel.viewedProfile.collectAsState()
+    val userActivitiesState by viewModel.userActivities.collectAsState()
 
-    val profileToDisplay = if (isOwnProfile) activeProfile else (viewedProfileResult as? NetworkResult.Success)?.data
+    val profileToDisplay = activeProfile
 
-    if (!isOwnProfile && viewedProfileResult is NetworkResult.Loading) {
-        Scaffold(containerColor = Color(0xFF0F172A)) {
-            Box(modifier = Modifier.fillMaxSize().padding(it), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        }
-    } else if (!isOwnProfile && viewedProfileResult is NetworkResult.Error) {
-        Scaffold(containerColor = Color(0xFF0F172A)) {
-            Box(modifier = Modifier.fillMaxSize().padding(it), contentAlignment = Alignment.Center) {
-                Text((viewedProfileResult as NetworkResult.Error).message ?: "Error", color = Color.White)
-            }
-        }
-    } else if (profileToDisplay != null) {
+    if (profileToDisplay != null) {
         BusinessProfileContent(
             businessId = businessId,
             onClose = onClose,
@@ -99,7 +89,8 @@ fun BusinessProfileRoute(
             canCreateBusinessProfile = canCreateBusinessProfile,
             onSwitchProfile = { viewModel.switchProfile(it) },
             onCreateProfile = { /* Navigation to create_profile would be handled here */ },
-            onEditBusinessProfileClick = onEditBusinessProfileClick
+            onEditBusinessProfileClick = onEditBusinessProfileClick,
+            userActivitiesState = userActivitiesState
         )
     } else if (isOwnProfile) {
         // Loading state for own profile
@@ -123,7 +114,8 @@ fun BusinessProfileContent(
     canCreateBusinessProfile: Boolean,
     onSwitchProfile: (UserProfileData) -> Unit,
     onCreateProfile: () -> Unit,
-    onEditBusinessProfileClick: (businessId: Long) -> Unit
+    onEditBusinessProfileClick: (businessId: Long) -> Unit,
+    userActivitiesState: NetworkResult<List<SocialResponse>>
 ) {
     var showProfileSwitcher by remember { mutableStateOf(false) }
 
@@ -214,7 +206,7 @@ fun BusinessProfileContent(
 
                 item {
                     Text(
-                        text = "Active Moves",
+                        text = "Moves",
                         color = Color.White,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
@@ -222,42 +214,54 @@ fun BusinessProfileContent(
                     )
                 }
 
-                // Mock active moves
-                val activeMoves = listOf(
-                    SocialResponse(
-                        id = 101,
-                        title = if (businessId == 16L) "Live Jazz Night 🎷" else "Friday Night Fever 🕺",
-                        description = "Special event tonight!",
-                        category = "Events",
-                        city = "Delhi",
-                        locationName = businessName,
-                        scheduledTime = "2026-01-21T20:00:00",
-                        maxParticipants = 100,
-                        participantCount = 45,
-                        userName = businessName,
-                        userAvatar = businessAvatar,
-                        socialType = SocialType.BUSINESS,
-                        timeAgo = "Just now",
-                        distance = "0.5 km away"
-                    )
-                )
-
-                items(activeMoves) { move ->
-                    MoveCard(
-                        userName = move.userName ?: "",
-                        userAvatar = move.userAvatar ?: "",
-                        moveTitle = move.title,
-                        description = move.description ?: "",
-                        category = move.category,
-                        categoryEmoji = "🔥",
-                        timeAgo = move.timeAgo ?: "",
-                        distance = move.distance ?: "",
-                        participantCount = move.participantCount,
-                        maxParticipants = move.maxParticipants,
-                        socialType = move.socialType,
-                        onCardClick = { onMoveClick(move.id) },
-                        onJoinClick = {}
-                    )
+                when (userActivitiesState) {
+                    is NetworkResult.Loading -> {
+                        item {
+                            Box(modifier = Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(color = Color.White)
+                            }
+                        }
+                    }
+                    is NetworkResult.Error -> {
+                        item {
+                            Text(
+                                text = "Failed to load moves: ${userActivitiesState.message}",
+                                color = Color.Red,
+                                modifier = Modifier.padding(16.dp)
+                            )
+                        }
+                    }
+                    is NetworkResult.Success -> {
+                        val activeMoves = userActivitiesState.data ?: emptyList()
+                        
+                        if (activeMoves.isEmpty()) {
+                            item {
+                                Text(
+                                    text = "No active moves yet.",
+                                    color = Color(0xFF94A3B8),
+                                    modifier = Modifier.padding(16.dp)
+                                )
+                            }
+                        } else {
+                            items(activeMoves) { move ->
+                                MoveCard(
+                                    userName = move.userName ?: "",
+                                    userAvatar = move.userAvatar ?: "",
+                                    moveTitle = move.title,
+                                    description = move.description ?: "",
+                                    category = move.category,
+                                    categoryEmoji = "🔥",
+                                    timeAgo = move.timeAgo ?: "",
+                                    distance = move.distance ?: "",
+                                    participantCount = move.participantCount,
+                                    maxParticipants = move.maxParticipants,
+                                    socialType = move.socialType,
+                                    onCardClick = { onMoveClick(move.id) },
+                                    onJoinClick = {}
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
@@ -285,8 +289,11 @@ fun BusinessProfileContent(
 @Composable
 fun BusinessHeader(coverImage: String, avatar: String, name: String) {
         Box(modifier = Modifier.fillMaxWidth().height(280.dp)) {
+        val coverPlaceholder = painterResource(PlaceholderUtils.getBusinessCoverPlaceholder())
         AsyncImage(
-            model = com.shivam.downn.utils.ImageUtils.getFullImageUrl(coverImage),
+            model = ImageUtils.getFullImageUrl(coverImage),
+            placeholder = coverPlaceholder,
+            error = coverPlaceholder,
             contentDescription = null,
             modifier = Modifier.fillMaxWidth().height(200.dp),
             contentScale = ContentScale.Crop
@@ -298,8 +305,11 @@ fun BusinessHeader(coverImage: String, avatar: String, name: String) {
                 .padding(start = 20.dp, bottom = 20.dp)
         ) {
             Column {
+                val avatarPlaceholder = painterResource(PlaceholderUtils.getAvatarPlaceholder(ProfileType.BUSINESS))
                 AsyncImage(
-                    model = com.shivam.downn.utils.ImageUtils.getFullImageUrl(avatar),
+                    model = ImageUtils.getFullImageUrl(avatar),
+                    placeholder = avatarPlaceholder,
+                    error = avatarPlaceholder,
                     contentDescription = null,
                     modifier = Modifier
                         .size(100.dp)
@@ -406,7 +416,7 @@ fun VibeTag(text: String, color: Color) {
     Surface(
         color = color.copy(alpha = 0.1f),
         shape = RoundedCornerShape(8.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.5f))
+        border = BorderStroke(1.dp, color.copy(alpha = 0.5f))
     ) {
         Text(
             text = text,
@@ -460,8 +470,11 @@ private fun ProfileSwitcherBottomSheet(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
+                    val profileSwitcherPlaceholder = painterResource(PlaceholderUtils.getAvatarPlaceholder(profile.type))
                     AsyncImage(
-                        model = com.shivam.downn.utils.ImageUtils.getFullImageUrl(profile.avatar),
+                        model = ImageUtils.getFullImageUrl(profile.avatar),
+                        placeholder = profileSwitcherPlaceholder,
+                        error = profileSwitcherPlaceholder,
                         contentDescription = profile.name,
                         modifier = Modifier
                             .size(48.dp)
@@ -561,6 +574,7 @@ fun PreviewBusinessProfileScreen() {
         canCreateBusinessProfile = true,
         onSwitchProfile = {},
         onCreateProfile = {},
-        onEditBusinessProfileClick = {}
+        onEditBusinessProfileClick = {},
+        userActivitiesState = NetworkResult.Success(emptyList())
     )
 }

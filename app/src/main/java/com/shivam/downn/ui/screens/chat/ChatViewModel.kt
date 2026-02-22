@@ -5,20 +5,24 @@ import androidx.lifecycle.viewModelScope
 import com.shivam.downn.data.local.SessionManager
 import com.shivam.downn.data.models.ChatListResponse
 import com.shivam.downn.data.models.ChatMessageResponse
+import com.shivam.downn.data.models.ReportRequest
 import com.shivam.downn.data.network.NetworkResult
 import com.shivam.downn.data.repository.ChatRepository
+import com.shivam.downn.data.repository.ProfileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     private val chatRepository: ChatRepository,
-    private val sessionManager: SessionManager
+    private val sessionManager: SessionManager,
+    private val profileRepository: ProfileRepository
 ) : ViewModel() {
 
     private val _chatList = MutableStateFlow<NetworkResult<List<ChatListResponse>>>(NetworkResult.Loading())
@@ -83,4 +87,16 @@ class ChatViewModel @Inject constructor(
         // For now, let's rely on the socket echo or response to append
         chatRepository.sendMessage(activityId, profileId, content)
     }
+
+    fun reportActivity(activityId: Long, reason: String) {
+        viewModelScope.launch {
+            profileRepository.reportContent(
+                ReportRequest(
+                    reason = reason,
+                    activityId = activityId
+                )
+            ).collectLatest { /* result handled silently */ }
+        }
+    }
 }
+

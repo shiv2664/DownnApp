@@ -46,7 +46,7 @@ fun CreateProfileScreen(
     onCreateSuccess: (String, String, String, String) -> Unit
 ) {
 
-    val profileViewModel: ProfileViewModel = hiltViewModel()
+    val profileViewModel: CreateProfileViewModel = hiltViewModel()
     var businessName by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("") }
     var bio by remember { mutableStateOf("") }
@@ -313,9 +313,9 @@ fun CreateProfileScreen(
                 Button(
                     onClick = { 
                         if (businessName.isNotBlank() && category.isNotBlank()) {
-                            // Don't call onCreateSuccess immediately. Wait for API result.
                             profileViewModel.createBusinessProfile(
                                 businessName, category, bio, location,
+                                selectedImageUri?.toString() ?: "",
                                 selectedCoverUri?.toString() ?: "", 
                                 selectedVibes.toList(),
                                 latitude,

@@ -27,8 +27,10 @@ fun SocialDetailRoute(
     socialId: Int,
     onClose: () -> Unit,
     onOpenChat: (title: String) -> Unit,
+    onOpenLiveBoard: (title: String, businessName: String, businessAvatar: String, isOwner: Boolean) -> Unit,
     onViewProfile: (userId: Long, isBusiness: Boolean) -> Unit,
     onSeeAllParticipants: (socialId: Int) -> Unit,
+    onEditActivity: (socialId: Int) -> Unit,
     viewModel: SocialDetailViewModel = hiltViewModel()
 ) {
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
@@ -64,13 +66,17 @@ fun SocialDetailRoute(
         socialId = socialId,
         onClose = onClose,
         onOpenChat = onOpenChat,
+        onOpenLiveBoard = onOpenLiveBoard,
         onViewProfile = onViewProfile,
         onSeeAllParticipants = onSeeAllParticipants,
+        onEditActivity = onEditActivity,
         onJoinSocial = { id -> viewModel.joinSocial(id) },
         onLeaveSocial = { id -> viewModel.leaveSocial(id) },
         onRemoveParticipant = { sId, pId -> viewModel.removeParticipant(sId, pId) },
         onDeleteActivity = { id -> viewModel.deleteActivity(id) },
-        isBusinessProfile = viewModel.isBusinessProfile.collectAsState().value
+        onReportActivity = { reason -> viewModel.reportActivity(socialId, reason) },
+        isBusinessProfile = viewModel.isBusinessProfile.collectAsState().value,
+        activeProfileId = viewModel.activeProfileId.collectAsState().value
     )
 }
 
@@ -84,13 +90,17 @@ fun SocialDetailContent(
     socialId: Int,
     onClose: () -> Unit,
     onOpenChat: (String) -> Unit,
+    onOpenLiveBoard: (title: String, businessName: String, businessAvatar: String, isOwner: Boolean) -> Unit,
     onViewProfile: (userId: Long, isBusiness: Boolean) -> Unit,
     onSeeAllParticipants: (socialId: Int) -> Unit,
+    onEditActivity: (socialId: Int) -> Unit,
     onJoinSocial: (Int) -> Unit,
     onLeaveSocial: (Int) -> Unit,
     onRemoveParticipant: (Int, Long) -> Unit,
+    onReportActivity: (String) -> Unit,
     onDeleteActivity: (Int) -> Unit = {},
-    isBusinessProfile: Boolean = false
+    isBusinessProfile: Boolean = false,
+    activeProfileId: Long = -1L
 ) {
     val view = LocalView.current
 
@@ -124,13 +134,17 @@ fun SocialDetailContent(
                 deleteState = deleteState,
                 onClose = onClose,
                 onOpenChat = onOpenChat,
+                onOpenLiveBoard = onOpenLiveBoard,
                 onViewProfile = onViewProfile,
                 onSeeAllParticipants = { onSeeAllParticipants(socialId) },
+                onEditActivity = { onEditActivity(socialId) },
                 onJoinSocial = { id -> onJoinSocial(id) },
                 onLeaveSocial = { id -> onLeaveSocial(id) },
                 onRemoveParticipant = { sId, pId -> onRemoveParticipant(sId, pId) },
+                onReportActivity = onReportActivity,
                 onDeleteActivity = { id -> onDeleteActivity(id) },
-                isBusinessProfile = isBusinessProfile
+                isBusinessProfile = isBusinessProfile,
+                activeProfileId = activeProfileId
             )
         }
     }

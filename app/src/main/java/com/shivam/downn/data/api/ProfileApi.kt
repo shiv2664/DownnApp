@@ -2,6 +2,7 @@ package com.shivam.downn.data.api
 
 import com.shivam.downn.data.models.CreateProfileRequest
 import com.shivam.downn.data.models.ProfileResponse
+import com.shivam.downn.data.models.ReportRequest
 import com.shivam.downn.data.models.UpdateProfileRequest
 import com.shivam.downn.data.models.UpdateUserRequest
 import com.shivam.downn.data.models.UserDetailsResponse
@@ -13,8 +14,14 @@ interface ProfileApi {
     @GET
     suspend fun getProfiles(@Url url: String): Response<List<ProfileResponse>>
 
+    @Multipart
     @POST
-    suspend fun createProfile(@Url url: String, @Body request: CreateProfileRequest): Response<ProfileResponse>
+    suspend fun createProfile(
+        @Url url: String, 
+        @Part("profile") request: CreateProfileRequest,
+        @Part avatar: MultipartBody.Part?,
+        @Part cover: MultipartBody.Part?
+    ): Response<ProfileResponse>
 
     @GET
     suspend fun getProfileDetails(@Url url: String): Response<ProfileResponse>
@@ -44,4 +51,13 @@ interface ProfileApi {
 
     @DELETE
     suspend fun unfollowUser(@Url url: String): Response<Void>
+
+    @POST
+    suspend fun blockUser(@Url url: String): Response<Void>
+
+    @DELETE
+    suspend fun unblockUser(@Url url: String): Response<Void>
+
+    @POST
+    suspend fun reportContent(@Url url: String, @Body request: ReportRequest): Response<Void>
 }

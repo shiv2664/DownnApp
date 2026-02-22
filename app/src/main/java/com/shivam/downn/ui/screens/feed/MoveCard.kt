@@ -55,6 +55,10 @@ import coil.compose.AsyncImage
 import com.shivam.downn.data.models.SocialType
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.material.icons.filled.Verified
+import androidx.compose.ui.res.painterResource
+import com.shivam.downn.data.models.ProfileType
+import com.shivam.downn.utils.ImageUtils
+import com.shivam.downn.utils.PlaceholderUtils
 
 @Composable
 fun MoveCard(
@@ -112,30 +116,17 @@ fun MoveCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // User Avatar
-                    if (userAvatar != null) {
-                        AsyncImage(
-                            model = com.shivam.downn.utils.ImageUtils.getFullImageUrl(userAvatar),
-                            contentDescription = "User avatar",
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primaryContainer),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Person,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
-                    }
+                    val avatarPlaceholder = painterResource(PlaceholderUtils.getAvatarPlaceholder(if (isBusiness) ProfileType.BUSINESS else ProfileType.PERSONAL))
+                    AsyncImage(
+                        model = ImageUtils.getFullImageUrl(userAvatar),
+                        placeholder = avatarPlaceholder,
+                        error=avatarPlaceholder,
+                        contentDescription = "User avatar",
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
 
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {

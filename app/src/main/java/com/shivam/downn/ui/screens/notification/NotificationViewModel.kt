@@ -13,10 +13,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+import com.shivam.downn.data.local.SessionManager
+
 @HiltViewModel
 class NotificationViewModel @Inject constructor(
     private val repository: NotificationRepository,
-    private val navigationEventBus: NavigationEventBus
+    private val navigationEventBus: NavigationEventBus,
+    private val sessionManager: SessionManager
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<NetworkResult<List<NotificationResponse>>>(NetworkResult.Loading())
@@ -32,11 +35,14 @@ class NotificationViewModel @Inject constructor(
     val actionState: StateFlow<NetworkResult<Unit>?> = _actionState
 
     init {
-       /* startPolling()*/
+        // Only start polling if we are legitimately logged in
+        if (sessionManager.getToken() != null) {
+            startPolling()
+        }
         
         viewModelScope.launch {
             navigationEventBus.events.collect { route ->
-                if (route == "alerts") {
+                if (route == "alerts" && sessionManager.getToken() != null) {
                     fetchNotifications()
                 }
             }
@@ -45,10 +51,7 @@ class NotificationViewModel @Inject constructor(
 
     private fun startPolling() {
         viewModelScope.launch {
-            while (true) {
-                fetchNotifications()
-                delay(60000) // 60 seconds
-            }
+            fetchNotifications()
         }
     }
 

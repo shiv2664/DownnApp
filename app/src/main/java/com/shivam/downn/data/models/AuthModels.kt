@@ -17,11 +17,21 @@ data class RegisterRequest(
     @SerializedName("role") val role: String? = null
 )
 
+data class ForgotPasswordRequest(
+    @SerializedName("email") val email: String
+)
+
+data class ResetPasswordRequest(
+    @SerializedName("token") val token: String,
+    @SerializedName("newPassword") val newPassword: String
+)
+
 data class AuthResponse(
     @SerializedName("token") val token: String,
     @SerializedName("userId") val userId: Long,
     @SerializedName("email") val email: String,
-    @SerializedName("name") val name: String
+    @SerializedName("name") val name: String,
+    @SerializedName("personalProfileId") val personalProfileId: Long = 0
 )
 
 data class LogoutResponse(

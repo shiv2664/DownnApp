@@ -36,7 +36,8 @@ data class CreateProfileRequest(
     val bio: String? = null,
     val type: ProfileType = ProfileType.BUSINESS,
     val latitude: Double? = null,
-    val longitude: Double? = null
+    val longitude: Double? = null,
+    val category: String? = null
 )
 
 data class InterestTag(
@@ -73,9 +74,17 @@ data class UserDetailsResponse(
     val avatarThumbnail: String?="",
     val latitude: Double? = null,
     val longitude: Double? = null,
+    val personalProfileId: Long = 0,
     val followersCount: Int = 0,
     val followingCount: Int = 0,
-    val isFollowing: Boolean = false
+    val isFollowing: Boolean = false,
+    val isBlocked: Boolean = false
+)
+
+data class ReportRequest(
+    val reason: String,
+    val reportedUserId: Long? = null,
+    val activityId: Long? = null
 )
 
 data class UserProfileData(
@@ -93,6 +102,7 @@ data class UserProfileData(
     val longitude: Double? = null,
     val followersCount: Int = 0,
     val followingCount: Int = 0,
-    val isFollowing: Boolean = false
+    val isFollowing: Boolean = false,
+    val isBlocked: Boolean = false
 )
 
