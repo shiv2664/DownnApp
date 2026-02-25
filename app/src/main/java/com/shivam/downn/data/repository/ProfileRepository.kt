@@ -13,18 +13,39 @@ import okhttp3.MultipartBody
 import javax.inject.Inject
 import javax.inject.Singleton
 
+import com.shivam.downn.data.local.db.ProfileDao
+import com.shivam.downn.data.local.db.CachedProfile
+import com.shivam.downn.data.models.ProfileType
+import com.shivam.downn.utils.toProfileResponse
+import com.shivam.downn.utils.toCachedProfile
+import kotlinx.coroutines.flow.first
+import java.time.LocalDateTime
+
 @Singleton
 class ProfileRepository @Inject constructor(
     private val profileApi: ProfileApi,
-    private val appSettingsRepository: AppSettingsRepository
+    private val appSettingsRepository: AppSettingsRepository,
+    private val profileDao: ProfileDao
 ) {
     fun getProfiles(): Flow<NetworkResult<List<ProfileResponse>>> = flow {
-        emit(NetworkResult.Loading())
+        try {
+            val cached = profileDao.getAllProfiles().first()
+            if (cached.isNotEmpty()) {
+                emit(NetworkResult.Success(cached.map { it.toProfileResponse() }))
+            } else {
+                emit(NetworkResult.Loading())
+            }
+        } catch (e: Exception) {
+            emit(NetworkResult.Loading())
+        }
+
         try {
             val url = appSettingsRepository.getEndpoint("users.getProfiles")!!
             val response = profileApi.getProfiles(url)
             if (response.isSuccessful && response.body() != null) {
-                emit(NetworkResult.Success(response.body()!!))
+                val apiProfiles = response.body()!!
+                profileDao.insertProfiles(apiProfiles.map { it.toCachedProfile() })
+                emit(NetworkResult.Success(apiProfiles))
             } else {
                 emit(NetworkResult.Error("Fetch failed: ${response.message()}"))
             }

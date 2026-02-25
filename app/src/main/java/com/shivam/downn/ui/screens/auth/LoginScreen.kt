@@ -41,6 +41,12 @@ import com.shivam.downn.data.models.AuthRequest
 import com.shivam.downn.data.models.AuthResponse
 import com.shivam.downn.data.models.RegisterRequest
 import com.shivam.downn.data.network.NetworkResult
+import androidx.compose.ui.platform.LocalContext
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,8 +63,12 @@ fun LoginScreen(
         }
     }
 
+    var isRegisterMode by remember { mutableStateOf(false) }
+
     LoginContent(
         authState,
+        isRegisterMode = isRegisterMode,
+        onRegisterModeChange = { isRegisterMode = it },
         onLoginClick = { email, password, isAdmin ->
             val role = if (isAdmin) "ADMIN" else null
             viewModel.login(AuthRequest(email, password, role))
@@ -75,11 +85,40 @@ fun LoginScreen(
 @Composable
 fun LoginContent(
     authState: NetworkResult<AuthResponse?>?,
+    isRegisterMode: Boolean,
+    onRegisterModeChange: (Boolean) -> Unit,
     onLoginClick: (String, String, Boolean) -> Unit,
     onRegisterClick: (String, String, String, String, Boolean) -> Unit,
     onForgotPasswordClick: () -> Unit // Receive callback
 ) {
-    var isRegisterMode by remember { mutableStateOf(false) }
+    /*
+    // GOOGLE LOGIN HAS BEEN COMMENTED OUT FOR NOW
+    val context = LocalContext.current
+    val webClientId = "YOUR_WEB_CLIENT_ID"
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        try {
+            val account = task.getResult(ApiException::class.java)
+            val idToken = account?.idToken
+            if (idToken != null) {
+                // onGoogleSignInClick(idToken)
+            }
+        } catch (e: ApiException) {
+            // Log error or show toast
+        }
+    }
+
+    val signInOptions = remember {
+        GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(webClientId)
+            .requestEmail()
+            .requestProfile()
+            .build()
+    }
+    */
 
 
 
@@ -151,6 +190,8 @@ fun LoginContent(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            Spacer(modifier = Modifier.height(24.dp))
+
             Text(
                 text = if (isRegisterMode) "Create Account" else "Welcome Back",
                 fontSize = 28.sp,
@@ -169,7 +210,7 @@ fun LoginContent(
 
             AnimatedContent(targetState = isRegisterMode, label = "form") { isRegister ->
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    if (isRegisterMode) {
+                    if (isRegister) {
                         OutlinedTextField(
                             value = name,
                             onValueChange = { if (it.length <= 50) name = it },
@@ -264,29 +305,7 @@ fun LoginContent(
                         )
                     )
 
-/*                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .padding(top = 8.dp)
-                            .clickable { isAdmin = !isAdmin }
-                    ) {
-                        Checkbox(
-                            checked = isAdmin,
-                            onCheckedChange = { isAdmin = it },
-                            colors = CheckboxDefaults.colors(
-                                checkedColor = Color(0xFFA855F7),
-                                uncheckedColor = Color(0xFF94A3B8),
-                                checkmarkColor = Color.White
-                            )
-                        )
-                        Text(
-                            text = if (isRegisterMode) "Register as Admin" else "Login as Admin",
-                            color = Color.White,
-                            fontSize = 14.sp
-                        )
-                    }*/
-
-                    if (!isRegisterMode) {
+                    if (!isRegister) {
                         TextButton(
                             onClick = onForgotPasswordClick,
                             modifier = Modifier.align(Alignment.End)
@@ -298,8 +317,6 @@ fun LoginContent(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-
-
 
             if (validationError != null) {
                 Text(
@@ -325,7 +342,6 @@ fun LoginContent(
                 onClick = {
                     validationError = null
 
-                    // Validation Logic
                     val isEmailValid = android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
 
                     if (isRegisterMode) {
@@ -389,15 +405,20 @@ fun LoginContent(
                     color = Color(0xFFA855F7),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clickable { isRegisterMode = !isRegisterMode }
+                    modifier = Modifier.clickable { onRegisterModeChange(!isRegisterMode) }
                 )
             }
 
             Spacer(modifier = Modifier.height(40.dp))
+            // (Traditional Email/Password form hidden for now)
 
-            // Google Sign-In (Keep existing design pattern)
+            /*
+            // Google Sign-In
             Surface(
-                onClick = { /* Google Sign In logic */ },
+                onClick = { 
+                    val client = GoogleSignIn.getClient(context, signInOptions)
+                    launcher.launch(client.signInIntent)
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
@@ -410,21 +431,26 @@ fun LoginContent(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    Text(
-                        "G",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF4285F4)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        "Continue with Google",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF0F172A)
-                    )
+                    if (authState is NetworkResult.Loading) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color(0xFF4285F4))
+                    } else {
+                        Text(
+                            "G",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF4285F4)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            "Continue with Google",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFF0F172A)
+                        )
+                    }
                 }
             }
+            */
         }
     }
 }
@@ -434,6 +460,8 @@ fun LoginContent(
 fun PreviewLoginScreen() {
     LoginContent(
         authState = null,
+        isRegisterMode = false,
+        onRegisterModeChange = {},
         onLoginClick = { _, _, _ -> },
         onRegisterClick = { _, _, _, _, _ -> },
         onForgotPasswordClick = {}

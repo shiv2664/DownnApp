@@ -78,15 +78,17 @@ class FeedViewModel @Inject constructor(
             }
         }
 
+        val requestPage = currentPage
+
         viewModelScope.launch {
-            socialRepository.getSocialsPaged(currentCity, currentCategory, currentPage, pageSize).collect { result ->
+            socialRepository.getSocialsPaged(currentCity, currentCategory, requestPage, pageSize).collect { result ->
                 when(result) {
                    is NetworkResult.Success -> {
                        val pagedResponse = result.data
                        val newItems = pagedResponse?.content ?: emptyList()
                        isLastPage = pagedResponse?.last ?: true
                        
-                       if (currentPage == 0) {
+                       if (requestPage == 0) {
                            _state.value = NetworkResult.Success(newItems)
                        } else {
                            val currentItems = (_state.value.data ?: emptyList()) + newItems
@@ -94,14 +96,14 @@ class FeedViewModel @Inject constructor(
                        }
                    }
                    is NetworkResult.Error -> {
-                       if (currentPage == 0) {
+                       if (requestPage == 0) { // Should also ignore network error toasts on cache replacement if we want to be clean, but this is fine for MVP
                            _state.value = NetworkResult.Error(result.message)
                        } else {
                            // Handle error for load more (maybe separate state or toast)
                        }
                    }
                    is NetworkResult.Loading -> {
-                       if (currentPage == 0) {
+                       if (requestPage == 0) {
                            _state.value = NetworkResult.Loading()
                        }
                    }

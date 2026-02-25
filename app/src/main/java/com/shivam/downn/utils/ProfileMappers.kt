@@ -4,6 +4,7 @@ import com.shivam.downn.data.models.ProfileResponse
 import com.shivam.downn.data.models.ProfileType
 import com.shivam.downn.data.models.UserDetailsResponse
 import com.shivam.downn.data.models.UserProfileData
+import com.shivam.downn.data.local.db.CachedProfile
 
 fun ProfileResponse.toUserProfileData(): UserProfileData {
     return UserProfileData(
@@ -56,5 +57,39 @@ fun com.shivam.downn.data.models.AuthResponse.toUserProfileData(): UserProfileDa
         followersCount = 0,
         followingCount = 0,
         isFollowing = false
+    )
+}
+
+fun CachedProfile.toProfileResponse(): ProfileResponse {
+    return ProfileResponse(
+        id = this.id,
+        userId = this.userId,
+        name = this.name,
+        avatar = this.avatar,
+        coverImage = this.coverImage,
+        vibes = this.vibes,
+        bio = this.bio,
+        location = this.location,
+        type = ProfileType.valueOf(this.type),
+        createdAt = java.time.LocalDateTime.now(),
+        avatarThumbnail = null,
+        followersCount = this.followersCount,
+        followingCount = this.followingCount
+    )
+}
+
+fun ProfileResponse.toCachedProfile(): CachedProfile {
+    return CachedProfile(
+        id = this.id,
+        userId = this.userId,
+        name = this.name,
+        avatar = this.avatar,
+        coverImage = this.coverImage,
+        vibes = this.vibes ?: "",
+        bio = this.bio,
+        location = this.location,
+        type = this.type.name,
+        followersCount = this.followersCount,
+        followingCount = this.followingCount
     )
 }

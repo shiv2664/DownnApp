@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.shivam.downn.data.models.AuthRequest
 import com.shivam.downn.data.models.AuthResponse
+import com.shivam.downn.data.models.GoogleLoginRequest
 import com.shivam.downn.data.models.RegisterRequest
 import com.shivam.downn.data.repository.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -45,6 +46,17 @@ class AuthViewModel @Inject constructor(
             }
         }
     }
+    
+/*
+    fun continueWithGoogle(idToken: String) {
+        viewModelScope.launch {
+            _authState.value = NetworkResult.Loading()
+            repository.googleLogin(GoogleLoginRequest(idToken)).collect {
+                _authState.value = it
+            }
+        }
+    }
+*/
     
     fun forgotPassword(email: String) {
         viewModelScope.launch {

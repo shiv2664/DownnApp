@@ -11,11 +11,18 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.shivam.downn.data.local.db.SocialDao
+import com.shivam.downn.data.models.Pageable
+import com.shivam.downn.data.models.Sort
+import com.shivam.downn.utils.toSocialResponse
+import com.shivam.downn.utils.toCachedSocial
+import kotlinx.coroutines.flow.first
 
 @Singleton
 class SocialRepository @Inject constructor(
     private val socialApi: SocialApi,
-    private val appSettingsRepository: AppSettingsRepository
+    private val appSettingsRepository: AppSettingsRepository,
+    private val socialDao: SocialDao
 ) {
     fun createSocial(request: CreateSocialRequest, images: List<MultipartBody.Part>? = null): Flow<NetworkResult<SocialResponse?>> = flow {
         try {
@@ -63,12 +70,35 @@ class SocialRepository @Inject constructor(
         page: Int = 0,
         size: Int = 10
     ): Flow<NetworkResult<com.shivam.downn.data.models.PagedResponse<SocialResponse>>> = flow {
+        if (page == 0) {
+            try {
+                val cached = socialDao.getFeedActivities().first()
+                if (cached.isNotEmpty()) {
+                    val pagedCache = com.shivam.downn.data.models.PagedResponse(
+                        content = cached.map { it.toSocialResponse() },
+                        pageable = Pageable(Sort(true, false, true), 0, 0, cached.size, true, false),
+                        last = false, totalElements = cached.size.toLong(), totalPages = 1,
+                        size = cached.size, number = 0, sort = Sort(true, false, true),
+                        first = true, numberOfElements = cached.size, empty = false
+                    )
+                    emit(NetworkResult.Success(pagedCache))
+                }
+            } catch (e: Exception) {
+                // Ignore cache errors
+            }
+        }
+        
         try {
             val urlTemplate = appSettingsRepository.getEndpoint("activities.getByCity")!!
             val url = urlTemplate.replace("{city}", city)
             val response = socialApi.getSocialsByCity(url, category, page, size)
             if (response.isSuccessful && response.body() != null) {
-                emit(NetworkResult.Success(response.body()!!))
+                val pagedData = response.body()!!
+                if (page == 0) {
+                    socialDao.clearFeed()
+                    socialDao.insertActivities(pagedData.content.map { it.toCachedSocial() })
+                }
+                emit(NetworkResult.Success(pagedData))
             } else {
                 emit(NetworkResult.Error("Fetch failed: ${response.message()}"))
             }

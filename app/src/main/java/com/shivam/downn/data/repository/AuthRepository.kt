@@ -4,6 +4,7 @@ import com.shivam.downn.data.api.AuthApi
 import com.shivam.downn.data.local.PrefsManager
 import com.shivam.downn.data.models.AuthRequest
 import com.shivam.downn.data.models.AuthResponse
+import com.shivam.downn.data.models.GoogleLoginRequest
 import com.shivam.downn.data.models.ForgotPasswordRequest
 import com.shivam.downn.data.models.RegisterRequest
 import com.shivam.downn.data.network.NetworkResult
@@ -60,6 +61,28 @@ class AuthRepository @Inject constructor(
             emit(NetworkResult.Error(e.localizedMessage ?: "Unknown error"))
         }
     }
+
+/*
+    fun googleLogin(request: GoogleLoginRequest): Flow<NetworkResult<AuthResponse?>> = flow {
+        emit(NetworkResult.Loading())
+        try {
+            val url = appSettingsRepository.getEndpoint("auth.google") ?: ""
+            val response = authApi.googleLogin(url, request)
+            if (response.isSuccessful && response.body() != null) {
+                val authResponse = response.body()
+                authResponse?.let {
+                    prefsManager.saveAuthResponse(authResponse)
+                }
+                emit(NetworkResult.Success(authResponse))
+            } else {
+                val errorMsg = parseErrorBody(response) ?: "Google Login failed"
+                emit(NetworkResult.Error(errorMsg))
+            }
+        } catch (e: Exception) {
+            emit(NetworkResult.Error(e.localizedMessage ?: "Network error"))
+        }
+    }
+*/
 
     fun isUserLoggedIn(): Boolean {
         return prefsManager.getToken() != null

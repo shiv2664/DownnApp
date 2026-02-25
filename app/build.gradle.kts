@@ -101,10 +101,13 @@ dependencies {
     implementation(libs.play.services.location)
     implementation(libs.kotlinx.coroutines.play.services)
 
+    // Google Sign-In
+    implementation("com.google.android.gms:play-services-auth:21.0.0")
 
-
-//    implementation("androidx.room:room-runtime:2.8.4")
-//    implementation("androidx.room:room-ktx:2.8.4")
+    val room_version = "2.6.1"
+    implementation("androidx.room:room-runtime:$room_version")
+    implementation("androidx.room:room-ktx:$room_version")
+    ksp("androidx.room:room-compiler:$room_version")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

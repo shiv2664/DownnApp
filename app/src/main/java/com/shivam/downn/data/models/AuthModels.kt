@@ -37,3 +37,7 @@ data class AuthResponse(
 data class LogoutResponse(
     @SerializedName("message") val message: String
 )
+
+data class GoogleLoginRequest(
+    @SerializedName("idToken") val idToken: String
+)

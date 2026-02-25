@@ -2,6 +2,7 @@ package com.shivam.downn.data.api
 
 import com.shivam.downn.data.models.AuthRequest
 import com.shivam.downn.data.models.AuthResponse
+import com.shivam.downn.data.models.GoogleLoginRequest
 import com.shivam.downn.data.models.ForgotPasswordRequest
 import com.shivam.downn.data.models.RegisterRequest
 import com.shivam.downn.data.models.LogoutResponse
@@ -30,4 +31,9 @@ interface AuthApi {
 
     @DELETE
     suspend fun deleteAccount(@Url url: String): Response<LogoutResponse>
+
+/*
+    @POST
+    suspend fun googleLogin(@Url url: String, @Body request: GoogleLoginRequest): Response<AuthResponse>
+*/
 }
